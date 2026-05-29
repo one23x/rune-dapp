@@ -184,8 +184,10 @@ export function useOnboardFlow(wallet: string | undefined) {
     mutationFn: async () => {
       if (!wallet) throw new Error("No wallet");
       setSteps(["running", "idle", "idle"]);
+      // Engine POST /users/onboard returns { userId, ... } (NOT { id }).
       const user = await users.onboard(wallet);
-      const userId = String(user?.id ?? "");
+      const userId = String((user as { userId?: string; id?: string })?.userId ?? user?.id ?? "");
+      if (!userId) throw new Error("onboard returned no userId");
       setSteps(["done", "running", "idle"]);
       await users.confirm(userId);
       setSteps(["done", "done", "running"]);
