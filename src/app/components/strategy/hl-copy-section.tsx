@@ -1,33 +1,32 @@
 /**
- * Hyperliquid 合约跟单 (HL contract copy-trading), at /app/hl.
+ * Hyperliquid copy-trading section — the heart of the Strategy page.
  *
- * Repurposes the old AI "strategy" surface into a real HL copy-trading product
- * wired to the engine's Bearer-plane HL reads:
- *   - GET /v1/hl/leaders        → useHlLeaders   (策略包 by risk tier)
- *   - GET /v1/hl/signals        → useHlSignals   (数据源 leader feed)
- *   - GET /v1/hl/account        → useHlAccount   (持仓 / 历史 for the wallet)
- *   - GET /v1/users/:id/hl/subscriptions → useHlSubs (active follows)
+ * This folds the former standalone /hl page into the Strategy surface so that
+ * "Strategy = Hyperliquid": the agent-copy list is reframed as the risk-tier
+ * STRATEGY list (保守 / 稳健 / 激进 / 套利), with HL 开户 (enable / connect),
+ * the mainnet/testnet toggle, and 持仓 / 历史 all living here.
  *
- * Top-level mainnet/testnet segmented toggle drives the `network` param
- * everywhere. One-click copy attempts POST .../hl/subscriptions and degrades
- * gracefully when that create route isn't shipped yet (see useHlCopy).
+ * Engine wiring (Bearer read plane, real data only):
+ *   - GET /v1/hl/leaders                 → useHlLeaders   (策略 by risk tier)
+ *   - GET /v1/hl/signals                 → useHlSignals   (数据源 leader feed)
+ *   - GET /v1/hl/account                 → useHlAccount   (持仓 / 历史)
+ *   - GET /v1/users/:id/hl/subscriptions → useHlSubs      (active follows)
  *
- * The legacy AI-strategy page lives untouched at /app/strategy; this is a
- * NEW page + nav entry, so nothing breaks.
+ * One-click follow attempts POST .../hl/subscriptions and degrades gracefully
+ * (see useHlCopy) until the engine create route ships.
  */
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import {
-  Sparkles, Users, Activity, Layers, History as HistoryIcon, ChevronDown, ChevronRight,
-  Wallet, TrendingUp, TrendingDown, Zap, Crown,
+  Users, Activity, Layers, History as HistoryIcon, ChevronDown, ChevronRight,
+  Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PremiumCard, GoldCard } from "@app/components/premium-card";
+import { PremiumCard } from "@app/components/premium-card";
 import { cn } from "@app/lib/utils";
 import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs,
@@ -38,36 +37,70 @@ import {
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
 } from "@app/components/hl/shared";
 
-// ── Hero / layout chrome (mirrors copy-trading layout) ───────────────────────
+// ── 开户 / enable strip — HL account onboarding state ────────────────────────
 
-function HlHero({ network, onNetwork, actions }: { network: HlNetwork; onNetwork: (n: HlNetwork) => void; actions?: React.ReactNode }) {
+function HlAccountStrip({
+  wallet, network, accountReady, followCount,
+}: {
+  wallet?: string;
+  network: HlNetwork;
+  accountReady: boolean;
+  followCount: number;
+}) {
   const { t } = useTranslation();
-  return (
-    <GoldCard className="rounded-2xl">
-      <div
-        className="relative overflow-hidden rounded-2xl p-4 lg:p-5"
-        style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.14) 0%, rgba(180,90,10,0.06) 60%, transparent 100%)" }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-              <span className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Hyperliquid · One-Agents
-              </span>
-            </div>
-            <h1 className="text-lg lg:text-xl font-bold text-foreground truncate" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
-              {t("hl.title")}
-            </h1>
-            <p className="mt-1 text-[12px] text-foreground/55 leading-relaxed max-w-md">{t("hl.subtitle")}</p>
+  void network;
+
+  // Not connected → 开户 CTA (connect wallet to enable HL copy-trading).
+  if (!wallet) {
+    return (
+      <PremiumCard className="p-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="shrink-0 flex items-center justify-center rounded-xl h-11 w-11"
+            style={{
+              background: "linear-gradient(135deg, rgba(251,191,36,0.28), rgba(180,90,10,0.12))",
+              border: "1px solid rgba(251,191,36,0.4)",
+              boxShadow: "0 0 18px rgba(251,191,36,0.18)",
+            }}
+          >
+            <Wallet className="h-5 w-5 text-amber-300" />
           </div>
-          {actions}
+          <div className="min-w-0 flex-1">
+            <div className="text-[14px] font-bold text-foreground" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
+              {t("hl.openTitle")}
+            </div>
+            <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">{t("hl.openDesc")}</p>
+          </div>
         </div>
-        <div className="mt-3">
-          <NetworkToggle value={network} onChange={onNetwork} />
+      </PremiumCard>
+    );
+  }
+
+  // Connected → account enabled banner with quick state.
+  return (
+    <PremiumCard className="p-3.5">
+      <div className="flex items-center gap-3">
+        <div
+          className="shrink-0 flex items-center justify-center rounded-xl h-10 w-10"
+          style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.3)" }}
+        >
+          <ShieldCheck className="h-5 w-5 text-emerald-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] font-bold text-foreground/90">{t("hl.accountEnabled")}</span>
+            <Badge className="text-[9px] px-1.5 py-0 border-0 bg-emerald-500/15 text-emerald-300 no-default-hover-elevate no-default-active-elevate">
+              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />{t("hl.enabledBadge")}
+            </Badge>
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground/80">
+            <code className="font-mono">{shortAddr(wallet)}</code>
+            <span>·</span>
+            <span>{t("hl.followsCount", { count: followCount })}</span>
+          </div>
         </div>
       </div>
-    </GoldCard>
+    </PremiumCard>
   );
 }
 
@@ -82,7 +115,7 @@ function StatTile({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
-// ── Leader card (策略包 tier list) ───────────────────────────────────────────
+// ── Leader card (one strategy / leader to follow) ────────────────────────────
 
 function LeaderCard({
   leader, onCopy, copying, subscribed,
@@ -126,7 +159,7 @@ function LeaderCard({
   );
 }
 
-// ── 策略包 tab — leaders grouped into expandable risk-tier categories ────────
+// ── 策略 tab — leaders grouped into expandable risk-tier categories ──────────
 
 function StrategyPacksTab({
   network, userId, subscribedLeaders,
@@ -358,16 +391,22 @@ function ActiveSubs({ userId }: { userId?: string }) {
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Section ──────────────────────────────────────────────────────────────────
 
-type TopTab = "packs" | "data" | "positions";
+type HlTab = "packs" | "data" | "positions";
 
-export default function HlPage() {
+/**
+ * HlCopySection — drop-in body for the Strategy page's "strategies" tab.
+ * Renders the network toggle, 开户/enable strip, account stats, active follows,
+ * and the 策略 / 数据源 / 持仓 inner tabs. No page chrome (the Strategy page
+ * already supplies the header + outer tabbar).
+ */
+export function HlCopySection() {
   const { t } = useTranslation();
   const account = useActiveAccount();
   const wallet = account?.address;
   const [network, setNetwork] = useState<HlNetwork>("mainnet");
-  const [tab, setTab] = useState<TopTab>("packs");
+  const [tab, setTab] = useState<HlTab>("packs");
 
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
@@ -387,59 +426,76 @@ export default function HlPage() {
   const openPnl = acct?.unrealizedPnl ?? 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 lg:pb-8" data-testid="page-hl">
-      <div className="max-w-lg lg:max-w-4xl mx-auto px-4 py-5 space-y-4">
-        <HlHero network={network} onNetwork={setNetwork} />
-
-        {/* Account stat strip — real HL account state for the connected wallet */}
-        {wallet && (
-          acctQ.isLoading ? (
-            <div className="grid grid-cols-4 gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
-          ) : (
-            <div className="grid grid-cols-4 gap-2">
-              <StatTile label={t("hl.accountValue")} value={fmtUsd(acct?.accountValue ?? 0)} />
-              <StatTile label={t("hl.openPositions")} value={String(acct?.positions.length ?? 0)} />
-              <StatTile label={t("hl.unrealized")} value={fmtUsd(openPnl)} accent={openPnl >= 0 ? "#4ade80" : "#f87171"} />
-              <StatTile label={t("hl.follows")} value={String(subscribedLeaders.size)} accent="#60a5fa" />
-            </div>
-          )
-        )}
-
-        <ActiveSubs userId={userId} />
-
-        {/* Top tabs: 策略包 / 数据源 / 持仓 */}
-        <div className="flex gap-1.5 rounded-xl border border-border/55 bg-card/60 p-1 surface-3d">
-          {([
-            { id: "packs", labelKey: "hl.tabPacks", icon: Users },
-            { id: "data", labelKey: "hl.tabData", icon: Activity },
-            { id: "positions", labelKey: "hl.tabPositions", icon: Layers },
-          ] as const).map((x) => {
-            const Icon = x.icon;
-            const active = tab === x.id;
-            return (
-              <button
-                key={x.id}
-                onClick={() => setTab(x.id)}
-                className={cn(
-                  "flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-[12px] font-bold tracking-wide transition-all",
-                  active
-                    ? "bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-amber-700/10 ring-1 ring-amber-500/35 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card/80",
-                )}
-              >
-                <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
-                <span className="truncate">{t(x.labelKey)}</span>
-              </button>
-            );
-          })}
+    <div className="space-y-4" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
+      {/* Intro line — frames the section as HL one-click-follow strategies */}
+      <div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="text-[15px] font-bold text-foreground" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
+            {t("hl.sectionTitle")}
+          </h2>
+          <NetworkToggle value={network} onChange={setNetwork} />
         </div>
+        <p className="mt-1 text-[12px] text-foreground/55 leading-relaxed">{t("hl.subtitle")}</p>
+      </div>
 
-        <div style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
-          {tab === "packs" && <StrategyPacksTab network={network} userId={userId} subscribedLeaders={subscribedLeaders} />}
-          {tab === "data" && <DataSourceTab network={network} />}
-          {tab === "positions" && <MyPositionsTab network={network} />}
-        </div>
+      {/* 开户 / enable strip */}
+      <HlAccountStrip
+        wallet={wallet}
+        network={network}
+        accountReady={!!acct}
+        followCount={subscribedLeaders.size}
+      />
+
+      {/* Account stat strip — real HL account state for the connected wallet */}
+      {wallet && (
+        acctQ.isLoading ? (
+          <div className="grid grid-cols-4 gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            <StatTile label={t("hl.accountValue")} value={fmtUsd(acct?.accountValue ?? 0)} />
+            <StatTile label={t("hl.openPositions")} value={String(acct?.positions.length ?? 0)} />
+            <StatTile label={t("hl.unrealized")} value={fmtUsd(openPnl)} accent={openPnl >= 0 ? "#4ade80" : "#f87171"} />
+            <StatTile label={t("hl.follows")} value={String(subscribedLeaders.size)} accent="#60a5fa" />
+          </div>
+        )
+      )}
+
+      <ActiveSubs userId={userId} />
+
+      {/* Inner tabs: 策略 / 数据源 / 持仓 */}
+      <div className="flex gap-1.5 rounded-xl border border-border/55 bg-card/60 p-1 surface-3d">
+        {([
+          { id: "packs", labelKey: "hl.tabStrategies", icon: Users },
+          { id: "data", labelKey: "hl.tabData", icon: Activity },
+          { id: "positions", labelKey: "hl.tabPositions", icon: Layers },
+        ] as const).map((x) => {
+          const Icon = x.icon;
+          const active = tab === x.id;
+          return (
+            <button
+              key={x.id}
+              onClick={() => setTab(x.id)}
+              className={cn(
+                "flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-[12px] font-bold tracking-wide transition-all",
+                active
+                  ? "bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-amber-700/10 ring-1 ring-amber-500/35 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-card/80",
+              )}
+            >
+              <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+              <span className="truncate">{t(x.labelKey)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
+        {tab === "packs" && <StrategyPacksTab network={network} userId={userId} subscribedLeaders={subscribedLeaders} />}
+        {tab === "data" && <DataSourceTab network={network} />}
+        {tab === "positions" && <MyPositionsTab network={network} />}
       </div>
     </div>
   );
 }
+
+export default HlCopySection;

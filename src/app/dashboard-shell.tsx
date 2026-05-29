@@ -1,5 +1,5 @@
 import "./index.css";
-import { Switch, Route, Router as WouterRouter, Link } from "wouter";
+import { Switch, Route, Router as WouterRouter, Link, Redirect } from "wouter";
 import { lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import "@app/lib/i18n";
@@ -12,7 +12,6 @@ const Dashboard       = lazy(() => import("@app/pages/dashboard"));
 const Trade           = lazy(() => import("@app/pages/trade"));
 const Vault           = lazy(() => import("@app/pages/vault"));
 const StrategyPage    = lazy(() => import("@app/pages/strategy"));
-const HlPage          = lazy(() => import("@app/pages/hl"));
 const Market          = lazy(() => import("@app/pages/market"));
 const CopyTrading     = lazy(() => import("@app/pages/copy-trading"));
 const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
@@ -171,7 +170,9 @@ function DashboardRoutes() {
         <Route path="/trade" component={Trade} />
         <Route path="/vault" component={Vault} />
         <Route path="/strategy" component={StrategyPage} />
-        <Route path="/hl" component={HlPage} />
+        {/* HL copy-trading was merged into /strategy; keep /hl as a redirect
+            so old links / bookmarks land on the strategy page. */}
+        <Route path="/hl">{() => <Redirect to="/strategy" />}</Route>
         <Route path="/market" component={Market} />
         <Route path="/copy-trading" component={CopyTrading} />
         <Route path="/copy-trading/auto" component={CopyTradingAuto} />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "@app/lib/copy";
-import { useDailyPnl, modelTargets } from "@app/lib/ai-bot-feed";
+import { useDailyPnl } from "@app/lib/ai-bot-feed";
 import { getCalendarDays as getCalendarDaysReal } from "@app/components/strategy/strategy-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,227 +28,22 @@ import {
 import type { Strategy, StrategySubscription, Profile, HedgePosition, InsurancePurchase } from "@app-shared/types";
 import { StrategyHeader } from "@app/components/strategy/strategy-header";
 import { AiLab } from "@app/components/strategy/ai-lab";
-import { CopyTradingFlow } from "@app/components/strategy/copy-trading-flow";
 import { SmartPredictionHero } from "@app/components/strategy/smart-prediction-hero";
 import { TradingVaultBanner } from "@app/components/strategy/trading-vault-banner";
-// Note: "prediction" replaces the old "signals" tab. TradeMatchingEngine
-// moved into AiLab so the signals surface stays available but the third
-// tab now hosts the Polymarket copy-trade product (node-gated).
+import { HlCopySection } from "@app/components/strategy/hl-copy-section";
+// "strategies" now hosts the Hyperliquid copy-trading product (risk-tier
+// one-click-follow leaders + HL 开户 + 持仓/历史) — Strategy = Hyperliquid.
+// "ailab" keeps the AI model lab + signals; "prediction" hosts the Polymarket
+// smart-prediction hero.
 type TabId = "strategies" | "ailab" | "prediction";
 
 const TABS: { id: TabId; labelKey: string }[] = [
-  { id: "strategies", labelKey: "strategy.strategyList" },
+  { id: "strategies", labelKey: "hl.navTitle" },
   { id: "ailab", labelKey: "strategy.aiLab" },
   { id: "prediction", labelKey: "strategy.smartPredictionTab" },
 ];
 
 import { EXCHANGES, HEDGE_CONFIG } from "@app/lib/data";
-
-// ─── 6 AI Strategy definitions (replaces LOCAL_STRATEGIES) ────────────────────
-
-interface StrategyDef {
-  key: string;
-  nameKey: string;
-  descKey: string;
-  icon: React.ElementType;
-  color: string;
-  assets: string[];
-  timeframe: string;
-  risk: "low" | "medium" | "high";
-  hot?: boolean;
-}
-
-const AI_STRATEGIES: StrategyDef[] = [
-  { key: "rune_ai", nameKey: "aiLab.runeAi", descKey: "aiLab.runeAiDesc", icon: Crown, color: "#d4a832", assets: ["BTC", "ETH", "SOL", "BNB"], timeframe: "Multi", risk: "medium", hot: true },
-  { key: "GPT-4o", nameKey: "strategy.gpt4o", descKey: "strategy.gpt4oDesc", icon: Brain, color: "#4ade80", assets: ["BTC", "ETH", "SOL"], timeframe: "4H", risk: "medium" },
-  { key: "Claude", nameKey: "strategy.claude", descKey: "strategy.claudeDesc", icon: Shield, color: "#a78bfa", assets: ["ETH", "BNB", "SOL"], timeframe: "1H", risk: "low" },
-  { key: "Gemini", nameKey: "strategy.gemini", descKey: "strategy.geminiDesc", icon: Sparkles, color: "#60a5fa", assets: ["BTC", "SOL", "DOGE"], timeframe: "15m", risk: "high" },
-  { key: "DeepSeek", nameKey: "strategy.deepseek", descKey: "strategy.deepseekDesc", icon: Search, color: "#fbbf24", assets: ["BTC", "ETH", "XRP"], timeframe: "1H", risk: "medium" },
-  { key: "Llama", nameKey: "strategy.llama", descKey: "strategy.llamaDesc", icon: Zap, color: "#fb923c", assets: ["SOL", "AVAX", "DOGE"], timeframe: "15m", risk: "medium" },
-];
-
-const RISK_COLORS: Record<string, string> = {
-  low: "text-emerald-400 border-emerald-500/25 bg-emerald-500/10",
-  medium: "text-yellow-400 border-yellow-500/25 bg-yellow-500/10",
-  high: "text-red-400 border-red-500/25 bg-red-500/10",
-};
-
-/** Per-model display stats, curated to spec:
- *    rune_ai → ~40% monthly P&L, daily 2–5%
- *    others  → 20–30% monthly P&L, daily ~3%
- *  Each model still gets a stable per-key variance so the cards aren't
- *  identical. `totalTrades` + `openCount` use a hash-based shuffle to
- *  match the original visual diversity. */
-function seededStats(key: string) {
-  const targets = modelTargets(key);
-  const seed = key.charCodeAt(0) + key.charCodeAt(key.length - 1);
-  return {
-    winRate: targets.winRatePct,
-    totalTrades: 60 + (seed % 80),
-    pnl: targets.monthlyPnlPct,
-    openCount: 1 + (seed % 4),
-    confidence: 55 + (seed % 35),
-  };
-}
-
-interface PaperTrade { id: string; asset: string; side: string; entry_price: number; pnl: number | null; strategy_type: string | null; status: string; opened_at: string; }
-interface TradeSignal { id: string; asset: string; direction: string; confidence: number; strategy_type: string; created_at: string; }
-
-function StrategyListTab({ walletAddr, onFollowStrategy }: { walletAddr: string; onFollowStrategy: (strategyType: string) => void }) {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  // Follow-strategy CTA is intentionally disabled until copy-trading is
-  // ready — clicking surfaces a "coming soon" toast instead of routing to
-  // the unfinished /copyconfig tab. Toast keys live under
-  // `strategy.followStrategyClosed*` in every locale.
-  const showComingSoon = () => {
-    toast({
-      title: t("strategy.followStrategyClosed", "Coming soon"),
-      description: t("strategy.followStrategyClosedDesc", "Copy-trading will open after the protocol launch."),
-    });
-  };
-  void onFollowStrategy; // kept for future re-enable; prop preserved for API compat.
-
-  const { data: allTrades = [], isLoading } = useQuery<PaperTrade[]>({
-    queryKey: ["strategy-trades"],
-    queryFn: async () => {
-      const res = await fetch("/api/paper-trades?limit=200");
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<PaperTrade[]>;
-    },
-    staleTime: 30_000, retry: false,
-  });
-
-  const { data: allSignals = [] } = useQuery<TradeSignal[]>({
-    queryKey: ["strategy-signals"],
-    queryFn: async () => {
-      const res = await fetch("/api/trade-signals?limit=50");
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<TradeSignal[]>;
-    },
-    staleTime: 30_000, retry: false,
-  });
-
-  function tradesFor(key: string, status: string) { return allTrades.filter(tr => tr.strategy_type === key && tr.status === status); }
-  function latestSig(key: string) { return allSignals.find(s => s.strategy_type === key) ?? null; }
-
-  const globalOpen = allTrades.filter(tr => tr.status === "OPEN").length || AI_STRATEGIES.reduce((s, m) => s + seededStats(m.key).openCount, 0);
-  const closedTrades = allTrades.filter(tr => tr.status === "CLOSED");
-  const globalWinRate = closedTrades.length > 0
-    ? (closedTrades.filter(tr => (tr.pnl ?? 0) > 0).length / closedTrades.length) * 100
-    : AI_STRATEGIES.reduce((s, m) => s + seededStats(m.key).winRate, 0) / AI_STRATEGIES.length;
-  const globalPnl = closedTrades.reduce((s, tr) => s + (tr.pnl ?? 0), 0) || AI_STRATEGIES.reduce((s, m) => s + seededStats(m.key).pnl, 0);
-
-  return (
-    <div className="space-y-4" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
-      {/* Global Stats */}
-      <div className="grid grid-cols-4 gap-1.5">
-        {[
-          { label: t("aiLab.positionsLabel"), value: globalOpen.toString(), color: "hsl(43,74%,52%)" },
-          { label: t("aiLab.winRateLabel"), value: `${globalWinRate.toFixed(1)}%`, color: globalWinRate >= 60 ? "#4ade80" : "hsl(43,74%,52%)" },
-          { label: t("aiLab.totalPnlLabel"), value: `${globalPnl >= 0 ? "+" : ""}${globalPnl.toFixed(1)}`, color: globalPnl >= 0 ? "#4ade80" : "#f87171" },
-          { label: t("aiLab.signalsLabel"), value: (allSignals.length || 84).toString(), color: "#60a5fa" },
-        ].map(s => (
-          <div key={s.label} className="premium-card rounded-lg p-2 text-center min-w-0">
-            <div className="text-[13px] font-black tabular-nums truncate" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-[8px] text-muted-foreground mt-0.5 uppercase tracking-wide truncate">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Strategy Cards */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}</div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {AI_STRATEGIES.map(strat => {
-            const Icon = strat.icon;
-            const openTrades = tradesFor(strat.key, "OPEN");
-            const closed = tradesFor(strat.key, "CLOSED");
-            const fb = seededStats(strat.key);
-            const hasReal = openTrades.length > 0 || closed.length > 0;
-            const winRate = hasReal && closed.length > 0 ? (closed.filter(tr => (tr.pnl ?? 0) > 0).length / closed.length) * 100 : fb.winRate;
-            const totalPnl = hasReal ? closed.reduce((s, tr) => s + (tr.pnl ?? 0), 0) : fb.pnl;
-            const openCount = hasReal ? openTrades.length : fb.openCount;
-            const totalCount = hasReal ? closed.length : fb.totalTrades;
-            const sig = latestSig(strat.key);
-            const sigDir = sig?.direction ?? (["BULLISH", "BULLISH", "BEARISH", "NEUTRAL"][strat.key.charCodeAt(2) * 3 % 4]);
-            const sigAsset = sig?.asset ?? strat.assets[0];
-            const sigConf = sig?.confidence ?? fb.confidence;
-            const isActive = openCount > 0 || (sig && Date.now() - new Date(sig.created_at).getTime() < 3600000);
-
-            return (
-              <div key={strat.key}
-                className="flex flex-col rounded-xl p-3 transition-all duration-200 hover:scale-[1.015] active:scale-[0.99]"
-                style={{
-                  background: "linear-gradient(145deg, rgba(22,16,8,0.98), rgba(14,10,4,0.99))",
-                  border: `1px solid ${isActive ? `${strat.color}30` : "rgba(255,255,255,0.08)"}`,
-                  boxShadow: isActive ? `0 0 20px ${strat.color}0a` : "0 2px 12px rgba(0,0,0,0.4)",
-                }}
-              >
-                {/* Header — fixed height */}
-                <div className="flex items-center gap-2 h-10">
-                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${strat.color}18`, border: `1px solid ${strat.color}35` }}>
-                    <Icon className="h-4 w-4" style={{ color: strat.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[12px] font-bold text-foreground/90 leading-tight truncate">{t(strat.nameKey)}</span>
-                      {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />}
-                      {strat.hot && <Badge className="text-[8px] px-1 py-0 border-0 bg-primary/20 text-primary no-default-hover-elevate no-default-active-elevate">HOT</Badge>}
-                    </div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-[9px] text-muted-foreground">{strat.timeframe}</span>
-                      <Badge className={`text-[8px] px-1 py-0 leading-none border ${RISK_COLORS[strat.risk]} no-default-hover-elevate no-default-active-elevate`}>
-                        {t(`aiLab.risk${strat.risk.charAt(0).toUpperCase() + strat.risk.slice(1)}`)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Win Rate Bar */}
-                <div className="flex items-center gap-1.5 mt-2">
-                  <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(winRate, 100)}%`, background: winRate >= 70 ? "hsl(143,60%,45%)" : winRate >= 55 ? "hsl(43,74%,52%)" : "hsl(0,65%,45%)" }} />
-                  </div>
-                  <span className="text-[11px] tabular-nums font-bold shrink-0" style={{ color: winRate >= 70 ? "#4ade80" : winRate >= 55 ? "hsl(43,74%,52%)" : "#f87171" }}>{winRate.toFixed(1)}%</span>
-                </div>
-
-                {/* Stats — flex-1 to fill space */}
-                <div className="grid grid-cols-3 gap-1 mt-2 flex-1">
-                  <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("aiLab.positionsLabel")}</div><div className="text-[12px] font-bold tabular-nums" style={{ color: openCount > 0 ? strat.color : undefined }}>{openCount}</div></div>
-                  <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("aiLab.tradesLabel")}</div><div className="text-[12px] font-bold tabular-nums">{totalCount}</div></div>
-                  <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("aiLab.pnlLabel")}</div><div className={`text-[12px] font-bold tabular-nums ${totalPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>{totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(1)}</div></div>
-                </div>
-
-                {/* Latest Signal — fixed height */}
-                <div className="mt-2 rounded-md px-2 py-1.5 flex items-center justify-between gap-1 h-8" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div className="flex items-center gap-1 min-w-0">
-                    <Sparkles className="h-2.5 w-2.5 shrink-0" style={{ color: strat.color }} />
-                    <span className="text-[10px] text-muted-foreground truncate">{sigAsset} {sigConf}%</span>
-                  </div>
-                  <span className={`inline-flex items-center gap-0.5 font-bold rounded text-[9px] px-1 py-0.5 shrink-0 ${sigDir === "BULLISH" ? "text-emerald-400 bg-emerald-500/10" : sigDir === "BEARISH" ? "text-red-400 bg-red-500/10" : "text-foreground/40 bg-white/[0.05]"}`}>
-                    {sigDir === "BULLISH" ? <TrendingUp className="h-2.5 w-2.5" /> : sigDir === "BEARISH" ? <TrendingDown className="h-2.5 w-2.5" /> : <Minus className="h-2.5 w-2.5" />}
-                  </span>
-                </div>
-
-                {/* Follow Button — always at bottom */}
-                <button
-                  onClick={showComingSoon}
-                  className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-bold transition-all active:scale-[0.98] opacity-80"
-                  style={{ background: `linear-gradient(135deg, ${strat.color}22, ${strat.color}10)`, border: `1px solid ${strat.color}35`, color: strat.color }}
-                >
-                  {t("aiLab.followStrategy")}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-    </div>
-  );
-}
 
 export default function StrategyPage() {
   const { t } = useTranslation();
@@ -256,7 +51,6 @@ export default function StrategyPage() {
   const { toast } = useToast();
   const walletAddr = account?.address || "";
   const [activeTab, setActiveTab] = useState<TabId>("strategies");
-  const [followModel, setFollowModel] = useState<string | null>(null);
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
   const [capitalAmount, setCapitalAmount] = useState("");
@@ -388,11 +182,6 @@ export default function StrategyPage() {
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const calendarLabel = `${monthNames[calendarMonth.getMonth()]} ${calendarMonth.getFullYear()}`;
 
-  const getStrategyName = (strategyId: string) => {
-    const s = LOCAL_STRATEGIES.find((st) => st.id === strategyId);
-    return s?.name || "Unknown Strategy";
-  };
-
   return (
     <div className="space-y-4 pb-24 lg:pb-8 lg:px-6 lg:pt-4" data-testid="page-strategy">
       <StrategyHeader />
@@ -422,29 +211,7 @@ export default function StrategyPage() {
       </div>
 
       <div className="px-4 space-y-4">
-        {activeTab === "strategies" && (
-          <StrategyListTab
-            walletAddr={walletAddr}
-            onFollowStrategy={(strategyType) => {
-              setFollowModel(strategyType);
-              setActiveTab("copyconfig" as TabId);
-            }}
-          />
-        )}
-
-        {activeTab === ("copyconfig" as TabId) && (
-          <div className="space-y-4" style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
-            <button onClick={() => setActiveTab("strategies")} className="flex items-center gap-1 text-xs text-foreground/40 hover:text-foreground/60 transition-colors">
-              <ChevronLeft className="h-3.5 w-3.5" /> {t("strategy.backToStrategies")}
-            </button>
-            <CopyTradingFlow
-              userId={walletAddr}
-              preSelectedModel={followModel || undefined}
-              compact
-            />
-          </div>
-        )}
-
+        {activeTab === "strategies" && <HlCopySection />}
 
         {activeTab === "ailab" && (
           <div className="px-0">
@@ -565,7 +332,7 @@ export default function StrategyPage() {
                           >
                             <div className="flex-1 min-w-0">
                               <div className="text-xs font-medium truncate">
-                                {sub.strategyName || getStrategyName(sub.strategyId)}
+                                {sub.strategyName || sub.strategyId}
                               </div>
                               <div className="text-[11px] text-muted-foreground">
                                 {formatUSD(Number(sub.allocatedCapital || 0))}
