@@ -1,11 +1,12 @@
 import { useLocation, Link } from "wouter";
-import { Home, BarChart3, Brain, User, TrendingUp, Server, GitBranch, ArrowLeftRight, History, Bell, Settings, ChevronLeft, Vault } from "lucide-react";
+import { Home, BarChart3, Brain, User, TrendingUp, Server, GitBranch, ArrowLeftRight, History, Bell, Settings, ChevronLeft, Vault, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 
 const mainNavItems = [
   { path: "/", icon: Home, labelKey: "nav.home" },
   { path: "/trade", icon: BarChart3, labelKey: "nav.predict" },
+  { path: "/copy-trading", icon: Users, labelKey: "copyTrading.entryTitle" },
   {
     path: "/vault",
     labelKey: "nav.vault",
@@ -19,7 +20,7 @@ const mainNavItems = [
       </svg>
     ),
   },
-  { path: "/strategy", icon: Brain, labelKey: "nav.trade" },
+  { path: "/hl", icon: Brain, labelKey: "hl.navTitle" },
   { path: "/market", icon: TrendingUp, labelKey: "nav.market" },
   { path: "/profile", icon: User, labelKey: "nav.profile" },
 ];

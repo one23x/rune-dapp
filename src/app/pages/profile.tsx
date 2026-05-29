@@ -15,6 +15,11 @@ import { buildReferralUrl } from "@/hooks/rune/use-referral-param";
 import { useUserPurchase } from "@/hooks/rune/use-node-presell";
 import { NoNodeReminder } from "@/components/rune/no-node-reminder";
 import { useNodeMembershipsRune } from "@app/lib/data-rune";
+import {
+  useEngineUser, usePusdBalance, useOrders, useCopySubs, useHlAccount, useHlSubs,
+} from "@app/lib/engine-hooks";
+import { asArray, pusdAmount, normalizeOrder, isClosed, fmtUsd } from "@app/components/copy-trading/shared";
+import { Activity, Layers } from "lucide-react";
 
 // MENU_ITEMS deliberately omits the "Referral & Team" entry — it lives
 // above as a prominent top-level CTA button (see ~line 440), so showing
@@ -94,6 +99,116 @@ function AnimUsdt({ value }: { value: number }) {
  *  • daily-yield estimate → tier × daily-rate × count (PROJECTION; the
  *    settlement contracts aren't live yet)
  */
+/**
+ * Engine copy-trading summary — surfaces live One-Agents Engine data on the
+ * profile: HL account value + open positions (useHlAccount), Polymarket pUSD
+ * balance + copy-subscription count, and a copy-trading performance summary
+ * derived from the local order history (useOrders). Real data only; gracefully
+ * hides itself when the wallet has no engine user / no HL account.
+ */
+function EngineSummaryCard({ wallet }: { wallet: string }) {
+  const { t } = useTranslation();
+  const userQ = useEngineUser(wallet);
+  const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
+
+  const balanceQ = usePusdBalance(userId);
+  const ordersQ = useOrders(userId);
+  const pmSubsQ = useCopySubs(userId);
+  const hlAcctQ = useHlAccount(wallet, "mainnet");
+  const hlSubsQ = useHlSubs(userId);
+
+  const pusd = pusdAmount(balanceQ.data);
+  const orders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
+  const closed = orders.filter(isClosed).filter((o) => o.pnl != null);
+  const wins = closed.filter((o) => (o.pnl ?? 0) > 0).length;
+  const winRate = closed.length > 0 ? (wins / closed.length) * 100 : 0;
+  const realizedPnl = closed.reduce((s, o) => s + (o.pnl ?? 0), 0);
+
+  const pmSubCount = asArray(pmSubsQ.data).filter((s: any) => s?.status !== "stopped").length;
+  const hlSubCount = (hlSubsQ.data?.subscriptions ?? []).filter((s: any) => s?.status !== "stopped").length;
+  const hlAcctVal = hlAcctQ.data?.accountValue ?? 0;
+  const hlOpen = hlAcctQ.data?.positions.length ?? 0;
+
+  // While the engine user is resolving, hold a slot so the card doesn't pop in.
+  if (userQ.isLoading) return <div className="rounded-3xl h-40 surface-3d" />;
+  // No engine user → nothing to surface here (the copy-trading entry handles onboarding).
+  if (!userId) return null;
+
+  return (
+    <div
+      className="surface-3d relative overflow-hidden rounded-3xl border border-amber-500/35 p-4"
+      style={{
+        background: "linear-gradient(135deg, rgba(40,30,8,0.75), rgba(20,15,8,0.90) 60%, rgba(10,8,4,0.95))",
+        boxShadow:
+          "inset 0 1px 0 rgba(251,191,36,0.20), inset 0 -1px 0 rgba(0,0,0,0.25), 0 8px 24px -10px rgba(251,191,36,0.20), 0 18px 40px -16px rgba(0,0,0,0.50)",
+      }}
+    >
+      <div className="pointer-events-none absolute -top-16 -right-8 h-44 w-44 rounded-full bg-amber-400/[0.18] blur-[70px]" />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5">
+            <Activity className="h-3.5 w-3.5 text-amber-300" />
+            <span className="text-[11px] text-amber-200/85 font-bold uppercase tracking-[0.18em]">
+              {t("profile.engineSummary", "Copy-Trading")}
+            </span>
+          </div>
+          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/45">
+            {t("profile.engineLive", "live")}
+          </span>
+        </div>
+
+        {/* HL — account value + open positions */}
+        <div className="grid grid-cols-2 gap-2">
+          <div
+            className="rounded-2xl px-3 py-3 ring-1 ring-sky-400/35"
+            style={{ background: "linear-gradient(160deg, rgba(56,189,248,0.14), rgba(8,47,73,0.10) 60%, rgba(0,0,0,0.20))" }}
+          >
+            <div className="flex items-center gap-1 mb-1.5">
+              <Layers className="h-3 w-3 text-sky-300" />
+              <span className="text-[10px] uppercase tracking-wider text-sky-200/85 font-bold">{t("profile.hlAccount", "HL Account")}</span>
+            </div>
+            <div className="text-[16px] font-black text-sky-200 tabular-nums leading-tight">
+              {hlAcctQ.isLoading ? "…" : fmtUsd(hlAcctVal)}
+            </div>
+            <div className="text-[10px] text-sky-300/70 mt-0.5">{hlOpen} {t("profile.hlOpenPositions", "open positions")}</div>
+          </div>
+
+          {/* Polymarket — pUSD balance + subscriptions */}
+          <div
+            className="rounded-2xl px-3 py-3 ring-1 ring-amber-400/40"
+            style={{ background: "linear-gradient(160deg, rgba(251,191,36,0.16), rgba(120,80,10,0.10) 60%, rgba(0,0,0,0.20))" }}
+          >
+            <div className="flex items-center gap-1 mb-1.5">
+              <Coins className="h-3 w-3 text-amber-300" />
+              <span className="text-[10px] uppercase tracking-wider text-amber-200/85 font-bold">{t("profile.pmBalance", "pUSD")}</span>
+            </div>
+            <div className="text-[16px] font-black text-amber-200 tabular-nums leading-tight">
+              {balanceQ.isLoading ? "…" : fmtUsd(pusd)}
+            </div>
+            <div className="text-[10px] text-amber-300/70 mt-0.5">{pmSubCount + hlSubCount} {t("profile.copySubs", "follows")}</div>
+          </div>
+        </div>
+
+        {/* Copy-trading performance summary (from local order history) */}
+        <div className="grid grid-cols-3 gap-2 mt-2 pt-3 border-t border-border/30">
+          <div className="text-center">
+            <div className={`text-[15px] font-black tabular-nums ${realizedPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtUsd(realizedPnl)}</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">{t("profile.realizedPnl", "Realized PnL")}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[15px] font-black tabular-nums num-gold">{closed.length > 0 ? `${winRate.toFixed(0)}%` : "—"}</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">{t("profile.winRate", "Win Rate")}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[15px] font-black tabular-nums">{orders.length}</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mt-0.5">{t("profile.totalTrades", "Trades")}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { t } = useTranslation();
   const account = useActiveAccount();
@@ -428,6 +543,9 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* ── Engine copy-trading summary (HL + Polymarket, live data) ── */}
+        {isConnected && <EngineSummaryCard wallet={walletAddr} />}
 
         {/* Invite link card — same elevated treatment so it reads as a peer
             of the hero rather than a flat list item. */}

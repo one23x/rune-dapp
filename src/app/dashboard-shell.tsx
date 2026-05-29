@@ -12,8 +12,15 @@ const Dashboard       = lazy(() => import("@app/pages/dashboard"));
 const Trade           = lazy(() => import("@app/pages/trade"));
 const Vault           = lazy(() => import("@app/pages/vault"));
 const StrategyPage    = lazy(() => import("@app/pages/strategy"));
+const HlPage          = lazy(() => import("@app/pages/hl"));
 const Market          = lazy(() => import("@app/pages/market"));
 const CopyTrading     = lazy(() => import("@app/pages/copy-trading"));
+const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
+const CopyTradingSignals   = lazy(() => import("@app/pages/copy-trading-signals"));
+const CopyTradingPositions = lazy(() => import("@app/pages/copy-trading-positions"));
+const CopyTradingEarnings  = lazy(() => import("@app/pages/copy-trading-earnings"));
+const CopyTradingHistory   = lazy(() => import("@app/pages/copy-trading-history"));
+const CopyTradingFunds     = lazy(() => import("@app/pages/copy-trading-funds"));
 const Profile         = lazy(() => import("@app/pages/profile"));
 const ProfileReferral = lazy(() => import("@app/pages/profile-referral"));
 const ProfileNodes    = lazy(() => import("@app/pages/profile-nodes"));
@@ -164,8 +171,15 @@ function DashboardRoutes() {
         <Route path="/trade" component={Trade} />
         <Route path="/vault" component={Vault} />
         <Route path="/strategy" component={StrategyPage} />
+        <Route path="/hl" component={HlPage} />
         <Route path="/market" component={Market} />
         <Route path="/copy-trading" component={CopyTrading} />
+        <Route path="/copy-trading/auto" component={CopyTradingAuto} />
+        <Route path="/copy-trading/signals" component={CopyTradingSignals} />
+        <Route path="/copy-trading/positions" component={CopyTradingPositions} />
+        <Route path="/copy-trading/earnings" component={CopyTradingEarnings} />
+        <Route path="/copy-trading/history" component={CopyTradingHistory} />
+        <Route path="/copy-trading/funds" component={CopyTradingFunds} />
         <Route path="/profile" component={Profile} />
         <Route path="/profile/nodes" component={ProfileNodes} />
         <Route path="/profile/referral" component={ProfileReferral} />

@@ -19,6 +19,7 @@ import {
   ChevronDown, Flame, Star, AlertCircle, Wallet,
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
+import { CopyTradingEntry } from "@app/components/copy-trading-entry";
 import type { AiPrediction, PredictionBet } from "@app-shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -849,6 +850,11 @@ export default function Trade() {
           <span className="text-[12px] text-foreground/70">{t("trade.connectWalletBet")}</span>
         </div>
       )}
+
+      {/* ── Smart Copy-Trading entry ────────────────── */}
+      <div className="px-4 lg:px-6 mt-3">
+        <CopyTradingEntry />
+      </div>
 
       {/* ── Market list ─────────────────────────────── */}
       <div className="px-4 lg:px-6 mt-3 space-y-3" onClick={() => sortOpen && setSortOpen(false)}>

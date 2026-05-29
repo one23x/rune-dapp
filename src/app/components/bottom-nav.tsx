@@ -1,7 +1,7 @@
 import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { motion, LayoutGroup } from "framer-motion";
-import { LayoutDashboard, Eye, Shield, BarChart2, User } from "lucide-react";
+import { LayoutDashboard, Eye, Shield, Users, User } from "lucide-react";
 
 // Unified amber palette — every tab uses the mainnet `--primary`
 // (hsl 38 95% 55%) so the strip reads as a single coherent surface
@@ -12,11 +12,11 @@ const ACCENT_GLOW = "rgba(251, 191, 36, 0.55)";
 const PILL_BG     = "linear-gradient(135deg, rgba(251,191,36,0.22), rgba(180,90,10,0.10))";
 
 const TABS = [
-  { path: "/",         icon: LayoutDashboard, id: "home" },
-  { path: "/trade",    icon: Eye,             id: "predict" },
-  { path: "/vault",    icon: Shield,          id: "vault" },
-  { path: "/strategy", icon: BarChart2,       id: "trade" },
-  { path: "/profile",  icon: User,            id: "profile" },
+  { path: "/",             icon: LayoutDashboard, id: "home" },
+  { path: "/trade",        icon: Eye,             id: "predict" },
+  { path: "/copy-trading", icon: Users,           id: "copy" },
+  { path: "/vault",        icon: Shield,          id: "vault" },
+  { path: "/profile",      icon: User,            id: "profile" },
 ].map((t) => ({ ...t, accent: ACCENT, glow: ACCENT_GLOW, pillBg: PILL_BG }));
 
 export function BottomNav() {

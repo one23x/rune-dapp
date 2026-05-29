@@ -12,6 +12,14 @@ if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT: "${rawPort}"
 const basePath = process.env.BASE_PATH;
 if (!basePath) throw new Error("BASE_PATH environment variable is required.");
 
+// ── One-Agents Engine dev proxy ───────────────────────────────────────────────
+// Local dev forwards `/engine/*` → the Engine API, injecting the project API
+// key Bearer header SERVER-SIDE (this is node context, NOT a VITE_ var) so the
+// key never enters the client bundle. In production the SPA points
+// VITE_ENGINE_PROXY at the Supabase `engine-proxy` Edge Function instead.
+const ENGINE_BASE = process.env.ONE_AGENTS_API_BASE || "https://api.one-agents.com";
+const ENGINE_KEY = process.env.ONE_AGENTS_API_KEY || "";
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -58,6 +66,23 @@ export default defineConfig({
     fs: {
       strict: true,
       deny: ["**/.*"],
+    },
+    proxy: {
+      "/engine": {
+        target: ENGINE_BASE,
+        changeOrigin: true,
+        secure: true,
+        rewrite: (p) => p.replace(/^\/engine/, ""),
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
+            if (ENGINE_KEY) proxyReq.setHeader("Authorization", `Bearer ${ENGINE_KEY}`);
+          });
+          proxy.on("error", (err) => {
+            // eslint-disable-next-line no-console
+            console.warn("[engine-proxy] upstream error:", err?.message);
+          });
+        },
+      },
     },
   },
   preview: {
