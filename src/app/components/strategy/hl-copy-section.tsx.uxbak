@@ -84,7 +84,7 @@ function HlAccountStrip({
             <Wallet className="h-5 w-5 text-amber-300" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-display text-[14px] font-bold text-foreground">
+            <div className="text-[14px] font-bold text-foreground" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
               {t("hl.openTitle")}
             </div>
             <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">{t("hl.openDesc")}</p>
@@ -156,7 +156,7 @@ function HlAccountStrip({
             <Wallet className="h-5 w-5 text-amber-300" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-display text-[14px] font-bold text-foreground">
+            <div className="text-[14px] font-bold text-foreground" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
               {t("hl.openTitle")}
             </div>
             <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">{t("hl.openCtaDesc", "一次性开通交易账户即可一键跟单,约需 10 秒。")}</p>
@@ -549,7 +549,7 @@ export function HlCopySection() {
       {/* Intro line — frames the section as HL one-click-follow strategies */}
       <div>
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h2 className="font-display text-[15px] font-bold text-foreground">
+          <h2 className="text-[15px] font-bold text-foreground" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
             {t("hl.sectionTitle")}
           </h2>
           <NetworkToggle value={network} onChange={setNetwork} />

@@ -59,12 +59,12 @@ export function DesktopSidebar() {
           <div className="px-5 pt-2 pb-2 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">
             {t("nav.profile")}
           </div>
-          <nav aria-label={t("nav.profile")} className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+          <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
             {profileNavItems.map((item) => {
               const isActive = item.exact ? location === item.path : location === item.path;
               const Icon = item.icon;
               return (
-                <Link key={item.path} href={item.path} aria-label={t(item.labelKey)} aria-current={isActive ? "page" : undefined}>
+                <Link key={item.path} href={item.path}>
                   <div
                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer ${
                       isActive
@@ -81,12 +81,12 @@ export function DesktopSidebar() {
           </nav>
         </>
       ) : (
-        <nav aria-label={t("nav.home")} className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1">
           {mainNavItems.map((item) => {
             const isActive = item.path === "/" ? location === "/" : location.startsWith(item.path);
             const Icon = item.icon;
             return (
-              <Link key={item.path} href={item.path} aria-label={t(item.labelKey)} aria-current={isActive ? "page" : undefined}>
+              <Link key={item.path} href={item.path}>
                 <div
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                     isActive

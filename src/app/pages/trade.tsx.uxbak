@@ -836,10 +836,7 @@ export default function Trade() {
             <div className="relative">
               <button
                 onClick={() => setSortOpen(v => !v)}
-                aria-label={t("trade.sortBy", "Sort markets")}
-                aria-haspopup="listbox"
-                aria-expanded={sortOpen}
-                className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors"
                 style={{ background: "rgba(255,255,255,0.03)" }}
               >
                 <span>{t(currentSortLabelKey)}</span>
@@ -934,7 +931,7 @@ export default function Trade() {
       </div>
 
       {/* ── Market list ─────────────────────────────── */}
-      <div className="px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3" onClick={() => sortOpen && setSortOpen(false)}>
+      <div className="px-4 lg:px-6 mt-3 space-y-3" onClick={() => sortOpen && setSortOpen(false)}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-44 w-full rounded-xl" />
@@ -1051,14 +1048,14 @@ export default function Trade() {
           {visibleCount < filtered.length && (
             <button
               onClick={() => setVisibleCount(c => c + 8)}
-              className="w-full py-3 rounded-xl text-[13px] font-bold text-primary transition-all active:scale-[0.98] lg:col-span-2 xl:col-span-3"
+              className="w-full py-3 rounded-xl text-[13px] font-bold text-primary transition-all active:scale-[0.98]"
               style={{ background: "rgba(212,168,50,0.06)", border: "1px solid rgba(212,168,50,0.15)" }}
             >
               {t("trade.loadMore", { remaining: filtered.length - visibleCount })}
             </button>
           )}
           {visibleCount >= filtered.length && filtered.length > 0 && (
-            <div className="text-center py-3 text-[11px] text-muted-foreground/40 lg:col-span-2 xl:col-span-3">
+            <div className="text-center py-3 text-[11px] text-muted-foreground/40">
               {t("trade.allMarketsShown", { count: filtered.length })}
             </div>
           )}

@@ -26,11 +26,6 @@ const buttonVariants = cva(
         // @replit no hover, transparent border
         ghost: "border border-transparent",
         link: "text-primary underline-offset-4 hover:underline",
-        // Shared gold CTA — converges the repeated inline
-        // `bg-gradient-to-r from-amber-500 to-yellow-600` treatment used across
-        // hl-copy / strategy / trade. Same look, one source of truth.
-        gold:
-          "bg-gradient-to-r from-amber-500 to-yellow-600 text-black font-semibold border border-amber-400/40 shadow-[0_4px_14px_-4px_rgba(212,168,50,0.5)] hover:brightness-110 active:brightness-95",
       },
       size: {
         // @replit changed sizes

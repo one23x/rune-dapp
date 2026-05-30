@@ -91,7 +91,7 @@ function AutoCopyInner({ userId }: { userId: string }) {
             <Zap className="h-5 w-5 text-amber-300" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-display text-base font-bold text-foreground">
+            <h2 className="text-base font-bold text-foreground" style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif" }}>
               {t("copyTrading.autoCopyTitle")}
             </h2>
             <p className="mt-1 text-[12px] text-foreground/55 leading-relaxed">{t("copyTrading.autoCopyDesc")}</p>

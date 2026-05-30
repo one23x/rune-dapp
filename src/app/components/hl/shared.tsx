@@ -163,6 +163,14 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
       if (userId) queryClient.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
     },
     onError: (err: unknown) => {
+      // Not onboarded yet → guide the user to 开通 instead of a raw error string.
+      if (String((err as any)?.message ?? err) === "no_user") {
+        toast({
+          title: t("hl.needOnboard", "请先开通交易账户"),
+          description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。"),
+        });
+        return;
+      }
       if (isEndpointMissing(err)) {
         toast({
           title: t("hl.copyPending"),

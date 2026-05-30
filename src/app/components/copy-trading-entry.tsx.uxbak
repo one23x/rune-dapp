@@ -46,8 +46,8 @@ export function CopyTradingEntry({ compact = false }: { compact?: boolean }) {
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-amber-300/80 shrink-0" />
                 <h3
-                  className="font-display font-bold text-[15px] lg:text-base text-foreground truncate"
-                  style={{ letterSpacing: "0.01em" }}
+                  className="font-bold text-[15px] lg:text-base text-foreground truncate"
+                  style={{ fontFamily: "'Orbitron', 'Space Grotesk', sans-serif", letterSpacing: "0.01em" }}
                 >
                   {t("copyTrading.entryTitle", "智能预测跟单")}
                 </h3>

@@ -65,7 +65,8 @@
     "select": "Select",
     "copyFailed": "Copy failed",
     "copyFailedDesc": "Long-press the link above to select & copy manually.",
-    "back": "Back"
+    "back": "Back",
+    "retry": "Retry"
   },
   "nav": {
     "home": "HALL",
@@ -194,7 +195,8 @@
     "yes": "Yes",
     "no": "No",
     "loadMore": "Load more ({{remaining}} remaining)",
-    "allMarketsShown": "All {{count}} markets shown"
+    "allMarketsShown": "All {{count}} markets shown",
+    "amountRange": "Amount must be between {{min}} and {{max}} USDC"
   },
   "vault": {
     "title": "Vault",
@@ -1912,6 +1914,16 @@
     "justNow": "now",
     "minAgo": "{{n}}m",
     "hourAgo": "{{n}}h",
-    "dayAgo": "{{n}}d"
+    "dayAgo": "{{n}}d",
+    "openCta": "Open trading account",
+    "opening": "Opening…",
+    "openCtaDesc": "Open your trading account once to enable one-click follow — takes about 10 seconds.",
+    "openStep1": "Create engine signer account",
+    "openStep2": "Confirm on-chain authorization",
+    "openStep3": "Enable trading",
+    "openErrorTitle": "Can not load account",
+    "openErrorDesc": "Failed to reach the engine. Check your connection and retry.",
+    "needOnboard": "Open a trading account first",
+    "needOnboardDesc": "Tap “Open trading account” above, then follow with one click."
   }
 }

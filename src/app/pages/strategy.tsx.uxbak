@@ -475,7 +475,7 @@ export default function StrategyPage() {
                       <span>{t("strategy.selectDateRange")}</span>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="gold" className="text-xs" data-testid="button-filter-search">
+                      <Button size="sm" className="text-xs bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black" data-testid="button-filter-search">
                         <Search className="h-3 w-3 mr-1" />
                         {t("common.search")}
                       </Button>
@@ -492,8 +492,7 @@ export default function StrategyPage() {
 
           <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
             <Button
-              variant="gold"
-              className="text-xs"
+              className="text-xs bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black"
               data-testid="button-inv-deposit"
               onClick={() => toast({ title: t("common.comingSoon") })}
             >
@@ -591,7 +590,7 @@ export default function StrategyPage() {
               {t("common.cancel")}
             </Button>
             <Button
-              variant="gold"
+              className="bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black"
               onClick={handleConfirmSubscribe}
               disabled={subscribeMutation.isPending}
               data-testid="button-confirm-subscribe"
@@ -687,7 +686,7 @@ export default function StrategyPage() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setDepositOpen(false)} data-testid="button-cancel-deposit">{t("common.cancel")}</Button>
             <Button
-              variant="gold"
+              className="bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black"
               onClick={() => {
                 toast({ title: t("common.comingSoon") });
               }}

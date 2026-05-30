@@ -88,10 +88,6 @@
   --gain: 45 90% 52%;
   --loss: 0 72% 55%;
 
-  /* Canonical gold token — representative value of the scattered
-     rgba(212,168,50,…) usages across the dapp. Converge inline golds to
-     rgba(var(--gold-rgb), …) without changing the look. */
-  --gold-rgb: 212, 168, 50;
   --neon-rgb: 246, 196, 70;
   --neon-glow: 0 0 10px rgba(246, 196, 70, 0.48), 0 0 28px rgba(246, 196, 70, 0.20), 0 0 56px rgba(246, 196, 70, 0.08);
   --neon-glow-sm: 0 0 7px rgba(246, 196, 70, 0.32), 0 0 18px rgba(246, 196, 70, 0.12);
@@ -1109,6 +1105,7 @@
     border-color 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .premium-card:hover {
+  transform: translateY(-2px);
   border-color: hsl(44 96% 60% / 0.62);
   box-shadow:
     inset 0 1px 0 rgba(255,244,212,0.22),
@@ -1117,11 +1114,6 @@
     0 1px 0 rgba(0,0,0,0.30),
     0 16px 36px -12px rgba(0,0,0,0.62),
     0 30px 66px -26px rgba(251,191,36,0.52);
-}
-/* Lift only on real hover devices — avoids the card jumping up on the
-   touch-and-hold "sticky hover" state of phones/tablets. */
-@media (hover: hover) {
-  .premium-card:hover { transform: translateY(-2px); }
 }
 
 .gold-ring {

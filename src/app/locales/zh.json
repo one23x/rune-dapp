@@ -65,7 +65,8 @@
     "select": "选择",
     "copyFailed": "复制失败",
     "copyFailedDesc": "长按链接手动选择复制",
-    "back": "返回"
+    "back": "返回",
+    "retry": "重试"
   },
   "nav": {
     "home": "HALL",
@@ -194,7 +195,8 @@
     "yes": "是",
     "no": "否",
     "loadMore": "加载更多 (剩余 {{remaining}} 个)",
-    "allMarketsShown": "已显示全部 {{count}} 个市场"
+    "allMarketsShown": "已显示全部 {{count}} 个市场",
+    "amountRange": "金额须介于 {{min}} 至 {{max}} USDC"
   },
   "vault": {
     "title": "金库",
@@ -1912,6 +1914,16 @@
     "justNow": "刚刚",
     "minAgo": "{{n}}分钟前",
     "hourAgo": "{{n}}小时前",
-    "dayAgo": "{{n}}天前"
+    "dayAgo": "{{n}}天前",
+    "openCta": "开通交易账户",
+    "opening": "开通中…",
+    "openCtaDesc": "一次性开通交易账户即可一键跟单,约需 10 秒。",
+    "openStep1": "创建引擎签名账户",
+    "openStep2": "确认链上授权",
+    "openStep3": "启用交易",
+    "openErrorTitle": "无法读取账户",
+    "openErrorDesc": "连接引擎失败,请检查网络后重试。",
+    "needOnboard": "请先开通交易账户",
+    "needOnboardDesc": "在上方点击「开通交易账户」后即可一键跟单。"
   }
 }

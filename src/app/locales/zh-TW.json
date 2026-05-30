@@ -192,7 +192,8 @@
     "yes": "是",
     "no": "否",
     "loadMore": "載入更多 (剩餘 {{remaining}} 個)",
-    "allMarketsShown": "已顯示全部 {{count}} 個市場"
+    "allMarketsShown": "已顯示全部 {{count}} 個市場",
+    "amountRange": "金額須介於 {{min}} 至 {{max}} USDC"
   },
   "vault": {
     "title": "金庫",
