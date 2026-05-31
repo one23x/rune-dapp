@@ -44,6 +44,7 @@ const TABS: { id: TabId; labelKey: string }[] = [
 ];
 
 import { EXCHANGES, HEDGE_CONFIG } from "@app/lib/data";
+import { users } from "@app/lib/engine";
 
 export default function StrategyPage() {
   const { t } = useTranslation();
@@ -77,6 +78,15 @@ export default function StrategyPage() {
     queryFn: () => getProfile(walletAddr),
     enabled: !!walletAddr,
   });
+
+  // HL/合约充值地址 = 用户的 engine 托管 EOA(链上 HL 账户 / 签名者),不是连接钱包。
+  // 未开户(404)→ findOrNull 返回 null;此时引导用户先在跟单页开通交易账户。
+  const { data: engineUser } = useQuery({
+    queryKey: ["engine-user", walletAddr],
+    queryFn: () => users.findOrNull(walletAddr),
+    enabled: !!walletAddr,
+  });
+  const hlDepositAddress = (engineUser?.engineEoaAddress as string | undefined) || "";
 
   const { data: subscriptions = [] } = useQuery<(StrategySubscription & { strategyName?: string })[]>({
     queryKey: ["subscriptions", walletAddr],
@@ -639,7 +649,12 @@ export default function StrategyPage() {
               <label className="text-xs text-muted-foreground mb-1.5 block">{t("strategy.depositAddress")}</label>
               <div className="flex items-center gap-2">
                 <Input
-                  value={walletAddr || t("strategy.connectWalletFirstInput")}
+                  value={
+                    hlDepositAddress ||
+                    (!walletAddr
+                      ? t("strategy.connectWalletFirstInput")
+                      : t("strategy.openAccountFirst", "请先在跟单页开通交易账户"))
+                  }
                   readOnly
                   className="text-xs font-mono"
                   data-testid="input-deposit-address"
@@ -648,8 +663,8 @@ export default function StrategyPage() {
                   size="icon"
                   variant="ghost"
                   onClick={() => {
-                    if (!walletAddr) return;
-                    const ok = copyText(walletAddr);
+                    if (!hlDepositAddress) return;
+                    const ok = copyText(hlDepositAddress);
                     toast(
                       ok
                         ? { title: t("common.copied"), description: t("common.copiedDesc") }
