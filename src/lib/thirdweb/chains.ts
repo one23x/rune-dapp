@@ -52,9 +52,46 @@ export const bscTestnetReliable: Chain = defineChain({
   testnet: true,
 });
 
+// ─── 交易链:Polymarket = pUSD@Polygon;Hyperliquid = USDC@Arbitrum(主网) /
+//     Arbitrum Sepolia(测试网 gas)。加进 supportedChains 让钱包能切到这些链充值/提现。
+export const polygon: Chain = defineChain({
+  id: 137,
+  name: "Polygon",
+  rpc: (import.meta.env.VITE_POLYGON_RPC as string | undefined) ?? "https://polygon-rpc.com",
+  nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+  blockExplorers: [{ name: "PolygonScan", url: "https://polygonscan.com", apiUrl: "https://api.polygonscan.com/api" }],
+});
+
+export const arbitrum: Chain = defineChain({
+  id: 42161,
+  name: "Arbitrum One",
+  rpc: (import.meta.env.VITE_ARBITRUM_RPC as string | undefined) ?? "https://arb1.arbitrum.io/rpc",
+  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+  blockExplorers: [{ name: "Arbiscan", url: "https://arbiscan.io", apiUrl: "https://api.arbiscan.io/api" }],
+});
+
+export const arbitrumSepolia: Chain = defineChain({
+  id: 421614,
+  name: "Arbitrum Sepolia",
+  rpc: (import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC as string | undefined) ?? "https://sepolia-rollup.arbitrum.io/rpc",
+  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+  blockExplorers: [{ name: "Arbiscan", url: "https://sepolia.arbiscan.io" }],
+  testnet: true,
+});
+
 export const runeChainKey: RuneChainKey = resolveRuneChainKey();
 
 export const runeChain: Chain = runeChainKey === "bsc_mainnet" ? bscMainnet : bscTestnetReliable;
 
-/** Both BSC chains in a stable order for the ConnectButton `chains` prop. */
-export const supportedChains: Chain[] = [bscMainnet, bscTestnetReliable];
+/**
+ * Chains the ConnectButton offers for switching. BSC (presale/RUNE) + the
+ * trading chains: Polygon (Polymarket pUSD), Arbitrum (HL USDC mainnet),
+ * Arbitrum Sepolia (HL testnet). Active chain still starts at `runeChain`.
+ */
+export const supportedChains: Chain[] = [
+  bscMainnet,
+  bscTestnetReliable,
+  polygon,
+  arbitrum,
+  arbitrumSepolia,
+];
