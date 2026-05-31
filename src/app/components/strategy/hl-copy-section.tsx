@@ -55,14 +55,15 @@ import { useOnboardFlow } from "@app/components/copy-trading/shared";
 // 提现:hyperliquid.withdraw → 引擎签 withdraw3 经官方桥把 USDC 提到指定 Arbitrum 地址。
 // 弹窗用 w-[calc(100vw-2rem)] max-w-sm + footer 在 <sm 纵向堆叠,适配手机端。
 function HlFunding({
-  userId, network, depositAddress, withdrawable,
-}: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number }) {
+  userId, network, depositAddress, withdrawable, connectedWallet,
+}: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number; connectedWallet: string }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [depOpen, setDepOpen] = useState(false);
   const [wdOpen, setWdOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [dest, setDest] = useState("");
+  // 提现默认转到客户连接的钱包(EOA)。仍可改,但默认就是「直接转入连接钱包」。
+  const [dest, setDest] = useState(connectedWallet);
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && (withdrawable <= 0 || amt <= withdrawable);
@@ -129,7 +130,7 @@ function HlFunding({
       </Dialog>
 
       {/* 提现:withdraw3 → Arbitrum */}
-      <Dialog open={wdOpen} onOpenChange={(v) => { if (!v) { setAmount(""); setDest(""); } setWdOpen(v); }}>
+      <Dialog open={wdOpen} onOpenChange={(v) => { if (!v) { setAmount(""); setDest(connectedWallet); } setWdOpen(v); }}>
         <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold flex items-center gap-2">
@@ -148,8 +149,16 @@ function HlFunding({
               <Input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" inputMode="decimal" className="bg-background/50 text-sm" data-testid="input-hl-withdraw-amount" />
             </div>
             <div>
-              <label className="text-[12px] text-muted-foreground mb-1 block">{t("hl.withdrawDest", "目标地址(Arbitrum 0x...)")}</label>
+              <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                <label className="text-[12px] text-muted-foreground">{t("hl.withdrawDest", "提现到(默认你连接的钱包)")}</label>
+                {connectedWallet && dest.trim().toLowerCase() !== connectedWallet.toLowerCase() && (
+                  <button type="button" onClick={() => setDest(connectedWallet)} className="text-[11px] text-amber-300 hover:underline">
+                    {t("hl.useConnectedWallet", "填入连接钱包")}
+                  </button>
+                )}
+              </div>
               <Input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="0x..." className="bg-background/50 text-[12px] font-mono" data-testid="input-hl-withdraw-dest" />
+              <p className="mt-1 text-[11px] text-muted-foreground/70">{t("hl.withdrawToConnectedNote", "USDC 经官方桥提到这个 Arbitrum 地址(默认 = 你连接的钱包)。")}</p>
             </div>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
@@ -720,6 +729,7 @@ export function HlCopySection() {
           network={network}
           depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
           withdrawable={acct?.withdrawable ?? 0}
+          connectedWallet={wallet ?? ""}
         />
       )}
 

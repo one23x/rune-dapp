@@ -7,7 +7,7 @@
  * and the react-query hooks (`@app/lib/engine-hooks`) — no mocked arrays.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
@@ -290,6 +290,7 @@ export function DepositDialog({
 
   const load = useMutation({
     mutationFn: async () => {
+      if (!userId) return; // 账户还在自动开户中 → 等 userId 就绪(下方 effect 会再触发)
       const [addrRes, assetRes] = await Promise.allSettled([
         funding.depositAddresses(userId),
         funding.supportedAssets(),
@@ -325,9 +326,14 @@ export function DepositDialog({
     onError: (e: any) => toast({ title: t("common.error"), description: String(e?.message ?? e), variant: "destructive" }),
   });
 
-  // Lazy-load contents the first time the dialog opens.
+  // 打开 + userId 就绪才加载。userId 可能还在「自动开户」中(undefined),此时不发请求,
+  // 等它就绪由这个 effect 触发 —— 修「开户没好就请求 → 空 → 卡在『暂无充值地址·生成中』」。
+  useEffect(() => {
+    if (open && userId && addresses.length === 0 && !load.isPending) load.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
+
   function handleOpenChange(v: boolean) {
-    if (v && addresses.length === 0 && !load.isPending) load.mutate();
     onOpenChange(v);
   }
 
@@ -352,7 +358,12 @@ export function DepositDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          {load.isPending ? (
+          {!userId ? (
+            <div className="py-6 text-center space-y-2">
+              <Loader2 className="h-5 w-5 text-amber-300 animate-spin mx-auto" />
+              <p className="text-[12px] text-muted-foreground">{t("copyTrading.openingAccount", "正在开通交易账户…")}</p>
+            </div>
+          ) : load.isPending ? (
             <div className="py-6 text-center"><Loader2 className="h-5 w-5 text-amber-300 animate-spin mx-auto" /></div>
           ) : addresses.length > 0 ? (
             <div className="space-y-2">
@@ -370,7 +381,12 @@ export function DepositDialog({
               ))}
             </div>
           ) : (
-            <p className="text-[12px] text-muted-foreground text-center py-4">{t("copyTrading.noDepositAddress")}</p>
+            <div className="py-4 text-center space-y-2">
+              <p className="text-[12px] text-muted-foreground">{t("copyTrading.noDepositAddress")}</p>
+              <Button variant="outline" size="sm" onClick={() => load.mutate()} disabled={load.isPending}>
+                {load.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}{t("common.retry", "重试")}
+              </Button>
+            </div>
           )}
 
           {assets.length > 0 && (
