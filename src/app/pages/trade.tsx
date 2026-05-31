@@ -547,10 +547,10 @@ function BetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border max-w-sm">
+      <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center"
+            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
               style={{ background: "linear-gradient(135deg, hsl(43,74%,58%), hsl(38,70%,46%))" }}>
               <Wallet className="h-4 w-4 text-black" />
             </div>
