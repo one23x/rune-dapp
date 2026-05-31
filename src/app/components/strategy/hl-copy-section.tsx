@@ -18,7 +18,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useActiveAccount } from "thirdweb/react";
+import { useActiveAccount, PayEmbed } from "thirdweb/react";
 import {
   Users, Activity, Layers, History as HistoryIcon, ChevronDown, ChevronRight,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
@@ -40,6 +40,59 @@ import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs,
 } from "@app/lib/engine-hooks";
 import { hyperliquid } from "@app/lib/engine";
+import { thirdwebClient } from "@/lib/thirdweb/client";
+import { arbitrum } from "@/lib/thirdweb/chains";
+
+// HL 交易账户的结算币 = USDC@Arbitrum One。跨链/买币用 PayEmbed 直接送到用户的托管 EOA。
+const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
+
+// HL 跨链/买币直充(thirdweb PayEmbed)—— 和 pUSD 同源,只是目标链/币换成 Arbitrum/USDC,
+// 收款地址 = 用户的托管 EOA(HL 签名者/账户),即「跨链转入 EOA」。仅主网;测试网走水龙头。
+function HlDepositBridge({ depositAddress, network }: { depositAddress: string; network: HlNetwork }) {
+  const { t } = useTranslation();
+  const [amount, setAmount] = useState("");
+  const [go, setGo] = useState(false);
+  const amt = Number(amount);
+  if (network === "testnet") {
+    return (
+      <div className="border-t border-border/40 pt-3">
+        <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+          {t("hl.testnetFaucetNote", "测试网:从 Hyperliquid 测试网水龙头领测试 USDC,或把测试 USDC 充到上面的托管地址。跨链买币仅主网可用。")}
+        </p>
+      </div>
+    );
+  }
+  if (!depositAddress) return null;
+  return (
+    <div className="border-t border-border/40 pt-3 space-y-2">
+      <label className="text-[12px] text-muted-foreground block">
+        {t("hl.bridgeFundLabel", "用卡 / 跨链买 USDC 直充到托管账户(Arbitrum)")}
+      </label>
+      {!go || !(amt > 0) ? (
+        <div className="flex items-center gap-2">
+          <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="USDC" className="text-xs" />
+          <Button size="sm" disabled={!(amt > 0)} onClick={() => setGo(true)}>{t("common.next", "下一步")}</Button>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl">
+          <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setGo(false)}>← {t("common.back", "改数量")}</button>
+          <PayEmbed
+            client={thirdwebClient}
+            payOptions={{
+              mode: "direct_payment",
+              paymentInfo: {
+                chain: arbitrum,
+                sellerAddress: depositAddress as `0x${string}`,
+                token: { address: USDC_ARBITRUM },
+                amount: String(amt),
+              },
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
 import {
   NetworkToggle, HlEmpty, useHlCopy, groupByTier, HL_TIERS, TIER_META,
@@ -122,6 +175,8 @@ function HlFunding({
             <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
               {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在策略包一键跟单。提现请用本页「提现」。")}
             </p>
+            {/* 跨链/买币直充到托管 EOA(和 pUSD 同源,目标链/币 = Arbitrum/USDC) */}
+            <HlDepositBridge depositAddress={depositAddress} network={network} />
           </div>
           <DialogFooter>
             <Button variant="gold" className="w-full" onClick={() => setDepOpen(false)}>{t("common.done", "完成")}</Button>
