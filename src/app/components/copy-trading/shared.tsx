@@ -22,10 +22,16 @@ import { copyText } from "@app/lib/copy";
 import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
 import { funding, users } from "@app/lib/engine";
+import { useActiveAccount, PayEmbed } from "thirdweb/react";
+import { thirdwebClient } from "@/lib/thirdweb/client";
+import { polygon } from "@/lib/thirdweb/chains";
 import {
   LayoutDashboard, Zap, Activity, Layers, TrendingUp, History as HistoryIcon,
   Wallet, Copy, CheckCircle2, Circle, Loader2, ArrowDownToLine, ArrowUpFromLine, AlertTriangle,
 } from "lucide-react";
+
+// Polymarket pUSD @ Polygon — 跨链/买币直充入金的目标代币(无 AA:连接钱包=交易钱包)。
+const PUSD_POLYGON = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB" as `0x${string}`;
 
 // ─── Loose-shape normalizers ─────────────────────────────────────────────────
 // Engine list endpoints return either `{ data: [...] }` or a bare array; some
@@ -377,6 +383,8 @@ export function DepositDialog({
               </div>
             </div>
           )}
+
+          <DepositBridge />
         </div>
 
         <DialogFooter>
@@ -384,6 +392,58 @@ export function DepositDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── 跨链 / 买币直充(thirdweb PayEmbed)──────────────────────────────────────
+// 无 AA:连接钱包 = Polymarket 交易钱包,故 sellerAddress = 连接钱包(资金只会进用户
+// 自己的钱包,无错址风险)。买 pUSD@Polygon 直接到钱包,补足 demo-rune 的「跨链/Swap」方式。
+function DepositBridge() {
+  const { t } = useTranslation();
+  const account = useActiveAccount();
+  const [amount, setAmount] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const amt = Number(amount);
+  if (!account) return null;
+  return (
+    <div className="border-t border-border/40 pt-3 space-y-2">
+      <label className="text-[12px] text-muted-foreground block">
+        {t("copyTrading.bridgeFundLabel", "用卡 / 跨链买 pUSD 直充到钱包")}
+      </label>
+      {!confirmed || !(amt > 0) ? (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="pUSD"
+            className="text-xs"
+          />
+          <Button size="sm" disabled={!(amt > 0)} onClick={() => setConfirmed(true)}>
+            {t("common.next", "下一步")}
+          </Button>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl">
+          <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setConfirmed(false)}>
+            ← {t("common.back", "改数量")}
+          </button>
+          <PayEmbed
+            client={thirdwebClient}
+            payOptions={{
+              mode: "direct_payment",
+              paymentInfo: {
+                chain: polygon,
+                sellerAddress: account.address as `0x${string}`,
+                token: { address: PUSD_POLYGON },
+                amount: String(amt),
+              },
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
