@@ -289,11 +289,25 @@ export function DepositDialog({
         funding.supportedAssets(),
       ]);
       if (addrRes.status === "fulfilled") {
-        const rows = asArray(addrRes.value);
-        setAddresses(rows.map((r: any) => ({
-          chain: String(r?.chain ?? r?.network ?? r?.chainId ?? ""),
-          address: String(r?.address ?? r?.depositAddress ?? r ?? ""),
-        })).filter((r) => r.address));
+        // 引擎返回 { address: { evm, svm, tron, btc }, note } —— 按链 key 展开。
+        // 旧逻辑 asArray→String(r.address) 把 address 对象渲染成 "[object Object]" → 弹窗显示不出地址。
+        // 兼容旧的数组形态 [{chain,address}]。
+        const val: any = addrRes.value;
+        const addrObj = val?.address ?? val;
+        let rows: { chain: string; address: string }[] = [];
+        if (addrObj && typeof addrObj === "object" && !Array.isArray(addrObj)) {
+          rows = Object.entries(addrObj)
+            .filter(([, a]) => typeof a === "string" && (a as string).length > 0)
+            .map(([chain, a]) => ({ chain: chain.toUpperCase(), address: String(a) }));
+        } else {
+          rows = asArray(addrObj)
+            .map((r: any) => ({
+              chain: String(r?.chain ?? r?.network ?? r?.chainId ?? ""),
+              address: String(r?.address ?? r?.depositAddress ?? r ?? ""),
+            }))
+            .filter((r) => r.address);
+        }
+        setAddresses(rows);
       }
       if (assetRes.status === "fulfilled") {
         setAssets(asArray(assetRes.value).map((a: any) => String(a?.symbol ?? a?.asset ?? a)).filter(Boolean));
