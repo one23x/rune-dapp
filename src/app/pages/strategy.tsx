@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "@app/lib/copy";
+import { useEngineUser } from "@app/lib/engine-hooks";
 import { useDailyPnl } from "@app/lib/ai-bot-feed";
 import { getCalendarDays as getCalendarDaysReal } from "@app/components/strategy/strategy-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +45,6 @@ const TABS: { id: TabId; labelKey: string }[] = [
 ];
 
 import { EXCHANGES, HEDGE_CONFIG } from "@app/lib/data";
-import { users } from "@app/lib/engine";
 
 export default function StrategyPage() {
   const { t } = useTranslation();
@@ -80,13 +80,10 @@ export default function StrategyPage() {
   });
 
   // HL/合约充值地址 = 用户的 engine 托管 EOA(链上 HL 账户 / 签名者),不是连接钱包。
-  // 未开户(404)→ findOrNull 返回 null;此时引导用户先在跟单页开通交易账户。
-  const { data: engineUser } = useQuery({
-    queryKey: ["engine-user", walletAddr],
-    queryFn: () => users.findOrNull(walletAddr),
-    enabled: !!walletAddr,
-  });
-  const hlDepositAddress = (engineUser?.engineEoaAddress as string | undefined) || "";
+  // useEngineUser 现在对未开户钱包**自动开户(幂等)**,保证连接后 EOA/充值地址恒存在并直接显示
+  // (修"充值地址生成不出来")。
+  const { data: engineUser } = useEngineUser(walletAddr);
+  const hlDepositAddress = ((engineUser as { engineEoaAddress?: string } | undefined)?.engineEoaAddress) || "";
 
   const { data: subscriptions = [] } = useQuery<(StrategySubscription & { strategyName?: string })[]>({
     queryKey: ["subscriptions", walletAddr],

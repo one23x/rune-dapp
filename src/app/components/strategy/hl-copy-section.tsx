@@ -22,22 +22,153 @@ import { useActiveAccount } from "thirdweb/react";
 import {
   Users, Activity, Layers, History as HistoryIcon, ChevronDown, ChevronRight,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
-  Loader2, Circle, AlertTriangle, RefreshCw,
+  Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { PremiumCard } from "@app/components/premium-card";
 import { cn } from "@app/lib/utils";
+import { copyText } from "@app/lib/copy";
+import { queryClient } from "@app/lib/queryClient";
+import { useToast } from "@app/hooks/use-toast";
 import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs,
 } from "@app/lib/engine-hooks";
+import { hyperliquid } from "@app/lib/engine";
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
 import {
   NetworkToggle, HlEmpty, useHlCopy, groupByTier, HL_TIERS, TIER_META,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
 } from "@app/components/hl/shared";
 import { useOnboardFlow } from "@app/components/copy-trading/shared";
+
+// ── HL 充值 / 提现(响应式)──────────────────────────────────────────────────
+//
+// 充值:展示用户的引擎托管 EOA(= HL 签名者/账户),用户从 Arbitrum 把 USDC 充进去;
+//       测试网用 HL 测试网水龙头/桥。地址来自 engineUser.engineEoaAddress —— 未开户时为空,
+//       由 HlAccountStrip 的「开通账户」先把它创建出来(解决"充值地址生成不出来")。
+// 提现:hyperliquid.withdraw → 引擎签 withdraw3 经官方桥把 USDC 提到指定 Arbitrum 地址。
+// 弹窗用 w-[calc(100vw-2rem)] max-w-sm + footer 在 <sm 纵向堆叠,适配手机端。
+function HlFunding({
+  userId, network, depositAddress, withdrawable,
+}: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [depOpen, setDepOpen] = useState(false);
+  const [wdOpen, setWdOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [dest, setDest] = useState("");
+
+  const amt = Number(amount);
+  const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && (withdrawable <= 0 || amt <= withdrawable);
+  const destValid = /^0x[a-fA-F0-9]{40}$/.test(dest.trim());
+
+  const withdraw = useMutation({
+    mutationFn: async () => hyperliquid.withdraw(userId, { amountUsd: amt, destination: dest.trim(), network }),
+    onSuccess: () => {
+      toast({ title: t("hl.withdrawSuccess", "提现已提交"), description: t("hl.withdrawSuccessDesc", "USDC 将经官方桥到达目标 Arbitrum 地址(约几分钟,含 ~$1 桥费)。") });
+      queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
+      setAmount(""); setDest(""); setWdOpen(false);
+    },
+    onError: (e: unknown) => toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" }),
+  });
+
+  function copyAddr() {
+    if (!depositAddress) return;
+    const ok = copyText(depositAddress);
+    toast(ok ? { title: t("common.copied", "已复制") } : { title: t("common.copyFailed", "复制失败"), variant: "destructive" });
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="h-9 text-[13px] border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10" onClick={() => setDepOpen(true)} data-testid="button-hl-deposit">
+          <ArrowDownToLine className="h-4 w-4 mr-1.5" />{t("hl.deposit", "充值")}
+        </Button>
+        <Button variant="outline" className="h-9 text-[13px] border-amber-500/30 text-amber-300 hover:bg-amber-500/10" onClick={() => setWdOpen(true)} data-testid="button-hl-withdraw">
+          <ArrowUpFromLine className="h-4 w-4 mr-1.5" />{t("hl.withdraw", "提现")}
+        </Button>
+      </div>
+
+      {/* 充值:展示托管 EOA 地址 */}
+      <Dialog open={depOpen} onOpenChange={setDepOpen}>
+        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <ArrowDownToLine className="h-4 w-4 text-emerald-300" />{t("hl.depositTitle", "充值到 HL 交易账户")}
+            </DialogTitle>
+            <DialogDescription className="text-[12px] leading-relaxed">
+              {network === "testnet"
+                ? t("hl.depositDescTestnet", "测试网:用 Hyperliquid 测试网水龙头/桥把测试 USDC 充到下面这个托管地址。")
+                : t("hl.depositDescMainnet", "主网:从 Arbitrum 把 USDC 充到下面这个托管地址,引擎用它在 HL 下单。")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[12px] text-muted-foreground mb-1 block">{t("hl.depositAddress", "充值地址(托管 EOA)")}</label>
+              <div className="flex items-center gap-2">
+                <Input value={depositAddress || t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")} readOnly className="bg-background/50 text-[12px] font-mono" data-testid="input-hl-deposit-address" />
+                <Button size="icon" variant="ghost" className="shrink-0" onClick={copyAddr} disabled={!depositAddress}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在策略包一键跟单。提现请用本页「提现」。")}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="gold" className="w-full" onClick={() => setDepOpen(false)}>{t("common.done", "完成")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 提现:withdraw3 → Arbitrum */}
+      <Dialog open={wdOpen} onOpenChange={(v) => { if (!v) { setAmount(""); setDest(""); } setWdOpen(v); }}>
+        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <ArrowUpFromLine className="h-4 w-4 text-amber-300" />{t("hl.withdrawTitle", "从 HL 提现")}
+            </DialogTitle>
+            <DialogDescription className="text-[12px] leading-relaxed">
+              {t("hl.withdrawDesc", "经 Hyperliquid 官方桥把 USDC 提到指定 Arbitrum 地址(含 ~$1 桥费,占用保证金的部分需先平仓)。")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                <label className="text-[12px] text-muted-foreground">{t("hl.withdrawAmount", "提现金额(USDC)")}</label>
+                <span className="text-[11px] text-foreground/50">{t("hl.withdrawable", "可提")}: {fmtUsd(withdrawable)}</span>
+              </div>
+              <Input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" inputMode="decimal" className="bg-background/50 text-sm" data-testid="input-hl-withdraw-amount" />
+            </div>
+            <div>
+              <label className="text-[12px] text-muted-foreground mb-1 block">{t("hl.withdrawDest", "目标地址(Arbitrum 0x...)")}</label>
+              <Input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="0x..." className="bg-background/50 text-[12px] font-mono" data-testid="input-hl-withdraw-dest" />
+            </div>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setWdOpen(false)}>{t("common.cancel", "取消")}</Button>
+            <Button
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+              disabled={!amountValid || !destValid || withdraw.isPending}
+              onClick={() => withdraw.mutate()}
+              data-testid="button-hl-withdraw-confirm"
+            >
+              {withdraw.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ArrowUpFromLine className="h-4 w-4 mr-1.5" />}
+              {t("hl.withdrawConfirm", "确认提现")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 // ── 开户 / enable strip — HL account onboarding state ────────────────────────
 //
@@ -579,6 +710,17 @@ export function HlCopySection() {
             <StatTile label={t("hl.follows")} value={String(subscribedLeaders.size)} accent="#60a5fa" />
           </div>
         )
+      )}
+
+      {/* 充值 / 提现 —— 账户已开通(userId 解析出来)时显示;地址 = 引擎托管 EOA。
+          未开通则上方 HlAccountStrip 显示「开通账户」,开通后地址即出现(修"充值地址生成不出来")。 */}
+      {userId && (
+        <HlFunding
+          userId={userId}
+          network={network}
+          depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
+          withdrawable={acct?.withdrawable ?? 0}
+        />
       )}
 
       <ActiveSubs userId={userId} />

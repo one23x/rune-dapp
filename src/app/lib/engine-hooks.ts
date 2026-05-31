@@ -20,12 +20,27 @@ import {
   type HlNetwork,
 } from "@app/lib/engine";
 
-/** Resolve the Engine user for a connected smart wallet (null = not onboarded). */
+/**
+ * Resolve the Engine user for a connected wallet — **auto-onboard on first sight**.
+ *
+ * 之前:findOrNull 对未开户钱包返回 null → userId/engineEoaAddress 都拿不到 →
+ *   充值弹窗地址空白、跟单/持仓页空白("充值地址生成不出来")。
+ * 现在:未开户(null)就自动开户(每个连接的钱包 = 一个交易子账户;onboard 在引擎侧
+ *   是幂等 find-or-create),保证 userId + 托管 EOA + 充值地址**恒存在**,地址直接显示给客户。
+ * onboard 响应是 { userId, engineEoaAddress, ... }(没有 id)→ 归一成带 `id` 的用户对象,
+ * 让所有读 `data.id` 的调用方继续可用。
+ */
 export function useEngineUser(wallet: string | undefined) {
   return useQuery({
     queryKey: ["engine", "user", wallet?.toLowerCase()],
-    queryFn: () => users.findOrNull(wallet!),
+    queryFn: async () => {
+      const existing = await users.findOrNull(wallet!);
+      if (existing) return existing;
+      const onboarded = (await users.onboard(wallet!)) as Record<string, unknown>;
+      return { ...onboarded, id: onboarded.id ?? onboarded.userId };
+    },
     enabled: !!wallet,
+    retry: false,
   });
 }
 
