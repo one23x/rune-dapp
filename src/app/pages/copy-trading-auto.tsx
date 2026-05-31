@@ -20,7 +20,7 @@ import { cn } from "@app/lib/utils";
 import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
 import { useEngineUser, useCopySubs } from "@app/lib/engine-hooks";
-import { recommendations, copySubscriptions } from "@app/lib/engine";
+import { recommendations, copySubscriptions, signals } from "@app/lib/engine";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { CopyGate, SectionEmpty, asArray } from "@app/components/copy-trading/shared";
 
@@ -62,8 +62,22 @@ function AutoCopyInner({ userId }: { userId: string }) {
       try {
         return await recommendations.onboardPreset(userId, body);
       } catch {
-        // Fallback: create a copy subscription directly from the preset.
-        return await copySubscriptions.create(userId, { preset: presetId, riskPreset: presetKey, autoCopy: true });
+        // Fallback: 后端 copy-subscriptions 是 leader-wallet 订阅(必须带 leaderWallet),
+        // 没有 preset 字段 → 之前直接传 preset 报 400。这里解析顶部 leader 钱包再订阅,
+        // 风险档映射到额度(后端其余字段有默认)。
+        const top = asArray(await signals.leadersTop("7d").catch(() => null));
+        const topWallet = top
+          .map((r: any) => r?.wallet ?? r?.proxyWallet ?? r?.address)
+          .find((w: any) => typeof w === "string" && w.startsWith("0x"));
+        if (!topWallet) {
+          throw new Error(t("copyTrading.noLeaderForPreset", "暂无可跟的 Leader,请稍后再试或手动选择"));
+        }
+        const caps = presetKey.includes("aggress")
+          ? { notionalRatio: 0.1, notionalCapUsd: 200 }
+          : presetKey.includes("steady") || presetKey.includes("conserv")
+            ? { notionalRatio: 0.03, notionalCapUsd: 50 }
+            : { notionalRatio: 0.05, notionalCapUsd: 100 };
+        return await copySubscriptions.create(userId, { leaderWallet: topWallet, ...caps, status: "active" });
       }
     },
     onSuccess: () => {
