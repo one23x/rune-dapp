@@ -103,6 +103,7 @@ function HlDepositBridge({ seller }: { seller: string }) {
           <div className="-mx-2 overflow-x-auto">
             <PayEmbed
               client={thirdwebClient}
+              className="tw-pay-embed-fit"
               style={{ width: "100%" }}
               payOptions={{
                 mode: "direct_payment",

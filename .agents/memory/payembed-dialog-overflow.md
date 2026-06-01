@@ -23,6 +23,11 @@ embed, before the wrapper.
 3. Force the embed to its container: PayEmbed forwards `style`/`className` straight
    onto EmbedContainer, so pass `style={{ width: "100%" }}` (inline beats the
    emotion `width:400px`; `maxWidth:100%` then caps it to the container).
+4. Belt-and-suspenders global rule (src/index.css) applied via
+   `className="tw-pay-embed-fit"`: `width/min-width/max-width` forced to fit AND
+   `overflow: visible !important` so EmbedContainer's own `overflow:hidden` can't
+   hard-clip internal content — any residual width then scrolls in the `-mx-2
+   overflow-x-auto` wrapper instead of being cut. Needed for ≤320px phones.
 
 **Why:** Giving the embed ~370px (vs ~310) plus forcing `width:100%` lets
 thirdweb's responsive compact layout fit without internal clipping.

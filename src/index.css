@@ -556,3 +556,15 @@
   100% { transform: translateX(400%); }
 }
 .animate-bar-sweep { animation: bar-sweep 2.2s ease-in-out infinite; }
+
+/* thirdweb PayEmbed fit — the embed renders ~400px wide and clips its own
+   internal "Choose Payment Method" content with overflow:hidden, overflowing
+   narrow deposit dialogs on mobile. Force it to its container and let any
+   residual width scroll (via the -mx-2 overflow-x-auto wrapper) instead of
+   being hard-clipped. See .agents/memory/payembed-dialog-overflow.md */
+.tw-pay-embed-fit {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
