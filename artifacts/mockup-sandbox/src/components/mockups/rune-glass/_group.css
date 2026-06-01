@@ -16,10 +16,13 @@
     inset 0 1px 0 rgba(255, 244, 214, 0.26),
     inset 0 0 0 1px rgba(246, 209, 138, 0.06);
 
-  /* Antique, muted orbs — deep, restrained black-gold glow, not a bright wash */
-  --orb-1: #543708; /* Aged amber, dimmed */
-  --orb-2: #281a05; /* Deep bronze */
-  --orb-3: #6b4e14; /* Antique gold */
+  /* Antique, muted orbs — balanced top-to-bottom so the page reads evenly,
+     not black-on-top / gold-on-bottom. Tones compensate for each orb's inline
+     blur/opacity: dimmer (more-blurred) orb gets a brighter tone, the punchy
+     low-blur orb gets a darker tone. */
+  --orb-1: #463009; /* top-left  — medium */
+  --orb-2: #5a3f0e; /* top-right — brightest (offsets its heavy blur/low opacity) */
+  --orb-3: #2c1e06; /* bottom    — darkest (offsets its low blur / high punch) */
 
   /* Metallic champagne gold for accents/headings */
   --gold-bright: #f6d18a;
