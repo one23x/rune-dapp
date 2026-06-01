@@ -29,19 +29,18 @@ import {
 import type { Strategy, StrategySubscription, Profile, HedgePosition, InsurancePurchase } from "@app-shared/types";
 import { StrategyHeader } from "@app/components/strategy/strategy-header";
 import { AiLab } from "@app/components/strategy/ai-lab";
-import { SmartPredictionHero } from "@app/components/strategy/smart-prediction-hero";
 import { TradingVaultBanner } from "@app/components/strategy/trading-vault-banner";
 import { HlCopySection } from "@app/components/strategy/hl-copy-section";
 // "strategies" now hosts the Hyperliquid copy-trading product (risk-tier
 // one-click-follow leaders + HL 开户 + 持仓/历史) — Strategy = Hyperliquid.
-// "ailab" keeps the AI model lab + signals; "prediction" hosts the Polymarket
-// smart-prediction hero.
+// "ailab" keeps the AI model lab + signals; the third tab now hosts the
+// Trading Vault introduction (TradingVaultBanner).
 type TabId = "strategies" | "ailab" | "prediction";
 
 const TABS: { id: TabId; labelKey: string }[] = [
   { id: "strategies", labelKey: "hl.navTitle" },
   { id: "ailab", labelKey: "strategy.aiLab" },
-  { id: "prediction", labelKey: "strategy.smartPredictionTab" },
+  { id: "prediction", labelKey: "strategy.vaultIntroTab" },
 ];
 
 import { EXCHANGES, HEDGE_CONFIG } from "@app/lib/data";
@@ -193,8 +192,6 @@ export default function StrategyPage() {
     <div className="space-y-4 pb-24 lg:pb-8 lg:px-6 lg:pt-4" data-testid="page-strategy">
       <StrategyHeader />
 
-      <TradingVaultBanner />
-
       <div className="px-4 space-y-3">
         <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1" data-testid="strategy-tabs">
           {TABS.map((tab) => {
@@ -227,7 +224,7 @@ export default function StrategyPage() {
         )}
 
         {activeTab === "prediction" && (
-          <SmartPredictionHero />
+          <TradingVaultBanner />
         )}
 
       </div>

@@ -859,6 +859,7 @@
     "receiveSignalsAndPnl": "接收交易信号和盈亏动态",
     "aiLab": "AI 实验室",
     "smartPredictionTab": "智能预测",
+    "vaultIntroTab": "金库",
     "smartPrediction": {
       "title": "RUNE 智能预测",
       "subtitle": "AI 驱动的 Polymarket 跟单系统",
@@ -896,6 +897,7 @@
     "banner": {
       "title": "总管理金库",
       "subtitle": "AI 量化交易池 · 入金 45%",
+      "intro": "交易金库由 AI 量化引擎全天候管理:总入金的 45% 自动注入金库,链上执行策略并按日结算盈亏。以下为金库的实时表现。",
       "live": "实时运行",
       "monthlyReturn": "月化收益率",
       "monthlyReturnSub": "动态浮动",

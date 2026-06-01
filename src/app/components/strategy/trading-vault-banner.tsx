@@ -117,7 +117,7 @@ export function TradingVaultBanner() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="relative mx-4 lg:mx-0 rounded-3xl overflow-hidden border-2 border-amber-500/40"
+      className="relative rounded-3xl overflow-hidden border-2 border-amber-500/40"
       style={{
         background: "linear-gradient(140deg, rgba(40,30,8,0.95) 0%, rgba(26,19,7,0.93) 40%, rgba(30,21,7,0.85) 70%, rgba(10,8,4,0.98) 100%)",
         boxShadow:
@@ -205,6 +205,11 @@ export function TradingVaultBanner() {
             </span>
           </div>
         </div>
+
+        {/* Intro — what the trading vault is */}
+        <p className="text-[12px] leading-relaxed text-amber-100/80">
+          {t("strategy.banner.intro")}
+        </p>
 
         {/* KPI grid — taller, glow accent on the hero tile (the headline number) */}
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">

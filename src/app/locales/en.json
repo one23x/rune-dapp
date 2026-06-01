@@ -859,6 +859,7 @@
     "receiveSignalsAndPnl": "Receive trading signals and P&L updates",
     "aiLab": "AI Lab",
     "smartPredictionTab": "Prediction",
+    "vaultIntroTab": "Vault",
     "smartPrediction": {
       "title": "RUNE Smart Prediction",
       "subtitle": "AI-driven Polymarket copy-trading",
@@ -896,6 +897,7 @@
     "banner": {
       "title": "Total Management Vault",
       "subtitle": "AI Quant Trading Pool · 45% of Deposits",
+      "intro": "The trading vault is managed around the clock by the AI quant engine: 45% of total deposits flows into the vault, strategies execute on-chain, and PnL settles daily. Below is the vault's live performance.",
       "live": "Live",
       "monthlyReturn": "Monthly Return",
       "monthlyReturnSub": "Floating",
