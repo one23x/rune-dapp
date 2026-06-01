@@ -1,12 +1,12 @@
 /**
- * Smart Copy-Trading — Strategy & Tiers (策略跟单), at /copy-trading/auto.
+ * Smart Copy-Trading — Strategy (策略跟单), at /copy-trading/auto.
  *
- * Real-data flow: pick an L1–L5 strategy tier → its system params auto-fill
- * (risk preset, notional ratio, per-trade & monthly caps) → ONE click activates
- * copy-trading via the engine (recommendations.onboardPreset → copySubscriptions
- * fallback). Active subscriptions are listed with a stop control. Secondary
- * content (advanced config, tier comparison) lives in dialogs — not tiled down
- * the page. No mock data: status/stats are derived from real orders & subs.
+ * Real-data flow: pick a risk strategy (conservative / balanced / aggressive) →
+ * its system params auto-fill (notional ratio, per-trade cap) → ONE click
+ * activates copy-trading via the engine (recommendations.onboardPreset →
+ * copySubscriptions fallback). Active subscriptions are listed with a stop
+ * control. No membership/credit tiers, no daily/monthly spend limits, no
+ * confidence threshold. No mock data: status/stats derive from real orders & subs.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,14 +14,11 @@ import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Zap, Check, Loader2, Sliders, Settings, BarChart3, ToggleLeft, ToggleRight, Activity,
+  Zap, Check, Loader2, Sliders, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
 import { cn } from "@app/lib/utils";
 import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
@@ -30,42 +27,56 @@ import { recommendations, copySubscriptions, signals } from "@app/lib/engine";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { CopyGate, asArray, normalizeOrder, fmtUsd } from "@app/components/copy-trading/shared";
 
-// ─── Tier definitions (each carries the real system params it applies) ────────
+// ─── Strategy definitions (each carries the real system params it applies) ────
 
-interface TierDef {
-  key: string;
-  preset: "conservative" | "balanced" | "aggressive";
-  riskLabel: string;
-  dailyLimit: string;
-  monthLimit: string;
+interface StrategyDef {
+  key: "conservative" | "balanced" | "aggressive";
+  labelKey: string;
+  labelFallback: string;
+  descKey: string;
+  descFallback: string;
   notionalRatio: number;   // fraction of leader notional copied
   notionalCapUsd: number;  // per-trade cap
-  color: string;
   accent: string;
   glow: string;
 }
 
-const TIERS: TierDef[] = [
-  { key: "L1", preset: "conservative", riskLabel: "保守", dailyLimit: "$100",   monthLimit: "$2,000",   notionalRatio: 0.03, notionalCapUsd: 50,   color: "text-zinc-300",   accent: "rgba(161,161,170,0.5)", glow: "" },
-  { key: "L2", preset: "balanced",     riskLabel: "均衡", dailyLimit: "$200",   monthLimit: "$5,000",   notionalRatio: 0.05, notionalCapUsd: 100,  color: "text-indigo-300", accent: "rgba(99,102,241,0.45)", glow: "rgba(99,102,241,0.15)" },
-  { key: "L3", preset: "aggressive",   riskLabel: "进取", dailyLimit: "$500",   monthLimit: "$10,000",  notionalRatio: 0.08, notionalCapUsd: 200,  color: "text-amber-300",  accent: "rgba(245,158,11,0.5)",  glow: "rgba(245,158,11,0.12)" },
-  { key: "L4", preset: "aggressive",   riskLabel: "高阶", dailyLimit: "$1,000", monthLimit: "$100,000", notionalRatio: 0.10, notionalCapUsd: 500,  color: "text-orange-300", accent: "rgba(249,115,22,0.5)",  glow: "" },
-  { key: "L5", preset: "aggressive",   riskLabel: "机构", dailyLimit: "$2,000", monthLimit: "$200,000", notionalRatio: 0.12, notionalCapUsd: 1000, color: "text-red-300",    accent: "rgba(239,68,68,0.5)",   glow: "" },
+const STRATEGIES: StrategyDef[] = [
+  {
+    key: "conservative",
+    labelKey: "copyTrading.presetConservative", labelFallback: "保守",
+    descKey: "copyTrading.presetConservativeDesc", descFallback: "小仓位、仅高共识，资金保全优先。",
+    notionalRatio: 0.03, notionalCapUsd: 50,
+    accent: "rgba(161,161,170,0.5)", glow: "",
+  },
+  {
+    key: "balanced",
+    labelKey: "copyTrading.presetBalanced", labelFallback: "稳健",
+    descKey: "copyTrading.presetBalancedDesc", descFallback: "中等仓位，均衡信号门槛。",
+    notionalRatio: 0.05, notionalCapUsd: 100,
+    accent: "rgba(99,102,241,0.45)", glow: "rgba(99,102,241,0.15)",
+  },
+  {
+    key: "aggressive",
+    labelKey: "copyTrading.presetAggressive", labelFallback: "激进",
+    descKey: "copyTrading.presetAggressiveDesc", descFallback: "更大仓位、更多信号、更高波动。",
+    notionalRatio: 0.08, notionalCapUsd: 200,
+    accent: "rgba(245,158,11,0.5)", glow: "rgba(245,158,11,0.12)",
+  },
 ];
 
-const PRESET_TO_TIER: Record<string, string> = { conservative: "L1", balanced: "L2", aggressive: "L3" };
-
-function deriveActiveTier(subs: any[]): string | null {
+function deriveActiveStrategy(subs: any[]): StrategyDef["key"] | null {
   for (const s of subs) {
     const status = String(s?.status ?? "active").toLowerCase();
     if (status !== "active" && status !== "running") continue;
     const cap = Number(s?.notionalCapUsd ?? s?.notionalCap ?? 0);
     if (cap > 0) {
-      const byCap = TIERS.find((t) => t.notionalCapUsd === cap);
+      const byCap = STRATEGIES.find((t) => t.notionalCapUsd === cap);
       if (byCap) return byCap.key;
     }
     const preset = String(s?.riskPreset ?? s?.preset ?? "").toLowerCase();
-    for (const k of Object.keys(PRESET_TO_TIER)) if (preset.includes(k)) return PRESET_TO_TIER[k];
+    const byPreset = STRATEGIES.find((t) => preset.includes(t.key));
+    if (byPreset) return byPreset.key;
   }
   return null;
 }
@@ -87,7 +98,7 @@ function AutoCopyInner({ userId }: { userId: string }) {
   const ordersQ = useOrders(userId);
   const orders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
 
-  const activeTierKey = useMemo(() => deriveActiveTier(subs), [subs]);
+  const activeKey = useMemo(() => deriveActiveStrategy(subs), [subs]);
   const activeSubs = subs.filter((s: any) => {
     const st = String(s?.status ?? "active").toLowerCase();
     return st === "active" || st === "running";
@@ -102,39 +113,32 @@ function AutoCopyInner({ userId }: { userId: string }) {
   const realizedPnl = orders.filter((o) => o.pnl != null).reduce((s, o) => s + (o.pnl ?? 0), 0);
   const isRunning = activeSubs.length > 0;
 
-  // Selection — defaults to the active tier once it resolves, until the user picks.
-  const [selectedTier, setSelectedTier] = useState<string>("L2");
+  // Selection — defaults to the active strategy once it resolves, until the user picks.
+  const [selectedKey, setSelectedKey] = useState<StrategyDef["key"]>("balanced");
   const [touched, setTouched] = useState(false);
   useEffect(() => {
-    if (activeTierKey && !touched) setSelectedTier(activeTierKey);
-  }, [activeTierKey, touched]);
+    if (activeKey && !touched) setSelectedKey(activeKey);
+  }, [activeKey, touched]);
 
   const [autoCopy, setAutoCopy] = useState(true);
-  const [aiFilter, setAiFilter] = useState(true);
-  const [minConfidence, setMinConfidence] = useState(70);
-  const [configOpen, setConfigOpen] = useState(false);
-  const [compareOpen, setCompareOpen] = useState(false);
 
-  const selDef = TIERS.find((t) => t.key === selectedTier) ?? TIERS[1];
-  const isActiveSelected = selectedTier === activeTierKey;
+  const selDef = STRATEGIES.find((t) => t.key === selectedKey) ?? STRATEGIES[1];
+  const isActiveSelected = selectedKey === activeKey;
 
   const activate = useMutation({
-    mutationFn: async (tierKey: string) => {
-      const tier = TIERS.find((t) => t.key === tierKey)!;
-      const presetKey = tier.preset;
+    mutationFn: async (key: StrategyDef["key"]) => {
+      const strat = STRATEGIES.find((t) => t.key === key)!;
       const match = enginePresets.find((p: any) => {
         const id = String(p?.id ?? p?.key ?? p?.preset ?? p?.name ?? "").toLowerCase();
-        return id.includes(presetKey);
+        return id.includes(strat.key);
       });
-      const presetId = String((match as any)?.id ?? (match as any)?.key ?? presetKey);
+      const presetId = String((match as any)?.id ?? (match as any)?.key ?? strat.key);
       const body = {
         preset: presetId,
-        riskPreset: presetKey,
-        notionalRatio: tier.notionalRatio,
-        notionalCapUsd: tier.notionalCapUsd,
+        riskPreset: strat.key,
+        notionalRatio: strat.notionalRatio,
+        notionalCapUsd: strat.notionalCapUsd,
         autoExecute: autoCopy,
-        aiFilter,
-        minConfidence: minConfidence / 100,
       };
       try {
         return await recommendations.onboardPreset(userId, body);
@@ -146,8 +150,8 @@ function AutoCopyInner({ userId }: { userId: string }) {
         if (!topWallet) throw new Error(t("copyTrading.noLeaderForPreset", "暂无可跟的 Leader，请稍后再试"));
         return await copySubscriptions.create(userId, {
           leaderWallet: topWallet,
-          notionalRatio: tier.notionalRatio,
-          notionalCapUsd: tier.notionalCapUsd,
+          notionalRatio: strat.notionalRatio,
+          notionalCapUsd: strat.notionalCapUsd,
           status: "active",
         });
       }
@@ -206,70 +210,64 @@ function AutoCopyInner({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* ── 2. Strategy tier selector ── */}
+      {/* ── 2. Strategy selector ── */}
       <section className="space-y-3">
         <div className="flex items-baseline gap-2">
-          <h2 className="text-[15px] font-semibold text-foreground">{t("copyTrading.strategyPacks", "策略包")}</h2>
+          <h2 className="text-[15px] font-semibold text-foreground">{t("copyTrading.pickPreset", "选择策略")}</h2>
           <span className="text-[12px] text-muted-foreground">{t("copyTrading.selectAndActivate", "选择并激活")}</span>
         </div>
 
         <div className="space-y-2.5">
-          {TIERS.map((tier) => {
-            const isActive = tier.key === activeTierKey;
-            const isSelected = selectedTier === tier.key;
+          {STRATEGIES.map((strat) => {
+            const isActive = strat.key === activeKey;
+            const isSelected = selectedKey === strat.key;
             return (
-              <button key={tier.key}
-                onClick={() => { setSelectedTier(tier.key); setTouched(true); }}
+              <button key={strat.key}
+                onClick={() => { setSelectedKey(strat.key); setTouched(true); }}
                 className={cn("w-full flex items-center p-4 rounded-xl transition-all text-left")}
                 style={{
                   background: isSelected ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.025)",
-                  border: `1px solid ${isSelected ? tier.accent : "rgba(255,255,255,0.06)"}`,
-                  boxShadow: isSelected && tier.glow ? `0 0 20px ${tier.glow}` : undefined,
+                  border: `1px solid ${isSelected ? strat.accent : "rgba(255,255,255,0.06)"}`,
+                  boxShadow: isSelected && strat.glow ? `0 0 20px ${strat.glow}` : undefined,
                 }}>
-                <div className={cn("flex items-center justify-center w-10 h-10 rounded-lg border font-bold mr-4", tier.color)}
-                  style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}>
-                  {tier.key}
-                </div>
                 <div className="flex-1 min-w-0">
-                  <div className={cn("text-[17px] font-medium", isSelected ? "text-amber-400" : "text-foreground")}>
-                    {tier.dailyLimit}<span className="text-xs text-muted-foreground ml-1">/{t("copyTrading.perDay", "日")}</span>
+                  <div className={cn("text-[16px] font-medium", isSelected ? "text-amber-400" : "text-foreground")}>
+                    {t(strat.labelKey, strat.labelFallback)}
                   </div>
-                  <div className="text-[12px] text-muted-foreground">{tier.monthLimit} /{t("copyTrading.perMonth", "月")} · {tier.riskLabel}</div>
+                  <div className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">{t(strat.descKey, strat.descFallback)}</div>
                 </div>
                 {isActive ? (
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded text-[12px] font-medium"
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded text-[12px] font-medium shrink-0 ml-3"
                     style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#34d399" }}>
                     <Check className="h-3 w-3" /> {t("copyTrading.subStatusActive", "激活中")}
                   </div>
                 ) : isSelected ? (
-                  <Check className="h-4 w-4 text-amber-400" />
+                  <Check className="h-4 w-4 text-amber-400 shrink-0 ml-3" />
                 ) : null}
               </button>
             );
           })}
         </div>
 
-        {/* Selected tier → auto-filled system params + ONE-CLICK follow */}
+        {/* Selected strategy → auto-filled system params + ONE-CLICK follow */}
         <div className="rounded-xl p-4 space-y-3.5"
           style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
           <div className="flex items-center gap-2">
             <Sliders className="h-4 w-4 text-amber-400" />
             <span className="text-[13px] font-semibold text-foreground">
-              {selDef.key} · {selDef.riskLabel}{t("copyTrading.paramsSuffix", "策略 · 系统参数")}
+              {t(selDef.labelKey, selDef.labelFallback)} · {t("copyTrading.systemParams", "系统参数")}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Param label={t("copyTrading.paramRatio", "跟单比例")} value={`${(selDef.notionalRatio * 100).toFixed(0)}%`} />
             <Param label={t("copyTrading.paramTradeCap", "单笔上限")} value={`$${selDef.notionalCapUsd}`} />
-            <Param label={t("copyTrading.paramDailyCap", "单日上限")} value={selDef.dailyLimit} />
-            <Param label={t("copyTrading.paramMonthCap", "月度上限")} value={selDef.monthLimit} />
-            <Param label={t("copyTrading.paramRisk", "风险档位")} value={selDef.riskLabel} />
-            <Param label={t("copyTrading.paramAiFilter", "AI 过滤")} value={aiFilter ? `${t("common.on", "开启")} · ≥${minConfidence}%` : t("common.off", "关闭")} />
           </div>
+
+          <ConfigToggle label={t("copyTrading.cfgAutoCopy", "自动跟单模式")} value={autoCopy} onToggle={() => setAutoCopy((v) => !v)} />
 
           <Button className="w-full font-bold h-11"
             style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
-            onClick={() => activate.mutate(selectedTier)}
+            onClick={() => activate.mutate(selectedKey)}
             disabled={activate.isPending}>
             {activate.isPending ? (
               <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("copyTrading.activating", "激活中…")}</>
@@ -279,19 +277,6 @@ function AutoCopyInner({ userId }: { userId: string }) {
               <><Zap className="h-4 w-4 mr-1.5" />{t("copyTrading.oneClickFollow", "一键开始跟单")}</>
             )}
           </Button>
-
-          <div className="flex gap-2">
-            <button onClick={() => setConfigOpen(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium text-foreground/80 transition-colors hover:bg-white/5"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <Settings className="h-3.5 w-3.5" /> {t("copyTrading.advancedConfig", "高级设置")}
-            </button>
-            <button onClick={() => setCompareOpen(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium text-foreground/80 transition-colors hover:bg-white/5"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <BarChart3 className="h-3.5 w-3.5" /> {t("copyTrading.compareTiers", "档位对比")}
-            </button>
-          </div>
         </div>
       </section>
 
@@ -327,82 +312,6 @@ function AutoCopyInner({ userId }: { userId: string }) {
           )}
         </section>
       )}
-
-      {/* ── Advanced config dialog ── */}
-      <Dialog open={configOpen} onOpenChange={setConfigOpen}>
-        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-bold flex items-center gap-2">
-              <Settings className="h-4 w-4 text-amber-400" /> {t("copyTrading.advancedConfig", "高级设置")}
-            </DialogTitle>
-            <DialogDescription className="text-[12px]">
-              {t("copyTrading.configDesc", "这些设置会在你下一次一键跟单时生效。")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 pt-1">
-            <ConfigToggle label={t("copyTrading.cfgAutoCopy", "自动跟单模式")} value={autoCopy} onToggle={() => setAutoCopy((v) => !v)} />
-            <ConfigToggle label={t("copyTrading.cfgAiFilter", "AI 过滤开启")} value={aiFilter} onToggle={() => setAiFilter((v) => !v)} />
-            <div className="p-3.5 rounded-xl space-y-2.5" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-medium text-foreground">{t("copyTrading.cfgMinConfidence", "最低可信度阈值")}</span>
-                <span className="text-[13px] font-bold text-amber-400">{minConfidence}%</span>
-              </div>
-              <div className="flex gap-1.5">
-                {[60, 70, 80, 90].map((v) => (
-                  <button key={v} onClick={() => setMinConfidence(v)}
-                    className={cn("flex-1 py-1.5 rounded-lg text-[12px] font-medium transition-colors",
-                      minConfidence === v ? "bg-amber-500 text-black" : "bg-white/5 text-muted-foreground hover:text-foreground")}>
-                    {v}%
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground leading-relaxed pt-1">
-              <Activity className="h-3.5 w-3.5 mt-px shrink-0 text-amber-400/70" />
-              {t("copyTrading.aiFilterNote", "AI 决策引擎会分析每条跟单信号，自动跳过低可信度订单，让跟单更稳定。")}
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Tier comparison dialog (real params) ── */}
-      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
-        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-bold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-amber-400" /> {t("copyTrading.compareTiers", "档位对比")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid rgba(255,255,255,0.05)" }}>
-            <table className="w-full text-[12px] text-left border-collapse">
-              <thead>
-                <tr>
-                  {[
-                    t("copyTrading.colTier", "档位"),
-                    t("copyTrading.paramRisk", "风险"),
-                    t("copyTrading.paramRatio", "比例"),
-                    t("copyTrading.paramTradeCap", "单笔"),
-                    t("copyTrading.paramMonthCap", "月上限"),
-                  ].map((h, i) => (
-                    <th key={i} className="py-2.5 px-3 font-medium text-muted-foreground border-b border-white/[0.06] whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {TIERS.map((tier, i) => (
-                  <tr key={tier.key} className={cn(selectedTier === tier.key && "bg-amber-500/5")}>
-                    <td className={cn("py-2.5 px-3 font-bold", tier.color, i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{tier.key}</td>
-                    <td className={cn("py-2.5 px-3 text-foreground/70", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{tier.riskLabel}</td>
-                    <td className={cn("py-2.5 px-3 text-foreground/70 tabular-nums", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{(tier.notionalRatio * 100).toFixed(0)}%</td>
-                    <td className={cn("py-2.5 px-3 text-foreground/70 tabular-nums", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>${tier.notionalCapUsd}</td>
-                    <td className={cn("py-2.5 px-3 text-foreground/70 tabular-nums", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{tier.monthLimit}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
