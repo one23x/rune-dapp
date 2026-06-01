@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Route, Switch, useLocation } from "wouter";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { AppLayout } from "@/components/layout";
 import { RuneOnboarding } from "@/components/rune/rune-onboarding";
@@ -52,6 +53,14 @@ export default function AppRouter() {
       ) : (
         <AppLayout>
           <Suspense fallback={<Loading />}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            >
           <Switch>
         <Route path="/" component={Home} />
         <Route path="/projects" component={Projects} />
@@ -68,6 +77,8 @@ export default function AppRouter() {
         <Route path="/tutorial"   component={Tutorial} />
             <Route component={NotFound} />
           </Switch>
+            </motion.div>
+          </AnimatePresence>
           </Suspense>
         </AppLayout>
       )}

@@ -327,7 +327,10 @@ function Navbar() {
             </div>
             {/* Connect wallet — desktop */}
             <div className="hidden md:flex items-center h-[72px] pl-3 ml-1">
-              <div className={`relative rounded-xl transition-all duration-300 ${connectSpotlight ? "ring-2 ring-cyan-400/90 ring-offset-2 ring-offset-background shadow-[0_0_32px_10px_rgba(34,211,238,0.40)]" : ""}`}>
+              <div
+                title="连接钱包以访问完整功能 · Connect wallet to access full features"
+                className={`relative rounded-xl transition-all duration-300 ${connectSpotlight ? "ring-2 ring-cyan-400/90 ring-offset-2 ring-offset-background shadow-[0_0_32px_10px_rgba(34,211,238,0.40)]" : ""}`}
+              >
                 <WalletConnectButton />
               </div>
             </div>

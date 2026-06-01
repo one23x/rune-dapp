@@ -500,12 +500,14 @@ export default function StrategyPage() {
           <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/50">
             <Button
               variant="gold"
-              className="text-xs"
+              className="text-xs opacity-50 cursor-not-allowed"
               data-testid="button-inv-deposit"
-              onClick={() => toast({ title: t("common.comingSoon") })}
+              disabled
+              title="即将上线 · Coming Soon"
             >
               <Wallet className="h-3.5 w-3.5 mr-1" />
               {t("common.deposit")}
+              <span className="ml-1 text-[9px] opacity-70 uppercase tracking-wider">Soon</span>
             </Button>
             <Button
               className="text-xs bg-gradient-to-r from-cyan-600 to-blue-500 border-cyan-500/50 text-white"
@@ -700,13 +702,14 @@ export default function StrategyPage() {
             <Button variant="outline" onClick={() => setDepositOpen(false)} data-testid="button-cancel-deposit">{t("common.cancel")}</Button>
             <Button
               variant="gold"
-              onClick={() => {
-                toast({ title: t("common.comingSoon") });
-              }}
+              disabled
+              className="opacity-50 cursor-not-allowed"
+              title="即将上线 · Coming Soon"
               data-testid="button-confirm-deposit"
             >
               <Wallet className="mr-1 h-4 w-4" />
               {t("strategy.confirmDepositBtn")}
+              <span className="ml-1 text-[9px] opacity-70 uppercase tracking-wider">Soon</span>
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -896,14 +899,14 @@ export default function StrategyPage() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setBindTelegramOpen(false)} data-testid="button-cancel-bind-telegram">{t("common.cancel")}</Button>
             <Button
-              className="bg-gradient-to-r from-blue-600 to-indigo-500 border-blue-500/50 text-white"
-              onClick={() => {
-                toast({ title: t("common.comingSoon") });
-              }}
+              className="bg-gradient-to-r from-blue-600 to-indigo-500 border-blue-500/50 text-white opacity-50 cursor-not-allowed"
+              disabled
+              title="即将上线 · Coming Soon"
               data-testid="button-confirm-bind-telegram"
             >
               <MessageCircle className="mr-1 h-4 w-4" />
               {t("strategy.bindTelegramBtn")}
+              <span className="ml-1 text-[9px] opacity-80 uppercase tracking-wider">Soon</span>
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -190,6 +190,24 @@ export default function Home() {
         <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-primary/40 rounded-bl pointer-events-none" />
         <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-primary/40 rounded-br pointer-events-none" />
 
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none"
+        >
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 font-medium hidden sm:block">Scroll</span>
+          <motion.div
+            animate={{ y: [0, 6, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-primary/40">
+              <path d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+          </motion.div>
+        </motion.div>
+
         <div className="relative z-10 max-w-3xl space-y-6">
           {/* Live badge */}
           <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur border border-border/60 shadow-sm">
@@ -208,14 +226,14 @@ export default function Home() {
               <>
                 <motion.span
                   initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.18, duration: 0.55, ease: [0.16,1,0.3,1] }}
-                  className="block text-foreground/80"
+                  transition={{ delay: 0.12, duration: 0.5, ease: [0.16,1,0.3,1] }}
+                  className="block text-foreground/90"
                 >
                   Institutional-Grade
                 </motion.span>
                 <motion.span
                   initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3, duration: 0.55, ease: [0.16,1,0.3,1] }}
+                  transition={{ delay: 0.22, duration: 0.5, ease: [0.16,1,0.3,1] }}
                   className="block mt-1"
                   style={{ background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 45%, #d97706 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
                 >
@@ -223,10 +241,10 @@ export default function Home() {
                 </motion.span>
                 <motion.span
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  transition={{ delay: 0.48, duration: 0.55 }}
+                  transition={{ delay: 0.3, duration: 0.45 }}
                   className="block mt-3"
                 >
-                  <span className="block text-2xl lg:text-3xl text-foreground/75 font-semibold tracking-tight">
+                  <span className="block text-2xl lg:text-3xl text-foreground/85 font-semibold tracking-tight">
                     {t("mr.home.hero.sub")}
                   </span>
                 </motion.span>
@@ -235,14 +253,14 @@ export default function Home() {
               <>
                 <motion.span
                   initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.18, duration: 0.55, ease: [0.16,1,0.3,1] }}
-                  className="block text-foreground/80"
+                  transition={{ delay: 0.12, duration: 0.5, ease: [0.16,1,0.3,1] }}
+                  className="block text-foreground/90"
                 >
                   Institutional-Grade
                 </motion.span>
                 <motion.span
                   initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3, duration: 0.55, ease: [0.16,1,0.3,1] }}
+                  transition={{ delay: 0.22, duration: 0.5, ease: [0.16,1,0.3,1] }}
                   className="block mt-1"
                   style={{ background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 45%, #d97706 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
                 >
@@ -250,13 +268,13 @@ export default function Home() {
                 </motion.span>
                 <motion.span
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  transition={{ delay: 0.48, duration: 0.55 }}
+                  transition={{ delay: 0.3, duration: 0.45 }}
                   className="block mt-3"
                 >
-                  <span className="block text-2xl lg:text-3xl text-foreground/75 font-semibold tracking-tight">
+                  <span className="block text-2xl lg:text-3xl text-foreground/85 font-semibold tracking-tight">
                     {t("mr.home.hero.title")}
                   </span>
-                  <span className="block text-lg lg:text-xl text-muted-foreground/70 font-medium mt-1 tracking-wide">
+                  <span className="block text-lg lg:text-xl text-muted-foreground/85 font-medium mt-1 tracking-wide">
                     {t("mr.home.hero.sub")}
                   </span>
                 </motion.span>
@@ -298,8 +316,8 @@ export default function Home() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            className="text-base text-muted-foreground max-w-2xl leading-relaxed"
+            transition={{ delay: 0.28, duration: 0.45 }}
+            className="text-base text-muted-foreground/90 max-w-2xl leading-relaxed"
           >
             {t("mr.home.hero.desc")}
           </motion.p>
@@ -308,7 +326,7 @@ export default function Home() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.72, duration: 0.5 }}
+            transition={{ delay: 0.35, duration: 0.45 }}
             className="flex flex-wrap gap-4 pt-2"
           >
             <Link href="/projects" className="inline-flex h-12 items-center justify-center rounded-md bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-[0_0_24px_rgba(245,158,11,0.35)] transition-all hover:bg-primary/90 hover:shadow-[0_0_32px_rgba(245,158,11,0.55)] hover:-translate-y-0.5 active:translate-y-0">

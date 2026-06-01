@@ -1,12 +1,14 @@
 import "./index.css";
 import { Switch, Route, Router as WouterRouter, Link, Redirect } from "wouter";
 import { lazy, Suspense } from "react";
+import type React from "react";
 import { motion } from "framer-motion";
 import "@app/lib/i18n";
 import { DesktopSidebar } from "@app/components/desktop-sidebar";
 import { BottomNav } from "@app/components/bottom-nav";
 import LangSwitcher from "@app/components/lang-switcher";
 import { WalletConnectButton } from "@/components/rune/wallet-connect-button";
+import { useActiveAccount, useActiveWalletConnectionStatus } from "thirdweb/react";
 
 const Dashboard       = lazy(() => import("@app/pages/dashboard"));
 const Trade           = lazy(() => import("@app/pages/trade"));
@@ -162,6 +164,69 @@ function ShellHeader() {
   );
 }
 
+function WalletRequiredGate({ children }: { children: React.ReactNode }) {
+  const account = useActiveAccount();
+  const status = useActiveWalletConnectionStatus();
+  const isResolving = status === "unknown" || status === "connecting";
+
+  if (isResolving) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+            className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary"
+          />
+          <span className="text-sm">Loading…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!account) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="flex-1 flex items-center justify-center min-h-[70vh] px-6"
+      >
+        <div className="text-center max-w-sm space-y-6">
+          <div className="relative mx-auto w-20 h-20">
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/10"
+              animate={{ scale: [1, 1.15, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div className="relative w-20 h-20 rounded-full border border-primary/30 bg-card flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/70">
+                <rect width="20" height="14" x="2" y="5" rx="2" />
+                <path d="M16 12h.01" />
+                <path d="M12 5V3" />
+                <path d="M8 5V3" />
+                <path d="M16 5V3" />
+              </svg>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-foreground">连接钱包以继续</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Connect your wallet to access the dashboard, trading strategies, and portfolio management.
+            </p>
+            <p className="text-xs text-muted-foreground/70">连接钱包后即可访问仪表盘、交易策略和资产管理。</p>
+          </div>
+          <div className="flex justify-center [&_button]:!h-11 [&_button]:!px-8 [&_button]:!text-sm [&_button]:!rounded-lg">
+            <WalletConnectButton />
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function DashboardRoutes() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading…</div>}>
@@ -210,8 +275,10 @@ export default function DashboardShell() {
         <ShellHeader />
         <div className="flex">
           <DesktopSidebar />
-          <main className="flex-1 mx-auto max-w-lg lg:max-w-6xl xl:max-w-7xl w-full overflow-x-hidden pb-20 lg:pb-8">
-            <DashboardRoutes />
+          <main className="flex-1 mx-auto max-w-lg lg:max-w-6xl xl:max-w-7xl w-full overflow-x-hidden pb-24 lg:pb-10">
+            <WalletRequiredGate>
+              <DashboardRoutes />
+            </WalletRequiredGate>
           </main>
         </div>
         <BottomNav />

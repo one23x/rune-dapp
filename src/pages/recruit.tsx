@@ -479,6 +479,8 @@ export default function Recruit() {
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-cyan-500/40" />
         </div>
 
+        <div className="relative">
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background/80 to-transparent z-10 xl:hidden rounded-r-2xl" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {isLoading && nodes.length === 0
             ? Array.from({ length: 5 }).map((_, i) => <NodeCardSkeleton key={i} />)
@@ -626,6 +628,7 @@ export default function Recruit() {
                 );
               })
           }
+        </div>
         </div>
       </section>
 

@@ -159,7 +159,8 @@ export default function Tools() {
           {CATEGORIES.map((cat, ci) => (
             <div key={cat.id} className={ci > 0 ? "mt-5" : ""}>
               <p className="text-[11px] uppercase tracking-widest text-muted-foreground/50 font-semibold mb-2 px-2">
-                {cat.name}{showZh && <span className="ml-1 opacity-70">· {cat.nameZh}</span>}
+                <span className="block">{cat.name}</span>
+                {showZh && <span className="block text-[10px] normal-case tracking-wide font-normal text-muted-foreground/40 mt-0.5">{cat.nameZh}</span>}
               </p>
               {cat.tools.map(tool => (
                 <button
@@ -283,6 +284,38 @@ function EmptyState({ icon, msg, sub }: { icon: React.ReactNode; msg: string; su
   );
 }
 
+// ─── APY Demo Chart (shown before user runs simulation) ──────────────────────
+
+function ApyDemoChart() {
+  const demoData = Array.from({ length: 12 }, (_, i) => ({
+    day: (i + 1) * 30,
+    amount: Math.round(1000 * Math.pow(1 + 0.15 / 365, (i + 1) * 30)),
+  }));
+  return (
+    <div className="h-64 relative select-none">
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-2 pointer-events-none">
+        <div className="rounded-full bg-background/80 backdrop-blur px-4 py-1.5 border border-border/50 shadow text-xs text-muted-foreground">
+          Run simulation to view your projection
+          <span className="block text-center text-[10px] opacity-60 mt-0.5">运行模拟以查看预测结果</span>
+        </div>
+      </div>
+      <div className="opacity-20 pointer-events-none h-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={demoData}>
+            <defs>
+              <linearGradient id="gApyDemo" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#gApyDemo)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 // ─── APY Calculator ───────────────────────────────────────────────────────────
 
 function ApyCalculator() {
@@ -348,7 +381,7 @@ function ApyCalculator() {
                   </ResponsiveContainer>
                 </div>
               </>
-            ) : <EmptyState icon={<Activity className="h-6 w-6 text-muted-foreground/50" />} msg="Run simulation to view projection." sub="运行模拟以查看预测结果" />}
+            ) : <ApyDemoChart />}
           </CardContent>
         </Card>
       </div>

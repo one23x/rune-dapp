@@ -56,11 +56,18 @@ export default function LangSwitcher() {
   }, [open]);
 
   const select = (code: string) => {
-    setCurrent(code);
-    i18n.changeLanguage(code);
-    const mapped = customLangMap[code] ?? "en";
-    setLanguage(mapped);
-    localStorage.setItem("taiclaw-lang", code);
+    const root = document.documentElement;
+    root.style.transition = "opacity 0.18s ease";
+    root.style.opacity = "0.7";
+    setTimeout(() => {
+      setCurrent(code);
+      i18n.changeLanguage(code);
+      const mapped = customLangMap[code] ?? "en";
+      setLanguage(mapped);
+      localStorage.setItem("taiclaw-lang", code);
+      root.style.opacity = "1";
+      setTimeout(() => { root.style.transition = ""; }, 220);
+    }, 90);
     setOpen(false);
   };
 
