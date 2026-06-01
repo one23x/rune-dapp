@@ -144,6 +144,12 @@ export function isEndpointMissing(err: unknown): boolean {
   return /\b(404|405|not.?found|method.?not.?allowed|no_route|route)\b/i.test(s);
 }
 
+/** The engine refuses to start an *active* follow on an unfunded HL account
+ *  (400 insufficient_funds). Surface this as a "请先充值" prompt, not an error. */
+export function isInsufficientFunds(err: unknown): boolean {
+  return /insufficient_funds|fund your hyperliquid|account value/i.test(String((err as any)?.message ?? err));
+}
+
 /** Per-follow risk configuration captured by the follow-config dialog. */
 export interface HlFollowConfig {
   /** Fraction of the leader's notional mirrored per trade (0–1). */
@@ -168,7 +174,7 @@ interface CopyVars {
   config: HlFollowConfig;
 }
 
-type CopyOutcome = "ok" | "no_user" | "pending" | "error";
+type CopyOutcome = "ok" | "no_user" | "pending" | "funds" | "error";
 
 export function useHlCopy(userId: string | undefined, network: HlNetwork) {
   const { t } = useTranslation();
@@ -199,6 +205,7 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
 
   const categorize = useCallback((err: unknown): CopyOutcome => {
     if (String((err as any)?.message ?? err) === "no_user") return "no_user";
+    if (isInsufficientFunds(err)) return "funds";
     if (isEndpointMissing(err)) return "pending";
     return "error";
   }, []);
@@ -219,6 +226,8 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
         const kind = categorize(err);
         if (kind === "no_user") {
           toast({ title: t("hl.needOnboard", "请先开通交易账户"), description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。") });
+        } else if (kind === "funds") {
+          toast({ title: t("hl.needFunds", "余额不足,请先充值"), description: t("hl.needFundsDesc", "请先充值 USDC 到 HL 交易账户,有余额后即可开始跟单。") });
         } else if (kind === "pending") {
           toast({ title: t("hl.copyPending"), description: t("hl.copyPendingDesc") });
         } else {
@@ -244,7 +253,7 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
         return succeeded; // caller treats single via copy()'s own UX
       }
       setBatchPending(true);
-      let okCount = 0, pendingCount = 0, errCount = 0, needOnboard = false;
+      let okCount = 0, pendingCount = 0, errCount = 0, needOnboard = false, needFunds = false;
       let lastErr: unknown;
       try {
         for (const leader of leaders) {
@@ -256,6 +265,7 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
           } catch (err) {
             const kind = categorize(err);
             if (kind === "no_user") { needOnboard = true; break; }
+            if (kind === "funds") { needFunds = true; break; }
             if (kind === "pending") pendingCount += 1;
             else { errCount += 1; lastErr = err; }
           }
@@ -265,9 +275,11 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
         setBatchPending(false);
         invalidate();
       }
-      // One summarized toast, priority: onboard > started > pending > error.
+      // One summarized toast, priority: onboard > funds > started > pending > error.
       if (needOnboard) {
         toast({ title: t("hl.needOnboard", "请先开通交易账户"), description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。") });
+      } else if (needFunds) {
+        toast({ title: t("hl.needFunds", "余额不足,请先充值"), description: t("hl.needFundsDesc", "请先充值 USDC 到 HL 交易账户,有余额后即可开始跟单。") });
       } else if (okCount > 0) {
         toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedBatch", "已开始跟单 {{count}} 个策略", { count: okCount }) });
       } else if (pendingCount > 0) {
