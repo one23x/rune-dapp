@@ -887,7 +887,7 @@ export default function Trade() {
         </div>
       )}
 
-      {/* ── Smart Copy-Trading hero card ────────────── */}
+      {/* ── Smart Trading hero card ────────────── */}
       <div className="px-4 lg:px-6 mt-3">
         <div className="relative rounded-2xl overflow-hidden border border-[#f59e0b]/25 bg-gradient-to-br from-[#1a1408] via-[#161100] to-[#0c0a07]"
           style={{ boxShadow: "0 0 40px rgba(245,158,11,0.08), inset 0 1px 0 rgba(245,158,11,0.15)" }}>
@@ -904,7 +904,7 @@ export default function Trade() {
               <div className="flex items-center gap-1.5 bg-[#f59e0b]/12 border border-[#f59e0b]/25 rounded-full px-2.5 py-1">
                 <Zap size={11} className="text-[#f59e0b]" />
                 <span className="text-[10px] font-semibold text-[#f59e0b] uppercase tracking-wider">
-                  Smart Copy-Trading
+                  Smart Trading
                 </span>
               </div>
               <div className="flex items-center gap-1 text-[10px] text-[#10b981] font-medium">
@@ -917,11 +917,11 @@ export default function Trade() {
             <h2 className="text-[22px] font-bold text-white leading-tight tracking-tight mb-1">
               让 AI 帮你<br />
               <span className="bg-gradient-to-r from-[#f59e0b] via-amber-300 to-[#f59e0b] bg-clip-text text-transparent">
-                自动跟单预测市场
+                智能交易预测市场
               </span>
             </h2>
             <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-              One-Agents 引擎实时复制顶级交易员策略，自动执行 YES / NO 仓位
+              One-Agents 引擎实时分析顶级交易员策略，自动执行 YES / NO 仓位
             </p>
 
             {/* Stats row */}
@@ -950,12 +950,12 @@ export default function Trade() {
             </div>
 
             {/* CTA button */}
-            <Link href="/copy-trading">
+            <Link href="/copy-trading/auto">
               <button className="w-full relative overflow-hidden rounded-xl bg-[#f59e0b] text-black font-bold text-sm py-3 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
                 style={{ boxShadow: "0 4px 20px rgba(245,158,11,0.35)" }}>
                 <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
                 <Zap size={15} strokeWidth={2.5} className="relative z-10" />
-                <span className="relative z-10">进入智能跟单</span>
+                <span className="relative z-10">进入智能交易</span>
                 <ChevronRight size={15} strokeWidth={2.5} className="relative z-10 ml-0.5" />
               </button>
             </Link>
