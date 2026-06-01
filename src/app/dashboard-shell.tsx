@@ -169,6 +169,12 @@ function WalletRequiredGate({ children }: { children: React.ReactNode }) {
   const status = useActiveWalletConnectionStatus();
   const isResolving = status === "unknown" || status === "connecting";
 
+  // Design-preview bypass: any /app route with ?preview=1 renders without a
+  // connected wallet so member-only UIs can be reviewed in isolation.
+  const previewMode =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
+  if (previewMode) return <>{children}</>;
+
   if (isResolving) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">

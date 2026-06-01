@@ -85,6 +85,9 @@ export function RuneOnboarding() {
   // a member-only surface. Demo mode is exempt (it bypasses real auth).
   useEffect(() => {
     if (isDemoMode) return;
+    // Design-preview bypass: /app/...?preview=1 lets us view member-only
+    // surfaces without a connected wallet. Skip the kick-out-to-marketing.
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview")) return;
     if (address) return;
     if (location === "/app" || location.startsWith("/app/")) {
       navigate("/");
