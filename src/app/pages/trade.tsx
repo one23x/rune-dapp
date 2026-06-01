@@ -866,48 +866,6 @@ export default function Trade() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-2.5">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t("trade.searchMarkets")}
-            className="pl-8 h-8 text-[13px] bg-background/50 border-border"
-          />
-        </div>
-
-        {/* Category tabs */}
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
-          {CATEGORIES.map(cat => {
-            const Icon = cat.icon;
-            const isActive = category === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => { setCategory(cat.id); setVisibleCount(8); }}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-medium whitespace-nowrap transition-all shrink-0 ${
-                  isActive ? "text-black" : "text-muted-foreground hover:text-foreground"
-                }`}
-                style={isActive ? {
-                  background: "linear-gradient(135deg, hsl(43,74%,58%), hsl(38,70%,46%))",
-                  boxShadow: "0 0 10px rgba(212,168,50,0.25)",
-                } : {
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
-                <Icon className="h-3 w-3" />
-                {t(cat.labelKey)}
-                {cat.id === "mybets" && myBets.length > 0 && (
-                  <span className={`text-[10px] px-1 rounded-full ${isActive ? "bg-black/20" : "bg-primary/20 text-primary"}`}>
-                    {myBets.length}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* ── Stats bar ───────────────────────────────── */}
@@ -1008,6 +966,52 @@ export default function Trade() {
               <span className="text-[10px] text-zinc-500">资金托管在 Polymarket · Polygon 网络</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Search + category filters (below hero) ──── */}
+      <div className="px-4 lg:px-6 mt-4">
+        {/* Search */}
+        <div className="relative mb-2.5">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={t("trade.searchMarkets")}
+            className="pl-8 h-9 text-[13px] bg-background/50 border-border"
+          />
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+          {CATEGORIES.map(cat => {
+            const Icon = cat.icon;
+            const isActive = category === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => { setCategory(cat.id); setVisibleCount(8); }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-medium whitespace-nowrap transition-all shrink-0 ${
+                  isActive ? "text-black" : "text-muted-foreground hover:text-foreground"
+                }`}
+                style={isActive ? {
+                  background: "linear-gradient(135deg, hsl(43,74%,58%), hsl(38,70%,46%))",
+                  boxShadow: "0 0 10px rgba(212,168,50,0.25)",
+                } : {
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <Icon className="h-3 w-3" />
+                {t(cat.labelKey)}
+                {cat.id === "mybets" && myBets.length > 0 && (
+                  <span className={`text-[10px] px-1 rounded-full ${isActive ? "bg-black/20" : "bg-primary/20 text-primary"}`}>
+                    {myBets.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
