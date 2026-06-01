@@ -74,7 +74,7 @@ function PoolTab() {
             initial={{ width: 0 }}
             animate={{ width: "85%" }}
             transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
-            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 relative"
+            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 relative"
           >
             <div className="absolute top-0 right-0 bottom-0 w-10 bg-gradient-to-r from-transparent to-white/50 blur-sm"></div>
           </motion.div>
@@ -144,7 +144,7 @@ function PoolTab() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: `${val}%`, opacity: 1 }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                className="w-full bg-white/20 rounded-t-sm group-hover:bg-white/40 transition-colors relative"
+                className="w-full bg-amber-400/30 rounded-t-sm group-hover:bg-amber-400/60 transition-colors relative"
               >
               </motion.div>
             </div>
@@ -159,7 +159,7 @@ function PoolTab() {
             <motion.path 
               d="M0,80 L8,75 L16,78 L25,72 L33,65 L41,68 L50,62 L58,58 L66,60 L75,55 L83,57 L92,52 L100,50" 
               fill="none" 
-              stroke="#06b6d4" 
+              stroke="#f59e0b" 
               strokeWidth="2"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
@@ -217,7 +217,7 @@ function LockTab() {
                 onClick={() => setSelectedPeriod(p)}
                 className={`py-2 rounded-lg text-xs font-medium transition-all ${
                   selectedPeriod === p 
-                    ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' 
+                    ? 'bg-[#f59e0b] text-black shadow-[0_0_15px_rgba(245,158,11,0.45)]' 
                     : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
                 }`}
               >
@@ -234,15 +234,15 @@ function LockTab() {
           </div>
         </div>
 
-        <button className="w-full py-3.5 rounded-xl bg-white text-black font-bold text-sm glass-button shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+        <button className="w-full py-3.5 rounded-xl bg-[#f59e0b] text-black font-bold text-sm glass-button shadow-[0_0_20px_rgba(245,158,11,0.35)]">
           确认锁仓
         </button>
       </div>
 
       <div className="glass-panel p-5 relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full"></div>
+        <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/20 blur-3xl rounded-full"></div>
         <div className="flex items-center gap-2 mb-3">
-          <Flame size={16} className="text-indigo-400" />
+          <Flame size={16} className="text-amber-400" />
           <h3 className="text-white/90 text-sm font-medium">预计收益结构</h3>
           <span className="text-[9px] bg-white/10 border border-white/10 px-1.5 py-0.5 rounded text-white/50 ml-auto">预发布</span>
         </div>
@@ -350,7 +350,7 @@ export function Vault() {
   const [activeTab, setActiveTab] = useState<'pool' | 'lock' | 'burn'>('pool');
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30 relative">
+    <div className="min-h-screen bg-[#0c0a07] text-white font-sans overflow-x-hidden selection:bg-amber-500/30 relative">
       {/* Background Orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 

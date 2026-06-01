@@ -43,7 +43,7 @@ function AnimatedNumber({ value, prefix = "", suffix = "", decimals = 0 }: { val
 
 export function Profile() {
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30 relative pb-10">
+    <div className="min-h-screen bg-[#0c0a07] text-white font-sans overflow-x-hidden selection:bg-amber-500/30 relative pb-10">
       {/* Background Orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
@@ -116,7 +116,7 @@ export function Profile() {
             <div className="shimmer-sweep"></div>
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-2">
-                <TrendingUp size={16} className="text-indigo-400" />
+                <TrendingUp size={16} className="text-amber-400" />
                 <h3 className="text-white/90 text-sm font-medium">总收益 / Total Earnings</h3>
               </div>
               <div className="flex gap-1.5">
@@ -141,7 +141,7 @@ export function Profile() {
                 <div className="text-[9px] text-white/40">USDT 65% / FIRE 35%</div>
               </div>
 
-              <div className="bg-black/20 border border-white/10 rounded-xl p-3 relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
+              <div className="bg-black/20 border border-white/10 rounded-xl p-3 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
                 <div className="text-xs text-white/70 mb-2">推广收益 / Referral</div>
                 <div className="text-lg font-bold text-white mb-1">
                   <AnimatedNumber value={12548.50} prefix="$" decimals={2} />
@@ -158,11 +158,11 @@ export function Profile() {
             transition={{ duration: 0.4, delay: 0.1, type: "spring" }}
             className="glass-panel p-5 relative overflow-hidden"
           >
-            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-cyan-500/20 blur-3xl rounded-full pointer-events-none"></div>
+            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-amber-500/20 blur-3xl rounded-full pointer-events-none"></div>
             
             <div className="flex justify-between items-center mb-4 relative z-10">
               <div className="flex items-center gap-2">
-                <Layers size={16} className="text-cyan-400" />
+                <Layers size={16} className="text-amber-400" />
                 <h3 className="text-white/90 text-sm font-medium">跟单 / Copy-Trading</h3>
               </div>
               <div className="flex items-center gap-1.5">
@@ -209,7 +209,7 @@ export function Profile() {
             className="glass-panel p-5"
           >
             <div className="flex items-center gap-2 mb-3">
-              <User size={16} className="text-magenta-400" />
+              <User size={16} className="text-amber-400" />
               <h3 className="text-white/90 text-sm font-medium">邀请好友 / Invite friends</h3>
             </div>
             <p className="text-xs text-white/60 mb-4 leading-relaxed">
@@ -222,7 +222,7 @@ export function Profile() {
                   <Copy size={14} />
                 </button>
               </div>
-              <button className="px-4 py-2 rounded-lg bg-white text-black font-medium text-xs glass-button flex items-center justify-center">
+              <button className="px-4 py-2 rounded-lg bg-[#f59e0b] text-black font-medium text-xs glass-button flex items-center justify-center">
                 <Share2 size={14} />
               </button>
             </div>
@@ -270,7 +270,7 @@ export function Profile() {
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 group-hover:bg-white/20 transition-colors relative">
                     <Bell size={14} />
-                    <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-magenta-500 rounded-full"></div>
+                    <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
                   </div>
                   <span className="text-sm text-white/90 font-medium">通知 / Notifications</span>
                 </div>
