@@ -1,2 +1,3 @@
 - [i18n t() argument order](i18n-t-wrapper.md) — `t(key,{opts},fallback)` is broken & renders the raw key; put fallback before the options object.
 - [Previewing gated pages](app-preview-gating.md) — app lives under `/app`; add `?preview=1` to bypass the not-connected redirect; CopyGate still needs a real wallet.
+- [Mockup screenshot quirk](mockup-screenshot-quirk.md) — app_preview screenshot hits main app (port 5000), not the /__mockup/ sandbox; verify mockup renders via subagent screenshot or curl HTML.
