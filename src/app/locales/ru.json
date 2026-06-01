@@ -192,7 +192,8 @@
     "yes": "Да",
     "no": "Нет",
     "loadMore": "Загрузить ещё (осталось {{remaining}})",
-    "allMarketsShown": "Показаны все {{count}} рынков"
+    "allMarketsShown": "Показаны все {{count}} рынков",
+    "catAiLab": "AI-лаборатория"
   },
   "vault": {
     "title": "Хранилище",

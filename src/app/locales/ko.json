@@ -192,7 +192,8 @@
     "yes": "예",
     "no": "아니오",
     "loadMore": "더 보기 ({{remaining}}개 남음)",
-    "allMarketsShown": "총 {{count}}개 마켓 모두 표시"
+    "allMarketsShown": "총 {{count}}개 마켓 모두 표시",
+    "catAiLab": "예측 랩"
   },
   "vault": {
     "title": "볼트",

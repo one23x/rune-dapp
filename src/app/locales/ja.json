@@ -192,7 +192,8 @@
     "yes": "はい",
     "no": "いいえ",
     "loadMore": "さらに読み込む (残り {{remaining}} 件)",
-    "allMarketsShown": "全 {{count}} マーケット表示済み"
+    "allMarketsShown": "全 {{count}} マーケット表示済み",
+    "catAiLab": "予測ラボ"
   },
   "vault": {
     "title": "ボールト",

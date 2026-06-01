@@ -192,7 +192,8 @@
     "yes": "Ja",
     "no": "Nein",
     "loadMore": "Mehr laden ({{remaining}} übrig)",
-    "allMarketsShown": "Alle {{count}} Märkte angezeigt"
+    "allMarketsShown": "Alle {{count}} Märkte angezeigt",
+    "catAiLab": "KI-Labor"
   },
   "vault": {
     "title": "Tresor",

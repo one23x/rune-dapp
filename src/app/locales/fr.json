@@ -192,7 +192,8 @@
     "yes": "Oui",
     "no": "Non",
     "loadMore": "Charger plus ({{remaining}} restants)",
-    "allMarketsShown": "{{count}} marchés affichés"
+    "allMarketsShown": "{{count}} marchés affichés",
+    "catAiLab": "Labo IA"
   },
   "vault": {
     "title": "Coffre",

@@ -192,7 +192,8 @@
     "yes": "Sim",
     "no": "Não",
     "loadMore": "Carregar mais ({{remaining}} restantes)",
-    "allMarketsShown": "Todos os {{count}} mercados exibidos"
+    "allMarketsShown": "Todos os {{count}} mercados exibidos",
+    "catAiLab": "Laboratório IA"
   },
   "vault": {
     "title": "Cofre",

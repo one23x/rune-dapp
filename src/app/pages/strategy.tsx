@@ -29,20 +29,19 @@ import {
 import type { Strategy, StrategySubscription, Profile, HedgePosition, InsurancePurchase } from "@app-shared/types";
 import { StrategyHeader } from "@app/components/strategy/strategy-header";
 import { AiLab } from "@app/components/strategy/ai-lab";
-import { PredictionAiLab } from "@app/components/strategy/prediction-ai-lab";
 import { TradingVaultBanner } from "@app/components/strategy/trading-vault-banner";
 import { HlCopySection } from "@app/components/strategy/hl-copy-section";
 // "strategies" now hosts the Hyperliquid copy-trading product (risk-tier
 // one-click-follow leaders + HL 开户 + 持仓/历史) — Strategy = Hyperliquid.
 // "ailab" keeps the AI model lab + signals; "prediction" hosts the Trading
-// Vault introduction (TradingVaultBanner); "pmlab" hosts the prediction-market AI Lab.
-type TabId = "strategies" | "ailab" | "prediction" | "pmlab";
+// Vault introduction (TradingVaultBanner). The prediction-market AI Lab
+// (预测实验室) now lives on the Trade page's 实验室 category, not here.
+type TabId = "strategies" | "ailab" | "prediction";
 
 const TABS: { id: TabId; labelKey: string }[] = [
   { id: "strategies", labelKey: "hl.navTitle" },
   { id: "ailab", labelKey: "strategy.aiLab" },
   { id: "prediction", labelKey: "strategy.vaultIntroTab" },
-  { id: "pmlab", labelKey: "strategy.pmLabTab" },
 ];
 
 import { EXCHANGES, HEDGE_CONFIG } from "@app/lib/data";
@@ -227,12 +226,6 @@ export default function StrategyPage() {
 
         {activeTab === "prediction" && (
           <TradingVaultBanner />
-        )}
-
-        {activeTab === "pmlab" && (
-          <div className="px-0">
-            <PredictionAiLab />
-          </div>
         )}
 
       </div>

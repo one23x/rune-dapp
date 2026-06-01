@@ -192,7 +192,8 @@
     "yes": "Có",
     "no": "Không",
     "loadMore": "Tải thêm (còn {{remaining}})",
-    "allMarketsShown": "Đã hiển thị tất cả {{count}} thị trường"
+    "allMarketsShown": "Đã hiển thị tất cả {{count}} thị trường",
+    "catAiLab": "Phòng Lab AI"
   },
   "vault": {
     "title": "Kho bạc",

@@ -21,11 +21,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
 import { Link } from "wouter";
+import { PredictionAiLab } from "@app/components/strategy/prediction-ai-lab";
 import type { AiPrediction, PredictionBet } from "@app-shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Category = "all" | "crypto" | "ai" | "news" | "mybets";
+type Category = "all" | "crypto" | "ai" | "news" | "mybets" | "ailab";
 type SortKey = "volume" | "ending" | "newest";
 
 interface PolymarketMarket {
@@ -675,6 +676,7 @@ const CATEGORIES: { id: Category; labelKey: string; icon: React.ElementType }[] 
   { id: "ai", labelKey: "trade.catAiSignals", icon: Brain },
   { id: "news", labelKey: "trade.catNews", icon: Newspaper },
   { id: "mybets", labelKey: "trade.catMyBets", icon: Trophy },
+  { id: "ailab", labelKey: "trade.catAiLab", icon: Sparkles },
 ];
 
 const SORTS: { key: SortKey; labelKey: string }[] = [
@@ -971,8 +973,8 @@ export default function Trade() {
 
       {/* ── Search + category filters (below hero) ──── */}
       <div className="px-4 lg:px-6 mt-4">
-        {/* Search */}
-        <div className="relative mb-2.5">
+        {/* Search (hidden in 实验室 view) */}
+        <div className={`relative mb-2.5 ${category === "ailab" ? "hidden" : ""}`}>
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
@@ -1015,8 +1017,15 @@ export default function Trade() {
         </div>
       </div>
 
+      {/* ── 预测实验室 — moved here from the Strategy page (pmlab tab) ─ */}
+      {category === "ailab" && (
+        <div className="px-4 lg:px-6 mt-3">
+          <PredictionAiLab />
+        </div>
+      )}
+
       {/* ── Market list ─────────────────────────────── */}
-      <div className="px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3" onClick={() => sortOpen && setSortOpen(false)}>
+      <div className={`px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 ${category === "ailab" ? "hidden" : ""}`} onClick={() => sortOpen && setSortOpen(false)}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-44 w-full rounded-xl" />

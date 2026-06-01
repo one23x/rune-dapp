@@ -196,7 +196,8 @@
     "no": "否",
     "loadMore": "加载更多 (剩余 {{remaining}} 个)",
     "allMarketsShown": "已显示全部 {{count}} 个市场",
-    "amountRange": "金额须介于 {{min}} 至 {{max}} USDC"
+    "amountRange": "金额须介于 {{min}} 至 {{max}} USDC",
+    "catAiLab": "预测实验室"
   },
   "vault": {
     "title": "金库",

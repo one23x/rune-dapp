@@ -192,7 +192,8 @@
     "yes": "نعم",
     "no": "لا",
     "loadMore": "تحميل المزيد ({{remaining}} متبقي)",
-    "allMarketsShown": "تم عرض جميع الأسواق ({{count}})"
+    "allMarketsShown": "تم عرض جميع الأسواق ({{count}})",
+    "catAiLab": "مختبر الذكاء"
   },
   "vault": {
     "title": "الخزنة",

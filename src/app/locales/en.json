@@ -196,7 +196,8 @@
     "no": "No",
     "loadMore": "Load more ({{remaining}} remaining)",
     "allMarketsShown": "All {{count}} markets shown",
-    "amountRange": "Amount must be between {{min}} and {{max}} USDC"
+    "amountRange": "Amount must be between {{min}} and {{max}} USDC",
+    "catAiLab": "AI Lab"
   },
   "vault": {
     "title": "Vault",

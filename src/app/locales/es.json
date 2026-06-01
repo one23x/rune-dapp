@@ -192,7 +192,8 @@
     "yes": "Sí",
     "no": "No",
     "loadMore": "Cargar más ({{remaining}} restantes)",
-    "allMarketsShown": "{{count}} mercados mostrados"
+    "allMarketsShown": "{{count}} mercados mostrados",
+    "catAiLab": "Laboratorio IA"
   },
   "vault": {
     "title": "Bóveda",
