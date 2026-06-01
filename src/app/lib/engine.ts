@@ -244,7 +244,29 @@ export const hyperliquid = {
   /** Cancel (stop following) a subscription (DELETE live: hl-read.ts :616). */
   subscriptionDelete: (userId: string, id: string) =>
     del<{ ok: boolean }>(`v1/users/${userId}/hl/subscriptions/${id}`),
+
+  /** F17 — this user's AI copy-trade decision stream (drives the decision cards). */
+  copyDecisions: (userId: string) =>
+    get<{ userId: string; decisions: HlCopyDecision[] }>(`v1/users/${userId}/hl/copy-decisions`),
 };
+
+/** One AI copy-trade decision (从 ai_inferences,kind='copy-trade-decision')。 */
+export interface HlCopyDecision {
+  id: string;
+  model: string;
+  symbol: string | null;
+  leader: string | null;
+  side: string | null;
+  leaderScore: number | null;
+  sentiment: Array<{ scope: string; mood?: string; classification?: string; value: number; fresh_min_ago?: number }>;
+  act: boolean | null;
+  confidence: number | null;
+  notionalMult: number | null;
+  leverage: number | null;
+  rationale: string | null;
+  source: "ai" | "mirror" | "ai-fallback" | null;
+  at: string;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // strategies (Trigger-AST) — Bearer

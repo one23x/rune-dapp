@@ -166,6 +166,17 @@ export function useHlSubs(userId: string | undefined) {
   });
 }
 
+/** F17 — AI 跟单决策流(决策卡)。每个信号经 AI 判断+调参的审计。 */
+export function useHlCopyDecisions(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["engine", "hl", "copy-decisions", userId],
+    queryFn: () => hyperliquid.copyDecisions(userId!),
+    enabled: !!userId,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+}
+
 /**
  * Manage an existing HL copy subscription: pause / resume (PATCH) + cancel (DELETE).
  * Routes are live (hl-read.ts :588 / :616). Invalidates the subs query on success so the

@@ -47,6 +47,7 @@ import {
 } from "@app/lib/engine-hooks";
 import { hyperliquid } from "@app/lib/engine";
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
+import { AiDecisionCards } from "./ai-decision-cards";
 import {
   NetworkToggle, HlEmpty, useHlCopy, TIER_META, tierOf,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
@@ -1301,6 +1302,9 @@ export function HlHubPage() {
 
         {/* 跟单中 */}
         <ActiveSubs userId={userId} />
+
+        {/* F17 — AI 跟单决策卡(开启 AI 决策后显示每个信号的判断+调参) */}
+        <AiDecisionCards userId={userId} />
 
         {/* 信号 / 持仓列表 / 历史订单列表 */}
         <SecondaryPanels network={network} />
