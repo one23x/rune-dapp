@@ -3,7 +3,7 @@ import { Layers, ExternalLink } from "lucide-react";
 import { RuneLockSection } from "@app/components/vault/rune-lock-section";
 import { EmberBurnSection } from "@app/components/vault/ember-burn-section";
 import { VaultLpPool } from "@app/components/vault/vault-lp-pool";
-import { VaultCharts, VaultRecruitment } from "@app/components/vault/vault-charts";
+import { VaultCharts } from "@app/components/vault/vault-charts";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageEnter, SubTabSwitch } from "@app/components/page-enter";
@@ -110,7 +110,6 @@ export default function Vault() {
                   transition={{ duration: 0.35, type: "spring" }}
                   className="space-y-4 pb-4"
                 >
-                  <VaultRecruitment />
                   <VaultLpPool />
                   <VaultCharts />
                 </motion.div>
