@@ -27,7 +27,7 @@ import {
   Users, Activity, Layers, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
-  Settings, ChevronRight, Sparkles,
+  Settings, ChevronRight, Sparkles, ArrowLeft,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -476,7 +476,7 @@ function HlAccountStrip({
           <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground/80">
             <code className="font-mono">{shortAddr(wallet)}</code>
             <span>·</span>
-            <span>{t("hl.followsCount", { count: followCount })}</span>
+            <span>{t("hl.followsCount", "{{count}} 个进行中的跟单", { count: followCount })}</span>
           </div>
         </div>
       </div>
@@ -1070,7 +1070,6 @@ export function HlCopySection() {
   const acctQ = useHlAccount(wallet, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
-  const { copy, copyMany, pendingFor, batchPending } = useHlCopy(userId, network);
 
   const subscribedLeaders = useMemo(() => {
     const set = new Set<string>();
@@ -1083,59 +1082,25 @@ export function HlCopySection() {
   const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
 
-  const [cfg, setCfg] = useState<HlFollowConfig>(HL_DEFAULT_FOLLOW);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set<string>());
-
-  const toggle = (l: HlLeader) => {
-    const key = l.address.toLowerCase();
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const selectedCount = selected.size;
-
-  async function startCopy() {
-    // Only follow leaders that exist on the *current* network (drops any stale
-    // cross-network selection), sequentially, then keep any that failed.
-    const chosen = leaders.filter((l) => selected.has(l.address.toLowerCase()));
-    if (chosen.length === 0) return;
-    if (chosen.length === 1) {
-      await copy(chosen[0], cfg);
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.delete(chosen[0].address.toLowerCase());
-        return next;
-      });
-      return;
-    }
-    const succeeded = await copyMany(chosen, cfg);
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const addr of succeeded) next.delete(addr);
-      return next;
-    });
-  }
-
-  const busy = !!pendingFor || batchPending;
-  const showStickyBar = !leadersQ.isLoading && leaders.length > 0;
-
   return (
     <div className="space-y-5" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
-      <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} />
+      <NetworkToggle value={network} onChange={setNetwork} />
 
-      <StatsGrid
-        wallet={wallet}
-        loading={!!wallet && acctQ.isLoading}
-        accountValue={acct?.accountValue ?? 0}
-        unrealizedPnl={acct?.unrealizedPnl ?? 0}
-        followCount={subscribedLeaders.size}
-        reduce={reduce}
-      />
+      {/* Hero 入口 → 智能跟单HL 整页 (数据台/策略包/一键跟单/信号/持仓/历史订单) */}
+      <Link href="/strategy/hl" data-testid="link-hl-hub">
+        <div className="cursor-pointer active:scale-[0.99] transition-transform">
+          <HlHero
+            wallet={wallet}
+            loading={!!wallet && acctQ.isLoading}
+            accountValue={acct?.accountValue ?? 0}
+            unrealizedPnl={acct?.unrealizedPnl ?? 0}
+            followCount={subscribedLeaders.size}
+            reduce={reduce}
+          />
+        </div>
+      </Link>
 
-      {/* 开户 / enable strip — reflects the real engine-user onboarding state */}
+      {/* 钱包面板 — 开户 / 充值 / 提现 (engine-user onboarding + custodial EOA) */}
       <HlAccountStrip
         wallet={wallet}
         userLoading={!!wallet && userQ.isLoading}
@@ -1145,7 +1110,6 @@ export function HlCopySection() {
         followCount={subscribedLeaders.size}
       />
 
-      {/* 充值 / 提现 —— 账户已开通(userId 解析出来)时显示;地址 = 引擎托管 EOA。 */}
       {userId && (
         <HlFunding
           userId={userId}
@@ -1155,48 +1119,159 @@ export function HlCopySection() {
         />
       )}
 
-      <ConfigPanel cfg={cfg} setCfg={setCfg} reduce={reduce} />
-
-      <StrategySelect
+      {/* 热门金库 — 点击金库进入各自的详情页 */}
+      <VaultsList
         leaders={leaders}
         loading={leadersQ.isLoading}
-        selected={selected}
+        network={network}
         subscribedLeaders={subscribedLeaders}
-        pendingFor={pendingFor}
-        onToggle={toggle}
-        reduce={reduce}
       />
+    </div>
+  );
+}
 
-      <ActiveSubs userId={userId} />
+// ── 策略包行 — leader row with inline 一键跟单 (hub page) ──────────────────────
 
-      <SecondaryPanels network={network} />
-
-      {/* Sticky 开启跟单 CTA — clears the mobile bottom-nav; reuses one-click follow. */}
-      {showStickyBar && (
-        <div className="sticky bottom-20 lg:bottom-4 z-30 -mx-4 px-4 pt-6 pb-1 pointer-events-none bg-gradient-to-t from-background via-background/85 to-transparent">
-          <motion.button
-            type="button"
-            disabled={selectedCount === 0 || busy}
-            onClick={startCopy}
-            {...(reduce ? {} : { whileTap: selectedCount > 0 && !busy ? { scale: 0.98 } : undefined })}
-            className={cn(
-              "pointer-events-auto w-full relative overflow-hidden rounded-xl font-bold text-sm py-4 flex items-center justify-center gap-2 transition-all",
-              selectedCount > 0 && !busy
-                ? "bg-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.35)]"
-                : "glass-panel text-foreground/50 cursor-not-allowed border-white/10",
-            )}
-            data-testid="button-hl-start-copy"
+function PackRow({
+  leader, subscribed, copying, onFollow,
+}: {
+  leader: HlLeader; subscribed: boolean; copying: boolean; onFollow: (l: HlLeader) => void;
+}) {
+  const { t } = useTranslation();
+  const meta = TIER_META[tierOf(leader)];
+  const Icon = meta.icon;
+  return (
+    <div className="glass-panel p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
           >
-            {selectedCount > 0 && !busy && <span className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />}
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} /> : <Zap className="h-4 w-4" strokeWidth={2.5} />}
-            <span className="relative">
-              {selectedCount > 0
-                ? `${t("hl.startCopy", "开启跟单")} · ${t("hl.selectedCount", "已选 {{count}}", { count: selectedCount })}`
-                : t("hl.selectAtLeastOne", "请选择至少一个策略")}
-            </span>
-          </motion.button>
+            <Icon className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-foreground truncate">{leader.label || shortAddr(leader.address)}</span>
+              {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
+            </div>
+            <div className="text-[10px] text-foreground/50 mt-1 flex items-center gap-2">
+              <Badge className="text-[8px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{t(meta.labelKey)}</Badge>
+              <span className="tabular-nums">{t("hl.score", "评分")} {fmtScore(leader.score)}</span>
+            </div>
+          </div>
         </div>
-      )}
+        <button
+          type="button"
+          disabled={subscribed || copying}
+          onClick={() => onFollow(leader)}
+          className={cn(
+            "shrink-0 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[12px] font-bold transition-all",
+            subscribed
+              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+              : "bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)] active:scale-95",
+          )}
+          data-testid={`button-pack-follow-${leader.address}`}
+        >
+          {copying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : subscribed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
+          {subscribed ? t("hl.copying", "跟单中") : t("hl.oneClickFollow", "一键跟单")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── 智能跟单HL — full hub page reached from the 跟单 tab hero ──────────────────
+//
+// 数据台 (StatsGrid) · 参数配置 · 策略包 + 一键跟单 (PackRow) · 跟单中 (ActiveSubs)
+// · 信号 / 持仓列表 / 历史订单列表 (SecondaryPanels). Honest live engine data only.
+export function HlHubPage() {
+  const { t } = useTranslation();
+  const reduce = !!useReducedMotion();
+  const account = useActiveAccount();
+  const wallet = account?.address;
+  const [network, setNetwork] = useState<HlNetwork>("mainnet");
+
+  const userQ = useEngineUser(wallet);
+  const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
+  const acctQ = useHlAccount(wallet, network);
+  const subsQ = useHlSubs(userId);
+  const leadersQ = useHlLeaders(network);
+  const { copy, pendingFor } = useHlCopy(userId, network);
+
+  const subscribedLeaders = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of subsQ.data?.subscriptions ?? []) {
+      if ((s as any).status !== "stopped") set.add(String((s as any).leaderAddress).toLowerCase());
+    }
+    return set;
+  }, [subsQ.data]);
+
+  const acct = acctQ.data;
+  const leaders = leadersQ.data?.leaders ?? [];
+  const [cfg, setCfg] = useState<HlFollowConfig>(HL_DEFAULT_FOLLOW);
+
+  return (
+    <div className="min-h-screen pb-28 lg:pb-12">
+      {/* Back header */}
+      <div className="sticky top-0 z-30 backdrop-blur-xl bg-background/70 border-b border-white/10">
+        <div className="px-4 h-14 flex items-center gap-3 max-w-2xl mx-auto">
+          <Link href="/strategy" data-testid="link-back-strategy-hub">
+            <button className="w-9 h-9 -ml-1 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:scale-95 transition">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          </Link>
+          <h1 className="text-[15px] font-bold text-foreground truncate">{t("hl.hubTitle", "智能跟单 HL")}</h1>
+        </div>
+      </div>
+
+      <div className="px-4 py-5 space-y-5 max-w-2xl mx-auto" style={{ animation: "fadeSlideIn 0.4s ease-out" }}>
+        <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} />
+
+        {/* 数据台 */}
+        <StatsGrid
+          wallet={wallet}
+          loading={!!wallet && acctQ.isLoading}
+          accountValue={acct?.accountValue ?? 0}
+          unrealizedPnl={acct?.unrealizedPnl ?? 0}
+          followCount={subscribedLeaders.size}
+          reduce={reduce}
+        />
+
+        {/* 参数配置 */}
+        <ConfigPanel cfg={cfg} setCfg={setCfg} reduce={reduce} />
+
+        {/* 策略包 + 一键跟单 */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Layers className="h-4 w-4 text-amber-400" />
+            <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
+          </div>
+          {leadersQ.isLoading ? (
+            <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
+          ) : leaders.length === 0 ? (
+            <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
+          ) : (
+            <div className="space-y-3">
+              {leaders.map((l) => (
+                <PackRow
+                  key={l.address}
+                  leader={l}
+                  subscribed={subscribedLeaders.has(l.address.toLowerCase())}
+                  copying={pendingFor?.toLowerCase() === l.address.toLowerCase()}
+                  onFollow={(leader) => copy(leader, cfg)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 跟单中 */}
+        <ActiveSubs userId={userId} />
+
+        {/* 信号 / 持仓列表 / 历史订单列表 */}
+        <SecondaryPanels network={network} />
+      </div>
     </div>
   );
 }

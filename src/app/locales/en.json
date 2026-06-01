@@ -1833,6 +1833,12 @@
     }
   },
   "hl": {
+    "hubTitle": "Smart Copy HL",
+    "strategyPacks": "Strategy Packs",
+    "oneClickFollow": "Copy",
+    "vaultDetail": "Vault Detail",
+    "copySignals": "Copy Signals",
+    "openAccountFirst": "Open a trading account first",
     "navTitle": "Copy-Trading",
     "title": "Hyperliquid Copy-Trading",
     "subtitle": "Mirror top Hyperliquid perp traders. AI-scored leaders by trading habit, live signal feed, one-click copy.",

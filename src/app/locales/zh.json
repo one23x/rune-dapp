@@ -1833,6 +1833,12 @@
     }
   },
   "hl": {
+    "hubTitle": "智能跟单 HL",
+    "strategyPacks": "策略包",
+    "oneClickFollow": "一键跟单",
+    "vaultDetail": "金库详情",
+    "copySignals": "跟单信号",
+    "openAccountFirst": "请先开通交易账户",
     "navTitle": "合约跟单",
     "title": "Hyperliquid 合约跟单",
     "subtitle": "复制 Hyperliquid 顶级永续合约交易员。按交易习惯 AI 评分的领单员、实时信号流、一键跟单。",
