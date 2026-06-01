@@ -465,7 +465,8 @@ export function WithdrawDialog({
   const withdraw = useMutation({
     mutationFn: async () => {
       // walletWithdraw — relayer on-chain pUSD withdraw to an external 0x address.
-      return funding.walletWithdraw(userId, { amount: amt, to: dest.trim(), destination: dest.trim() });
+      // Backend expects { amountUsd, destination } (zod-validated); the old { amount, to } 400'd every time.
+      return funding.walletWithdraw(userId, { amountUsd: amt, destination: dest.trim() });
     },
     onSuccess: () => {
       toast({ title: t("copyTrading.withdrawSuccess"), description: t("copyTrading.withdrawSuccessDesc") });

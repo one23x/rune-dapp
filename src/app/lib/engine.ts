@@ -233,16 +233,17 @@ export const hyperliquid = {
   subscriptions: (userId: string) =>
     get<{ userId: string; subscriptions: any[] }>(`v1/users/${userId}/hl/subscriptions`),
 
-  /**
-   * One-click copy: attempts to CREATE an HL copy subscription. NOTE — this
-   * route does NOT exist on the Bearer plane yet (hl-read.ts only exposes the
-   * GET subscriptions reader). It is wired optimistically so the UI lights up
-   * the moment the backend ships `POST /v1/users/:userId/hl/subscriptions`;
-   * until then the call surfaces the engine's 404/405 to the caller, which the
-   * page turns into a "pending engine endpoint" notice (no faked success).
-   */
+  /** One-click copy: CREATE an HL copy subscription (live: hl-read.ts POST :398). */
   subscribeCreate: (userId: string, body: unknown) =>
     post(`v1/users/${userId}/hl/subscriptions`, body),
+
+  /** Pause / resume an active subscription (PATCH live: hl-read.ts :588). */
+  subscriptionPatch: (userId: string, id: string, body: { status: "active" | "paused" }) =>
+    patch<{ ok: boolean; id: string; status: string }>(`v1/users/${userId}/hl/subscriptions/${id}`, body),
+
+  /** Cancel (stop following) a subscription (DELETE live: hl-read.ts :616). */
+  subscriptionDelete: (userId: string, id: string) =>
+    del<{ ok: boolean }>(`v1/users/${userId}/hl/subscriptions/${id}`),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

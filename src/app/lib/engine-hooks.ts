@@ -8,7 +8,7 @@
  * per call site as they get built out.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   users,
   funding,
@@ -164,4 +164,31 @@ export function useHlSubs(userId: string | undefined) {
     enabled: !!userId,
     staleTime: 30_000,
   });
+}
+
+/**
+ * Manage an existing HL copy subscription: pause / resume (PATCH) + cancel (DELETE).
+ * Routes are live (hl-read.ts :588 / :616). Invalidates the subs query on success so the
+ * ActiveSubs list reflects the new state immediately.
+ */
+export function useHlSubMutations(userId: string | undefined) {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
+
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "active" | "paused" }) =>
+      hyperliquid.subscriptionPatch(userId!, id, { status }),
+    onSuccess: invalidate,
+  });
+  const cancel = useMutation({
+    mutationFn: ({ id }: { id: string }) => hyperliquid.subscriptionDelete(userId!, id),
+    onSuccess: invalidate,
+  });
+
+  return {
+    pause: (id: string) => setStatus.mutateAsync({ id, status: "paused" }),
+    resume: (id: string) => setStatus.mutateAsync({ id, status: "active" }),
+    cancel: (id: string) => cancel.mutateAsync({ id }),
+    isPending: setStatus.isPending || cancel.isPending,
+  };
 }
