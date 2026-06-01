@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  ArrowLeft, ExternalLink, Wallet, TrendingUp, TrendingDown, 
-  BarChart2, Activity, Info
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ComposedChart, Bar, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell
-} from "recharts";
-import './_group.css';
+  Search,
+  Zap,
+  Users,
+  ShieldCheck,
+  ChevronRight,
+  BarChart2,
+  TrendingUp,
+  Layers,
+  ExternalLink,
+  Flame,
+} from "lucide-react";
+import "./_group.css";
 
-// --- Helper Components ---
-
-function AnimatedNumber({ value, prefix = "", suffix = "", decimals = 0 }: { value: number, prefix?: string, suffix?: string, decimals?: number }) {
+// --- Helper: animated count-up number ---
+function AnimatedNumber({ value, prefix = "", suffix = "", decimals = 0 }: { value: number; prefix?: string; suffix?: string; decimals?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ function AnimatedNumber({ value, prefix = "", suffix = "", decimals = 0 }: { val
 
     const timer = setInterval(() => {
       start += increment;
-      if (start >= end) {
+      if ((increment >= 0 && start >= end) || (increment < 0 && start <= end)) {
         setDisplayValue(end);
         clearInterval(timer);
       } else {
@@ -44,367 +46,394 @@ function AnimatedNumber({ value, prefix = "", suffix = "", decimals = 0 }: { val
   );
 }
 
-// --- Mock Data ---
+// --- Helper: gold sparkline ---
+function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
+  const w = 96;
+  const h = 34;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const pts = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((d - min) / range) * h;
+    return [x, y];
+  });
+  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const area = `0,${h} ${line} ${w},${h}`;
+  const stroke = "#f59e0b";
+  const gradId = `spark-${positive ? "up" : "dn"}`;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible" style={{ opacity: positive ? 1 : 0.55 }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stroke} stopOpacity={0.28} />
+          <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <polygon points={area} fill={`url(#${gradId})`} />
+      <polyline points={line} fill="none" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-const chartCandles = Array.from({ length: 30 }).map((_, i) => {
-  const base = 80 + i * 0.5 + Math.sin(i * 0.5) * 5;
-  const isUp = Math.random() > 0.4;
-  const open = base + (Math.random() - 0.5) * 2;
-  const close = open + (isUp ? 1 : -1) * Math.random() * 3;
-  const high = Math.max(open, close) + Math.random() * 2;
-  const low = Math.min(open, close) - Math.random() * 2;
-  return {
-    date: `10-${String(i + 1).padStart(2, '0')}`,
-    open, close, high, low,
-    volume: Math.random() * 1000000 + 500000,
-    isUp
-  };
-});
+interface Vault {
+  id: string;
+  name: string;
+  nameEn: string;
+  tag: string;
+  leader: string;
+  apr: number;
+  tvl: number;
+  pnl30d: number;
+  followers: number;
+  commission: number;
+  spark: number[];
+  hot?: boolean;
+}
 
-const equityChart = Array.from({ length: 30 }).map((_, i) => {
-  return {
-    date: `10-${String(i + 1).padStart(2, '0')}`,
-    equity: 20000000 + i * 150000 + Math.sin(i * 0.3) * 500000 + Math.random() * 200000
-  };
-});
+const VAULTS: Vault[] = [
+  {
+    id: "alpha",
+    name: "金库 A · Alpha",
+    nameEn: "Vault A · Alpha",
+    tag: "做市",
+    leader: "0xc179...e0c8",
+    apr: 63.42,
+    tvl: 24_800_000,
+    pnl30d: 1_840_000,
+    followers: 12840,
+    commission: 10,
+    spark: [12, 14, 13, 16, 18, 17, 21, 23, 22, 26, 28, 31],
+    hot: true,
+  },
+  {
+    id: "hlp",
+    name: "HLP · 协议金库",
+    nameEn: "HLP · Protocol Vault",
+    tag: "协议",
+    leader: "0x0000...ffff",
+    apr: 28.74,
+    tvl: 182_400_000,
+    pnl30d: 4_120_000,
+    followers: 38210,
+    commission: 0,
+    spark: [40, 42, 41, 44, 46, 48, 47, 50, 53, 55, 58, 61],
+    hot: true,
+  },
+  {
+    id: "sigma",
+    name: "金库 C · Sigma",
+    nameEn: "Vault C · Sigma",
+    tag: "高频",
+    leader: "0x9a4f...12b7",
+    apr: 88.91,
+    tvl: 6_700_000,
+    pnl30d: 740_000,
+    followers: 3180,
+    commission: 12,
+    spark: [6, 7, 6.5, 8, 9, 11, 10, 12, 14, 13, 16, 19],
+    hot: true,
+  },
+  {
+    id: "beta",
+    name: "金库 B · Beta",
+    nameEn: "Vault B · Beta",
+    tag: "趋势",
+    leader: "0xd6e5...5b42",
+    apr: 41.16,
+    tvl: 12_300_000,
+    pnl30d: 920_000,
+    followers: 6420,
+    commission: 10,
+    spark: [20, 19, 21, 20, 22, 24, 23, 25, 24, 26, 28, 27],
+  },
+  {
+    id: "delta",
+    name: "金库 D · Delta",
+    nameEn: "Vault D · Delta",
+    tag: "对冲",
+    leader: "0x3f81...aa09",
+    apr: -7.42,
+    tvl: 3_200_000,
+    pnl30d: -120_000,
+    followers: 1240,
+    commission: 8,
+    spark: [18, 17, 18, 16, 17, 15, 16, 14, 15, 13, 14, 13],
+  },
+];
 
-const pnlChart = Array.from({ length: 30 }).map((_, i) => {
-  return {
-    date: `10-${String(i + 1).padStart(2, '0')}`,
-    pnl: i < 5 ? -100000 + i * 20000 : 50000 + i * 250000 + Math.random() * 300000
-  };
-});
+const CATEGORIES = ["全部", "做市", "趋势", "协议", "高频", "对冲"];
 
-// --- Main Page Component ---
+function fmtUsd(n: number) {
+  const a = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (a >= 1e9) return `${sign}$${(a / 1e9).toFixed(2)}B`;
+  if (a >= 1e6) return `${sign}$${(a / 1e6).toFixed(2)}M`;
+  if (a >= 1e3) return `${sign}$${(a / 1e3).toFixed(1)}K`;
+  return `${sign}$${a.toFixed(0)}`;
+}
 
-export default function Hyperliquid() {
-  const [activeVault, setActiveVault] = useState('alpha');
-  const [interval, setIntervalVal] = useState('1D');
+export function Hyperliquid() {
+  const [activeCategory, setActiveCategory] = useState("全部");
 
-  const currentPrice = chartCandles[chartCandles.length - 1].close;
-  const prevPrice = chartCandles[chartCandles.length - 2].close;
-  const priceChange = ((currentPrice - prevPrice) / prevPrice) * 100;
+  const filtered = activeCategory === "全部" ? VAULTS : VAULTS.filter((v) => v.tag === activeCategory);
 
-  const TT = {
-    contentStyle: {
-      background: "rgba(0,0,0,0.8)", 
-      border: "1px solid rgba(245, 158, 11, 0.3)",
-      backdropFilter: "blur(12px)",
-      borderRadius: 8, 
-      fontSize: 12,
-      color: "white"
-    },
-    itemStyle: { color: "rgba(255,255,255,0.8)" },
-    labelStyle: { color: "rgba(255,255,255,0.5)", marginBottom: 4 },
-    cursor: { fill: "rgba(245, 158, 11, 0.1)" }
-  };
+  const totalTvl = VAULTS.reduce((s, v) => s + v.tvl, 0);
 
   return (
     <div className="min-h-screen bg-[#0c0a07] text-white font-sans overflow-x-hidden selection:bg-amber-500/30 relative">
       {/* Background Orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <motion.div
           className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full opacity-60 blur-[100px]"
-          style={{ background: 'var(--orb-1)' }}
+          style={{ background: "var(--orb-1)" }}
           animate={{ x: [0, 50, -20, 0], y: [0, -30, 40, 0], scale: [1, 1.1, 0.9, 1] }}
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-[20%] -right-[20%] w-[70%] h-[60%] rounded-full opacity-50 blur-[120px]"
-          style={{ background: 'var(--orb-2)' }}
+          style={{ background: "var(--orb-2)" }}
           animate={{ x: [0, -40, 30, 0], y: [0, 50, -20, 0], scale: [1, 1.2, 0.8, 1] }}
           transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
         />
-        <motion.div 
+        <motion.div
           className="absolute -bottom-[10%] left-[10%] w-[50%] h-[40%] rounded-full opacity-60 blur-[90px]"
-          style={{ background: 'var(--orb-3)' }}
+          style={{ background: "var(--orb-3)" }}
           animate={{ x: [0, 30, -40, 0], y: [0, -20, 50, 0], scale: [1, 0.9, 1.1, 1] }}
           transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
         />
       </div>
 
-      <div className="max-w-[390px] mx-auto min-h-screen relative shadow-2xl border-x border-white/5 backdrop-blur-[2px] pb-12">
-        
-        {/* Header Row */}
-        <header className="px-5 pt-12 pb-4 flex items-center justify-between relative z-10">
-          <button className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white/90 transition-colors">
-            <ArrowLeft size={14} />
-            <span><span className="opacity-70">返回项目库 ·</span> Back to Projects</span>
-          </button>
-          
-          <div className="flex p-0.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-md">
-            <button 
-              onClick={() => setActiveVault('alpha')}
-              className={`px-3 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                activeVault === 'alpha' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)]' : 'text-white/50 hover:text-white/80'
-              }`}
-            >
-              金库 A · Alpha
-            </button>
-            <button 
-              onClick={() => setActiveVault('beta')}
-              className={`px-3 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                activeVault === 'beta' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)]' : 'text-white/50 hover:text-white/80'
-              }`}
-            >
-              金库 B · Beta
-            </button>
+      <div className="max-w-[390px] mx-auto min-h-screen relative z-10 shadow-2xl border-x border-white/5 backdrop-blur-[2px] pb-10">
+        {/* ── STICKY HEADER ── */}
+        <div className="sticky top-0 z-20 bg-[#0c0a07]/80 backdrop-blur-xl border-b border-white/10 pb-3 pt-6 px-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg border border-amber-500/30 bg-black flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.25)]">
+                <span className="text-[13px] font-black text-amber-400 tracking-tighter">HL</span>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-white leading-none drop-shadow-md">Hyperliquid 跟单</h1>
+                <span className="text-[10px] text-white/45 tracking-wide">链上永续金库 · 智能合约跟单</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-white/60 font-mono bg-white/5 px-2 py-1 rounded-full border border-white/10">
+              <div className="relative w-1.5 h-1.5">
+                <div className="absolute inset-0 bg-emerald-400 rounded-full" style={{ animation: "pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}></div>
+                <div className="absolute inset-0 bg-emerald-400 rounded-full border border-black/50"></div>
+              </div>
+              <span>实时</span>
+            </div>
           </div>
-        </header>
 
-        <main className="px-5 space-y-5 relative z-10">
-          {/* Hero Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, type: "spring" }}
-            className="glass-panel-strong p-5 relative overflow-hidden">
-            <div className="shimmer-sweep"></div>
-            
-            <div className="flex items-start gap-4 mb-5 relative z-10">
-              <div className="w-14 h-14 rounded-xl bg-black border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)] flex items-center justify-center shrink-0">
-                <span className="text-xl font-black text-amber-400 tracking-tighter">HL</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400/80 block mb-1">
-                  <span className="opacity-80">金库实时数据 ·</span> Live Vault Intelligence
-                </span>
-                <h1 className="text-2xl font-bold tracking-tight text-white leading-tight mb-0.5">
-                  {activeVault === 'alpha' ? '金库 A · Alpha' : '金库 B · Beta'}
-                </h1>
-                <p className="text-[10px] text-white/50 mb-2">
-                  Hyperliquid Vault<span className="opacity-70"> · 链上永续合约做市金库</span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-md px-2 py-1">
-                    <Wallet size={10} className="text-white/40" />
-                    <span className="font-mono text-[10px] text-white/60">0xc179...e0c8</span>
-                    <ExternalLink size={10} className="text-amber-400/70" />
-                  </div>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-400">
-                    运行中 / Active
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input
+              placeholder="搜索金库 / 管理员地址..."
+              className="w-full bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/50 pl-9 pr-3 text-sm text-white/90 placeholder:text-white/40 h-10 rounded-xl backdrop-blur-sm"
+            />
+          </div>
 
-            <div className="grid grid-cols-4 gap-2 pt-4 border-t border-white/10 relative z-10">
-              <div>
-                <div className="text-[9px] uppercase tracking-wider text-white/50 mb-1">TVL<span className="opacity-60 hidden sm:inline"> / 总锁仓</span></div>
-                <div className="text-sm font-bold text-white"><AnimatedNumber value={24.8} prefix="$" suffix="M" decimals={1} /></div>
-              </div>
-              <div>
-                <div className="text-[9px] uppercase tracking-wider text-white/50 mb-1">APR<span className="opacity-60 hidden sm:inline"> / 年化</span></div>
-                <div className="text-sm font-bold text-emerald-400">+<AnimatedNumber value={63.42} suffix="%" decimals={2} /></div>
-              </div>
-              <div>
-                <div className="text-[9px] uppercase tracking-wider text-white/50 mb-1">Total PnL</div>
-                <div className="text-sm font-bold text-amber-400">+<AnimatedNumber value={8.4} prefix="$" suffix="M" decimals={1} /></div>
-              </div>
-              <div>
-                <div className="text-[9px] uppercase tracking-wider text-white/50 mb-1">Followers</div>
-                <div className="text-sm font-bold text-white"><AnimatedNumber value={12840} /></div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* PnL Summary Cards */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1, type: "spring" }}
-            className="grid grid-cols-2 gap-2">
-            {[
-              { title: "今日盈亏", titleEn: "Day PnL", val: 42500, up: true },
-              { title: "本周盈亏", titleEn: "Week PnL", val: -12400, up: false },
-              { title: "本月盈亏", titleEn: "Month PnL", val: 345000, up: true },
-              { title: "历史盈亏", titleEn: "All-Time", val: 8400000, up: true }
-            ].map((item, idx) => (
-              <div key={idx} className={`p-3 rounded-xl border bg-black/20 backdrop-blur-sm ${item.up ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
-                <div className="text-[9px] uppercase text-white/50 mb-1">{item.titleEn} <span className="opacity-70">· {item.title}</span></div>
-                <div className={`text-sm font-bold font-mono mb-1 ${item.up ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {item.up ? '+' : '-'}${Math.abs(item.val).toLocaleString()}
-                </div>
-                <div className={`flex items-center gap-1 text-[9px] ${item.up ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {item.up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                  <span>{item.up ? '盈利' : '亏损'}</span>
-                </div>
-              </div>
-            ))}
-          </motion.div>
-
-          {/* Market Intelligence */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2, type: "spring" }}
-            className="space-y-4">
-            
-            <div className="flex items-center gap-2 border-l-[3px] border-amber-500 pl-3 py-0.5">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-500/60 mb-0.5">市场数据</div>
-                <h2 className="text-base font-bold text-white leading-none">Market Intelligence</h2>
-              </div>
-            </div>
-
-            {/* HYPE Chart */}
-            <div className="glass-panel overflow-hidden border-t-2 border-t-amber-500/50">
-              <div className="p-4 border-b border-white/10 flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <BarChart2 size={14} className="text-amber-400" />
-                    <span className="text-sm font-bold text-white">HYPE 价格走势</span>
-                    <span className="text-[10px] text-white/50 ml-1">Price Chart</span>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-mono font-bold text-white">${currentPrice.toFixed(2)}</span>
-                    <span className={`text-[10px] font-mono ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-1 bg-black/40 p-0.5 rounded border border-white/10">
-                  {['1H', '4H', '1D', '1W'].map(opt => (
-                    <button key={opt} onClick={() => setIntervalVal(opt)}
-                      className={`px-2 py-0.5 rounded text-[9px] font-mono transition-colors ${
-                        interval === opt ? 'bg-amber-500/20 text-amber-400' : 'text-white/40 hover:text-white/70'
-                      }`}>
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="h-[200px] w-full pt-4 pb-1 pr-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartCandles} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={30} />
-                    <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={v => `$${v.toFixed(0)}`} />
-                    <Tooltip {...TT} labelFormatter={() => ''} formatter={(val: number) => [`$${val.toFixed(2)}`, 'Close']} />
-                    <Area type="monotone" dataKey="close" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorClose)" />
-                    <Bar dataKey="volume" fill="#f59e0b" opacity={0.15} yAxisId="vol" />
-                    <YAxis yAxisId="vol" hide domain={[0, 'dataMax * 4']} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {/* Vault Equity */}
-              <div className="glass-panel overflow-hidden border-t-2 border-t-amber-500/30">
-                <div className="p-3 border-b border-white/5 flex items-center gap-1.5">
-                  <Activity size={12} className="text-amber-400/80" />
-                  <span className="text-xs font-bold text-white">金库规模走势 <span className="text-[9px] text-white/50 font-normal">Vault Equity</span></span>
-                </div>
-                <div className="h-[140px] w-full pt-3 pb-1 pr-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={equityChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorEq" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#fbbf24" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={30} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1e6).toFixed(0)}M`} />
-                      <Tooltip {...TT} labelFormatter={() => ''} formatter={(val: number) => [`$${(val/1e6).toFixed(2)}M`, 'Equity']} />
-                      <Area type="monotone" dataKey="equity" stroke="#fbbf24" strokeWidth={2} fillOpacity={1} fill="url(#colorEq)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* All-Time PnL */}
-              <div className="glass-panel overflow-hidden border-t-2 border-t-amber-500/30">
-                <div className="p-3 border-b border-white/5 flex items-center gap-1.5">
-                  <TrendingUp size={12} className="text-amber-400/80" />
-                  <span className="text-xs font-bold text-white">历史累计盈亏 <span className="text-[9px] text-white/50 font-normal">All-Time PnL</span></span>
-                </div>
-                <div className="h-[140px] w-full pt-3 pb-1 pr-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={pnlChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorPnl" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={30} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1e6).toFixed(1)}M`} />
-                      <Tooltip {...TT} labelFormatter={() => ''} formatter={(val: number) => [`$${(val/1e6).toFixed(2)}M`, 'PnL']} />
-                      <Area type="monotone" dataKey="pnl" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorPnl)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Vault Details */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3, type: "spring" }}
-            className="space-y-3">
-            <div className="flex items-center gap-2 border-l-[3px] border-amber-500 pl-3 py-0.5">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-500/60 mb-0.5">基本信息</div>
-                <h2 className="text-base font-bold text-white leading-none">Vault Details</h2>
-              </div>
-            </div>
-
-            <div className="glass-panel p-4">
-              <div className="space-y-3">
-                {[
-                  { labelZh: "合约地址", labelEn: "Vault Address", val: "0xc179...e0c8", isLink: true, isMono: true },
-                  { labelZh: "管理员", labelEn: "Leader", val: "0x8a92...3b1f", isLink: true, isMono: true },
-                  { labelZh: "管理员份额", labelEn: "Leader Fraction", val: "15.00%", isGold: true },
-                  { labelZh: "管理员佣金", labelEn: "Commission", val: "10.00%", isGold: true },
-                  { labelZh: "年化收益率", labelEn: "APR", val: "+63.42%", isGreen: true },
-                  { labelZh: "接受存款", labelEn: "Allow Deposits", val: "是 / Yes" },
-                  { labelZh: "跟单人数", labelEn: "Followers", val: "12,840" },
-                  { labelZh: "今日盈亏", labelEn: "Day PnL", val: "+$42,500.00", isGreen: true },
-                  { labelZh: "历史累计盈亏", labelEn: "All-Time PnL", val: "+$8,400,000.00", isGreen: true },
-                ].map((row, i) => (
-                  <div key={i} className="flex justify-between items-center py-1 border-b border-white/5 last:border-0 last:pb-0">
-                    <span className="text-[10px] text-white/50">{row.labelEn} <span className="opacity-60 hidden xs:inline">· {row.labelZh}</span></span>
-                    <div className={`flex items-center gap-1.5 text-xs ${
-                      row.isGold ? 'text-amber-400 font-bold' : 
-                      row.isGreen ? 'text-emerald-400 font-bold' : 
-                      row.isMono ? 'font-mono text-white/80' : 'text-white'
-                    }`}>
-                      {row.val}
-                      {row.isLink && <ExternalLink size={10} className="text-amber-400/50" />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Description & Footer Note */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4, type: "spring" }}
-            className="space-y-4 pt-2">
-            <div className="glass-panel p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Info size={14} className="text-amber-400" />
-                <h3 className="text-xs font-bold text-white">项目简介 <span className="text-[10px] font-normal text-white/50">Description</span></h3>
-              </div>
-              <p className="text-[11px] leading-relaxed text-white/60">
-                此金库策略专注于 Hyperliquid 链上永续合约的高频做市与套利。通过算法自动捕捉市场微小价差，提供深度流动性的同时获取稳定收益。策略风险经过严格控制，支持随时提取资金。
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 text-[9px] text-white/40">
-              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" style={{ animation: 'pulse-ring 2s infinite' }}></div>
-              <span>数据实时同步自 HyperLiquid 公开 API · 每 2 分钟自动刷新</span>
-            </div>
-            
-            <div className="pb-6">
-              <button className="w-full py-3.5 rounded-xl bg-[#f59e0b] text-black font-bold text-sm glass-button shadow-[0_0_20px_rgba(245,158,11,0.35)] flex items-center justify-center gap-2">
-                参与跟单做市
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  activeCategory === cat
+                    ? "bg-[#f59e0b] text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                }`}
+              >
+                {cat}
               </button>
+            ))}
+          </div>
+        </div>
+
+        <main className="px-5 pt-5 space-y-6">
+          {/* ── SMART CONTRACT COPY-TRADING HERO CARD ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, type: "spring" }}
+            className="glass-panel-strong p-5 relative overflow-hidden"
+          >
+            <div className="shimmer-sweep"></div>
+
+            <div className="absolute -top-8 -right-8 w-36 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 -left-4 w-24 h-24 bg-amber-600/10 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="relative z-10">
+              {/* Badge */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-500/30 rounded-full px-2.5 py-1">
+                  <Zap size={11} className="text-amber-400" />
+                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">智能合约跟单</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                  <div className="relative w-1.5 h-1.5">
+                    <div className="absolute inset-0 bg-emerald-400 rounded-full" style={{ animation: "pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}></div>
+                    <div className="absolute inset-0 bg-emerald-400 rounded-full"></div>
+                  </div>
+                  链上执行
+                </div>
+              </div>
+
+              {/* Headline */}
+              <h2 className="text-[22px] font-bold text-white leading-tight tracking-tight mb-2 drop-shadow-sm">
+                让 AI 帮你
+                <br />
+                <span className="text-amber-400">自动跟单 Hyperliquid 金库</span>
+              </h2>
+              <p className="text-xs text-white/60 mb-5 leading-relaxed">
+                One-Agents 引擎实时复制顶级金库的永续合约仓位，通过智能合约链上自动执行
+              </p>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                <div className="bg-black/20 rounded-xl p-3 border border-white/5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Layers size={10} className="text-white/40" />
+                    <span className="text-[9px] text-white/50 uppercase tracking-wide">总锁仓</span>
+                  </div>
+                  <p className="text-sm font-bold text-white"><AnimatedNumber value={totalTvl / 1e6} prefix="$" decimals={1} suffix="M" /></p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-3 border border-white/5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <BarChart2 size={10} className="text-white/40" />
+                    <span className="text-[9px] text-white/50 uppercase tracking-wide">平均年化</span>
+                  </div>
+                  <p className="text-sm font-bold text-emerald-400">+<AnimatedNumber value={54.7} decimals={1} suffix="%" /></p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-3 border border-white/5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Users size={10} className="text-white/40" />
+                    <span className="text-[9px] text-white/50 uppercase tracking-wide">跟随者</span>
+                  </div>
+                  <p className="text-sm font-bold text-amber-400"><AnimatedNumber value={61890} /></p>
+                </div>
+              </div>
+
+              {/* CTA button */}
+              <button className="w-full py-3.5 rounded-xl bg-[#f59e0b] text-black font-bold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-transform active:scale-[0.98]">
+                <Zap size={16} className="fill-black/20" />
+                <span>进入智能跟单</span>
+                <ChevronRight size={16} />
+              </button>
+
+              {/* Trust line */}
+              <div className="flex items-center justify-center gap-1.5 mt-4">
+                <ShieldCheck size={12} className="text-white/40" />
+                <span className="text-[10px] text-white/50">资金链上托管 · Hyperliquid L1 永续合约</span>
+              </div>
             </div>
           </motion.div>
 
+          {/* ── VAULTS SECTION ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                  <Layers size={14} className="text-amber-400" />
+                </div>
+                <span className="text-sm font-bold text-white tracking-wide">精选金库</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-white/50 font-mono bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
+                <TrendingUp size={12} />
+                <span>{filtered.length} 个金库</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <AnimatePresence>
+                {filtered.map((v, i) => {
+                  const up = v.apr >= 0;
+                  return (
+                    <motion.div
+                      key={v.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.35, delay: i * 0.06, type: "spring" }}
+                      className="glass-panel p-4 relative overflow-hidden"
+                    >
+                      {v.hot && <div className="absolute -top-10 -right-10 w-28 h-28 bg-amber-500/15 blur-2xl rounded-full pointer-events-none" />}
+
+                      {/* Top row: identity + APR */}
+                      <div className="relative z-10 flex items-start justify-between mb-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-[15px] font-bold text-white tracking-tight truncate">{v.name}</h3>
+                            {v.hot && <Flame size={13} className="text-amber-400 shrink-0" />}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-bold text-amber-300/90 uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">{v.tag}</span>
+                            <div className="flex items-center gap-1 text-[10px] text-white/40 font-mono">
+                              <span>{v.leader}</span>
+                              <ExternalLink size={9} className="text-amber-400/60" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 pl-2">
+                          <div className={`text-xl font-bold leading-none ${up ? "text-emerald-400" : "text-red-400"}`}>
+                            {up ? "+" : ""}<AnimatedNumber value={v.apr} decimals={1} suffix="%" />
+                          </div>
+                          <span className="text-[9px] text-white/40 uppercase tracking-wide">年化 APR</span>
+                        </div>
+                      </div>
+
+                      {/* Sparkline + stats */}
+                      <div className="relative z-10 flex items-end justify-between gap-3 mb-3.5">
+                        <div className="grid grid-cols-3 gap-3 flex-1">
+                          <div>
+                            <div className="text-[9px] text-white/40 uppercase tracking-wide mb-0.5">总锁仓</div>
+                            <div className="text-xs font-bold text-white font-mono">{fmtUsd(v.tvl)}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-white/40 uppercase tracking-wide mb-0.5">30D 盈亏</div>
+                            <div className={`text-xs font-bold font-mono ${v.pnl30d >= 0 ? "text-emerald-400" : "text-red-400"}`}>{v.pnl30d >= 0 ? "+" : ""}{fmtUsd(v.pnl30d)}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-white/40 uppercase tracking-wide mb-0.5">跟随者</div>
+                            <div className="text-xs font-bold text-white font-mono">{v.followers.toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div className="shrink-0 opacity-90">
+                          <Sparkline data={v.spark} positive={up} />
+                        </div>
+                      </div>
+
+                      {/* Footer: commission + CTA */}
+                      <div className="relative z-10 flex items-center justify-between gap-3 pt-3 border-t border-white/5">
+                        <span className="text-[10px] text-white/45">管理费 <span className="text-white/70 font-mono">{v.commission}%</span></span>
+                        {v.hot ? (
+                          <button className="flex items-center gap-1.5 bg-[#f59e0b] text-black font-bold text-xs px-4 py-2 rounded-lg shadow-[0_0_14px_rgba(245,158,11,0.3)] transition-transform active:scale-[0.97]">
+                            <Zap size={13} className="fill-black/20" />
+                            跟单
+                            <ChevronRight size={13} />
+                          </button>
+                        ) : (
+                          <button className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-xs px-4 py-2 rounded-lg hover:bg-amber-500/20 transition-colors">
+                            跟单
+                            <ChevronRight size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            <div className="text-center text-[11px] text-white/35 pt-1">
+              数据对标 Hyperliquid 公开金库 · 每 2 分钟同步
+            </div>
+          </div>
         </main>
       </div>
     </div>
   );
 }
+
+export default Hyperliquid;

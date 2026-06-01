@@ -5,6 +5,7 @@ export const modules: ModuleMap = {
   "./components/mockups/copy-trading/CopyTradingHistory.tsx": () => import("../components/mockups/copy-trading/CopyTradingHistory.tsx"),
   "./components/mockups/copy-trading/CopyTradingSignals.tsx": () => import("../components/mockups/copy-trading/CopyTradingSignals.tsx"),
   "./components/mockups/copy-trading/CopyTradingStrategy.tsx": () => import("../components/mockups/copy-trading/CopyTradingStrategy.tsx"),
+  "./components/mockups/rune-glass/Dashboard.tsx": () => import("../components/mockups/rune-glass/Dashboard.tsx"),
   "./components/mockups/rune-glass/Hyperliquid.tsx": () => import("../components/mockups/rune-glass/Hyperliquid.tsx"),
   "./components/mockups/rune-glass/Profile.tsx": () => import("../components/mockups/rune-glass/Profile.tsx"),
   "./components/mockups/rune-glass/Vault.tsx": () => import("../components/mockups/rune-glass/Vault.tsx"),
