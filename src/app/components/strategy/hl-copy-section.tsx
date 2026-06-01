@@ -1105,53 +1105,111 @@ export function HlCopySection() {
   );
 }
 
-// ── 策略包行 — leader row with inline 一键跟单 (hub page) ──────────────────────
+// ── 策略包行 — 可选择 + 可展开(更多资料 + AI 分析);跟单由底部唯一主按钮统一触发 ──
+//
+// Single source of follow truth: rows only toggle *selection*; the one master
+// "一键跟单" button at the bottom of the list batch-follows the selection via
+// copyMany. Tapping the chevron expands honest detail derived from real leader
+// fields (tier / score / median hold / HFT) plus a heuristic AI assessment.
+
+/** Honest, deterministic assessment composed from the leader's REAL fields
+ *  (tier, score, median holding, HFT) — not a fabricated win-rate or live LLM. */
+function aiAnalysis(leader: HlLeader, t: (k: string, d?: string) => string): string {
+  const tier = tierOf(leader);
+  const score = leader.score ?? 0;
+  const hold = leader.medianHoldingS ?? 0;
+  const style = leader.isHft
+    ? t("hl.ai.styleHft", "高频短打,换手快、单笔暴露低")
+    : hold > 0 && hold < 3600
+      ? t("hl.ai.styleScalp", "日内波段,持仓偏短")
+      : t("hl.ai.styleSwing", "趋势波段,持仓偏长、回撤更平滑");
+  const grade = score >= 85
+    ? t("hl.ai.gradeHigh", "评分处于头部区间,信号一致性强")
+    : score >= 70
+      ? t("hl.ai.gradeMid", "评分稳健,风险收益较均衡")
+      : t("hl.ai.gradeLow", "评分中性,建议小比例试跟");
+  const tierNote = tier === "conservative"
+    ? t("hl.ai.tierConservative", "适合作为底仓稳健跟随")
+    : tier === "aggressive"
+      ? t("hl.ai.tierAgg", "弹性更高,建议配合止盈止损")
+      : tier === "arbitrage"
+        ? t("hl.ai.tierArb", "中性套利,波动更低")
+        : t("hl.ai.tierSteady", "攻守平衡,适合中等仓位");
+  return `${style}。${grade},${tierNote}。`;
+}
 
 function PackRow({
-  leader, subscribed, copying, onFollow,
+  leader, subscribed, selected, onToggleSelect,
 }: {
-  leader: HlLeader; subscribed: boolean; copying: boolean; onFollow: (l: HlLeader) => void;
+  leader: HlLeader; subscribed: boolean; selected: boolean; onToggleSelect: (l: HlLeader) => void;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
   const meta = TIER_META[tierOf(leader)];
   const Icon = meta.icon;
+  const stat = (label: string, value: React.ReactNode) => (
+    <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-2 py-1.5 min-w-0">
+      <div className="text-[9px] uppercase tracking-wide text-foreground/45 truncate">{label}</div>
+      <div className="text-[12px] font-bold text-foreground/85 tabular-nums truncate">{value}</div>
+    </div>
+  );
   return (
-    <div className="glass-panel p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
-          >
-            <Icon className="w-5 h-5" />
+    <div className={cn("glass-panel p-3.5 transition", selected && !subscribed && "ring-1 ring-amber-400/60")}>
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => !subscribed && onToggleSelect(leader)}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left"
+          data-testid={`button-pack-select-${leader.address}`}
+        >
+          <div className={cn(
+            "h-5 w-5 rounded-md border grid place-items-center shrink-0 transition",
+            subscribed ? "border-emerald-500/40 bg-emerald-500/15" : selected ? "border-amber-400 bg-amber-400" : "border-white/20",
+          )}>
+            {subscribed ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : selected ? <CheckCircle2 className="h-3.5 w-3.5 text-black" /> : null}
+          </div>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}>
+            <Icon className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-foreground truncate">{leader.label || shortAddr(leader.address)}</span>
               {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
+              {subscribed && <span className="text-[10px] text-emerald-400 font-semibold shrink-0">{t("hl.copying", "跟单中")}</span>}
             </div>
             <div className="text-[10px] text-foreground/50 mt-1 flex items-center gap-2">
               <Badge className="text-[8px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{t(meta.labelKey)}</Badge>
               <span className="tabular-nums">{t("hl.score", "评分")} {fmtScore(leader.score)}</span>
             </div>
           </div>
-        </div>
+        </button>
         <button
           type="button"
-          disabled={subscribed || copying}
-          onClick={() => onFollow(leader)}
-          className={cn(
-            "shrink-0 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[12px] font-bold transition-all",
-            subscribed
-              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-              : "bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)] active:scale-95",
-          )}
-          data-testid={`button-pack-follow-${leader.address}`}
+          onClick={() => setOpen((o) => !o)}
+          aria-label={t("hl.moreDetail", "更多资料")}
+          className="shrink-0 h-9 px-2 inline-flex items-center gap-0.5 rounded-lg text-[11px] text-foreground/55 hover:text-amber-300 hover:bg-white/5 transition"
+          data-testid={`button-pack-detail-${leader.address}`}
         >
-          {copying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : subscribed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
-          {subscribed ? t("hl.copying", "跟单中") : t("hl.oneClickFollow", "一键跟单")}
+          {t("hl.detail", "详情")}
+          <ChevronRight className={cn("h-4 w-4 transition-transform", open && "rotate-90")} />
         </button>
       </div>
+
+      {open && (
+        <div className="mt-3 pt-3 border-t border-white/10 space-y-2.5" style={{ animation: "fadeSlideIn 0.25s ease-out" }}>
+          <div className="grid grid-cols-3 gap-2">
+            {stat(t("hl.score", "评分"), fmtScore(leader.score))}
+            {stat(t("hl.tier", "风险层级"), t(meta.labelKey))}
+            {stat(t("hl.medianHold", "中位持仓"), fmtHold(leader.medianHoldingS))}
+          </div>
+          <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 p-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-300">
+              <Sparkles className="h-3.5 w-3.5" /> {t("hl.aiAnalysis", "AI 分析")}
+            </div>
+            <p className="text-[11px] text-foreground/70 mt-1 leading-relaxed">{aiAnalysis(leader, t as Parameters<typeof aiAnalysis>[1])}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1172,7 +1230,7 @@ export function HlHubPage() {
   const acctQ = useHlAccount(wallet, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
-  const { copy, pendingFor } = useHlCopy(userId, network);
+  const { copyMany, batchPending } = useHlCopy(userId, network);
 
   const subscribedLeaders = useMemo(() => {
     const set = new Set<string>();
@@ -1185,6 +1243,32 @@ export function HlHubPage() {
   const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
   const [cfg, setCfg] = useState<HlFollowConfig>(HL_DEFAULT_FOLLOW);
+
+  // Leader SELECTION for the single batch-follow button. Pre-select the top-3
+  // not-yet-followed leaders once they load (sensible default; user can edit).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (leaders.length === 0) return;
+    setSelected((prev) => {
+      if (prev.size > 0) return prev;
+      return new Set(
+        leaders
+          .filter((l) => !subscribedLeaders.has(l.address.toLowerCase()))
+          .slice(0, 3)
+          .map((l) => l.address.toLowerCase()),
+      );
+    });
+  }, [leaders, subscribedLeaders]);
+  const toggleSelect = (l: HlLeader) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      const k = l.address.toLowerCase();
+      if (n.has(k)) n.delete(k); else n.add(k);
+      return n;
+    });
+  const selectedLeaders = leaders.filter(
+    (l) => selected.has(l.address.toLowerCase()) && !subscribedLeaders.has(l.address.toLowerCase()),
+  );
 
   return (
     <div className="min-h-screen pb-28 lg:pb-12">
@@ -1216,28 +1300,52 @@ export function HlHubPage() {
         {/* 参数配置 */}
         <ConfigPanel cfg={cfg} setCfg={setCfg} reduce={reduce} />
 
-        {/* 策略包 + 一键跟单 */}
+        {/* 策略包 — 选择 + 唯一的「一键跟单」主按钮(批量 copyMany) */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Layers className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-amber-400" />
+              <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
+            </div>
+            {leaders.length > 0 && (
+              <span className="text-[11px] text-foreground/45 tabular-nums">{t("hl.selectedCount", "已选")} {selectedLeaders.length}/{leaders.length}</span>
+            )}
           </div>
           {leadersQ.isLoading ? (
             <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
           ) : leaders.length === 0 ? (
             <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
           ) : (
-            <div className="space-y-3">
-              {leaders.map((l) => (
-                <PackRow
-                  key={l.address}
-                  leader={l}
-                  subscribed={subscribedLeaders.has(l.address.toLowerCase())}
-                  copying={pendingFor?.toLowerCase() === l.address.toLowerCase()}
-                  onFollow={(leader) => copy(leader, cfg)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {leaders.map((l) => (
+                  <PackRow
+                    key={l.address}
+                    leader={l}
+                    subscribed={subscribedLeaders.has(l.address.toLowerCase())}
+                    selected={selected.has(l.address.toLowerCase())}
+                    onToggleSelect={toggleSelect}
+                  />
+                ))}
+              </div>
+              {/* 唯一一键跟单主按钮 — 批量跟随所选策略 */}
+              <button
+                type="button"
+                disabled={selectedLeaders.length === 0 || batchPending}
+                onClick={() => copyMany(selectedLeaders, cfg)}
+                className={cn(
+                  "mt-4 w-full h-12 rounded-2xl inline-flex items-center justify-center gap-2 text-[15px] font-extrabold transition-all",
+                  selectedLeaders.length === 0
+                    ? "bg-white/5 text-foreground/40 cursor-not-allowed"
+                    : "bg-gradient-to-r from-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(245,158,11,0.35)] active:scale-[0.99]",
+                )}
+                data-testid="button-hl-follow-master"
+              >
+                {batchPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                {t("hl.oneClickFollow", "一键跟单")}{selectedLeaders.length > 0 ? ` (${selectedLeaders.length})` : ""}
+              </button>
+              <p className="mt-2 text-center text-[11px] text-foreground/45">{t("hl.followHint", "按上方参数配置批量跟随所选策略")}</p>
+            </>
           )}
         </div>
 
