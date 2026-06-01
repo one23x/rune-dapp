@@ -96,13 +96,14 @@ function HlDepositBridge({ seller }: { seller: string }) {
           </Button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl w-full">
+        <div className="rounded-xl w-full">
           <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setConfirmed(false)}>
             ← {t("common.back", "改数量")}
           </button>
-          <div className="w-full overflow-x-auto">
+          <div className="-mx-2 overflow-x-auto">
             <PayEmbed
               client={thirdwebClient}
+              style={{ width: "100%" }}
               payOptions={{
                 mode: "direct_payment",
                 paymentInfo: {
@@ -174,7 +175,7 @@ function HlFunding({
 
       {/* 充值 —— 镜像 copy-trading 入金弹窗设计(渐变圆形图标头 + 地址行 + 资产徽章 + PayEmbed) */}
       <Dialog open={depOpen} onOpenChange={setDepOpen}>
-        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border w-[calc(100vw-0.75rem)] max-w-md p-3 rounded-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
