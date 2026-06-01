@@ -284,7 +284,7 @@ export function Hyperliquid() {
               <h2 className="text-[22px] font-bold text-white leading-tight tracking-tight mb-2 drop-shadow-sm">
                 让 AI 帮你
                 <br />
-                <span className="text-amber-400">自动跟单 Hyperliquid 金库</span>
+                <span className="gold-text">自动跟单 Hyperliquid 金库</span>
               </h2>
               <p className="text-xs text-white/60 mb-5 leading-relaxed">
                 One-Agents 引擎实时复制顶级金库的永续合约仓位，通过智能合约链上自动执行
