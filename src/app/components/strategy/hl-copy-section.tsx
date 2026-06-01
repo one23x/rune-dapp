@@ -1,26 +1,29 @@
 /**
  * Hyperliquid copy-trading section — the heart of the Strategy page.
  *
- * This folds the former standalone /hl page into the Strategy surface so that
- * "Strategy = Hyperliquid": the agent-copy list is reframed as the risk-tier
- * STRATEGY list (保守 / 稳健 / 激进 / 套利), with HL 开户 (enable / connect),
- * the mainnet/testnet toggle, and 持仓 / 历史 all living here.
+ * Reskinned to the "CopyTradingStrategy" canvas mockup: a single glass screen
+ * with a live account-stats header (Engine Live pill + 3-up grid), a parameter-
+ * configuration panel (跟单比例 / 杠杆 / 止盈 / 止损), a multi-select strategy/leader
+ * list, and a sticky bottom "开启跟单" action. The visual is the mockup's; every
+ * number and row stays bound to the real engine data the section already used.
  *
  * Engine wiring (Bearer read plane, real data only):
- *   - GET /v1/hl/leaders                 → useHlLeaders   (策略 by risk tier)
+ *   - GET /v1/hl/leaders                 → useHlLeaders   (策略 list, by risk tier)
  *   - GET /v1/hl/signals                 → useHlSignals   (数据源 leader feed)
- *   - GET /v1/hl/account                 → useHlAccount   (持仓 / 历史)
+ *   - GET /v1/hl/account                 → useHlAccount   (持仓 / 历史 / 账户)
  *   - GET /v1/users/:id/hl/subscriptions → useHlSubs      (active follows)
  *
- * One-click follow attempts POST .../hl/subscriptions and degrades gracefully
+ * The sticky CTA fires the existing one-click-follow flow (useHlCopy.copy) for
+ * each selected leader with the chosen HlFollowConfig; it degrades gracefully
  * (see useHlCopy) until the engine create route ships.
  */
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { motion, useReducedMotion } from "framer-motion";
 import { useActiveAccount } from "thirdweb/react";
 import {
-  Users, Activity, Layers, History as HistoryIcon, ChevronDown, ChevronRight,
+  Users, Activity, Layers, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
   Settings, Check,
@@ -42,9 +45,9 @@ import {
 import { hyperliquid } from "@app/lib/engine";
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
 import {
-  NetworkToggle, HlEmpty, useHlCopy, groupByTier, HL_TIERS, TIER_META,
+  NetworkToggle, HlEmpty, useHlCopy, TIER_META, tierOf,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
-  HL_DEFAULT_FOLLOW, type HlFollowConfig, type HlTier,
+  HL_DEFAULT_FOLLOW, type HlFollowConfig,
 } from "@app/components/hl/shared";
 import { useOnboardFlow } from "@app/components/copy-trading/shared";
 
@@ -79,9 +82,9 @@ function HlFunding({
     onError: (e: unknown) => toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" }),
   });
 
-  function copyAddr() {
+  async function copyAddr() {
     if (!depositAddress) return;
-    const ok = copyText(depositAddress);
+    const ok = await copyText(depositAddress);
     toast(ok ? { title: t("common.copied", "已复制") } : { title: t("common.copyFailed", "复制失败"), variant: "destructive" });
   }
 
@@ -178,15 +181,8 @@ function HlFunding({
 //   no wallet                → connect CTA
 //   user query loading       → resolving skeleton
 //   user query error         → friendly error + retry
-//   wallet, no engine user   → explicit 开通 button (reuses useOnboardFlow:
-//                              POST /users/onboard → confirm → enablePolymarket,
-//                              the same idempotent contract /copy-trading uses)
+//   wallet, no engine user   → explicit 开通 button (reuses useOnboardFlow)
 //   engine user present      → enabled banner with live state
-//
-// The onboarding action is guarded against double-submit (disabled while the
-// mutation is pending) and surfaces per-step progress so the user knows what
-// is happening and how long it takes.
-
 function HlAccountStrip({
   wallet, userLoading, userError, userId, onRetryUser, followCount,
 }: {
@@ -355,359 +351,320 @@ function HlAccountStrip({
   );
 }
 
-// ── Status card (real HL account state, amber-gradient hero) ─────────────────
-//
-// Ports the mockup's status-card visual language (amber gradient + corner glow +
-// pill badges + h-1.5 progress bars) onto REAL HlAccount fields. The two bars
-// show genuine ratios — margin utilisation (margin / accountValue) and
-// withdrawable share (withdrawable / accountValue) — never fabricated counters.
+// ── Header — icon + title + Engine Live pill (mockup hero) ────────────────────
 
-function MiniBar({
-  label, right, ratio, tone,
-}: { label: string; right: React.ReactNode; ratio: number; tone: "amber" | "zinc" }) {
-  const pct = Math.max(0, Math.min(1, ratio)) * 100;
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-end">
-        <span className="text-[13px] text-zinc-400">{label}</span>
-        <span className={cn("text-[13px] font-medium tabular-nums", tone === "amber" ? "text-amber-400" : "text-white")}>{right}</span>
-      </div>
-      <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-        <div
-          className={cn("h-full rounded-full", tone === "amber" ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-zinc-400")}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function HlStatusCard({
-  network, enabled, accountValue, unrealizedPnl, openPositions, withdrawable, margin, followCount,
-}: {
-  network: HlNetwork; enabled: boolean; accountValue: number; unrealizedPnl: number;
-  openPositions: number; withdrawable: number; margin: number; followCount: number;
-}) {
+function SectionHeader({
+  network, onNetwork, reduce,
+}: { network: HlNetwork; onNetwork: (n: HlNetwork) => void; reduce: boolean }) {
   const { t } = useTranslation();
-  const marginRatio = accountValue > 0 ? margin / accountValue : 0;
-  const wdRatio = accountValue > 0 ? withdrawable / accountValue : 0;
-  const pnlPos = unrealizedPnl >= 0;
   return (
-    <div className="glass-panel-strong relative p-5 overflow-hidden">
-      <div className="shimmer-sweep" />
-      <div className="absolute -top-8 -right-8 w-36 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="relative z-10">
-        {/* pills — real account context */}
-        <div className="flex flex-wrap items-center gap-2 mb-5">
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full text-[11px] font-medium">
-            <Activity className="w-3.5 h-3.5" />
-            {network === "mainnet" ? t("hl.mainnet", "主网") : t("hl.testnet", "测试网")}
-          </span>
-          {enabled && (
-            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[11px] font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              {t("hl.accountEnabled", "账户已开通")}
-            </span>
-          )}
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-[11px] font-medium">
-            <Crown className="w-3.5 h-3.5" />
-            {t("hl.followingN", "{{count}} 跟单中", { count: followCount })}
-          </span>
-        </div>
-
-        {/* hero numbers */}
-        <div className="grid grid-cols-2 gap-5 mb-5">
-          <div>
-            <div className="text-[12px] text-zinc-400 mb-1">{t("hl.accountValue", "账户净值")}</div>
-            <div className="text-2xl font-bold text-white tabular-nums tracking-tight">{fmtUsd(accountValue)}</div>
-          </div>
-          <div>
-            <div className="text-[12px] text-zinc-400 mb-1">{t("hl.unrealized", "未实现盈亏")}</div>
-            <div className={cn("text-2xl font-bold tabular-nums tracking-tight", pnlPos ? "text-emerald-400" : "text-red-400")}>
-              {pnlPos ? "+" : ""}{fmtUsd(unrealizedPnl)}
+    <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg">
+              <Activity className="text-amber-400 h-5 w-5" />
             </div>
+            {/* Live pulse dot */}
+            <span className="absolute -top-1 -right-1 w-3 h-3">
+              {!reduce && <span className="absolute inset-0 bg-emerald-400 rounded-full" style={{ animation: "pulse-ring 2s cubic-bezier(0.4,0,0.6,1) infinite" }} />}
+              <span className="absolute inset-0 bg-emerald-400 rounded-full border border-black/50" />
+            </span>
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-display text-[20px] font-bold tracking-tight text-foreground drop-shadow-sm truncate">
+              {t("hl.sectionTitle")}
+            </h2>
+            <p className="text-[12px] text-foreground/55 leading-snug">{t("hl.configSubtitle", "配置参数 · 选择策略一键跟单")}</p>
           </div>
         </div>
-
-        {/* real ratio bars */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-1">
-          <MiniBar
-            label={t("hl.marginUsage", "保证金占用")}
-            right={<>{(marginRatio * 100).toFixed(0)}<span className="text-zinc-500">%</span></>}
-            ratio={marginRatio}
-            tone="zinc"
-          />
-          <MiniBar
-            label={t("hl.withdrawableShare", "可提余额")}
-            right={fmtUsd(withdrawable)}
-            ratio={wdRatio}
-            tone="amber"
-          />
-        </div>
-
-        {/* footer — open positions */}
-        <div className="flex items-center gap-4 pt-4 mt-4 border-t border-white/5">
-          <span className="text-[12px] text-zinc-400">
-            {t("hl.openPositions", "持仓")} <span className="text-white font-medium">{openPositions}</span>
-          </span>
-        </div>
+        <span className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-medium text-emerald-300">
+          <span className={cn("w-1.5 h-1.5 bg-emerald-400 rounded-full", !reduce && "animate-pulse")} />
+          {t("hl.engineLive", "实时引擎")}
+        </span>
+      </div>
+      <div className="mt-3">
+        <NetworkToggle value={network} onChange={onNetwork} />
       </div>
     </div>
   );
 }
 
-// ── Leader card (one strategy / leader to follow) — mockup badge-box row ──────
+// ── Stats grid — 3-up live account context (账户净值 / 未实现盈亏 / 跟单中) ─────
 
-function LeaderCard({
-  leader, meta, onFollow, copying, subscribed,
+function StatsGrid({
+  wallet, loading, accountValue, unrealizedPnl, followCount, reduce,
 }: {
-  leader: HlLeader;
-  meta: (typeof TIER_META)[HlTier];
-  onFollow: (l: HlLeader) => void;
-  copying: boolean;
-  subscribed: boolean;
+  wallet?: string; loading: boolean; accountValue: number; unrealizedPnl: number; followCount: number; reduce: boolean;
 }) {
   const { t } = useTranslation();
-  const Icon = meta.icon;
+  const pnlPos = unrealizedPnl >= 0;
+  const cell = (label: string, node: React.ReactNode) => (
+    <div className="min-w-0">
+      <p className="text-[10px] text-foreground/55 uppercase tracking-wider mb-1 truncate">{label}</p>
+      {node}
+    </div>
+  );
   return (
-    <div
-      className={cn(
-        "flex items-center p-3.5 rounded-xl border transition-all",
-        subscribed ? "border-emerald-500/30 bg-emerald-500/[0.06]" : "border-white/5 bg-white/[0.04] hover:border-white/10",
-      )}
+    <motion.div
+      {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { type: "spring", stiffness: 220, damping: 26 } })}
+      className="glass-panel-strong relative p-4 overflow-hidden"
     >
-      <div
-        className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 mr-3.5"
-        style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
-      >
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[14px] font-medium text-white truncate">{leader.label || shortAddr(leader.address)}</span>
-          {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
-        </div>
-        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500">
-          <span>{t("hl.score", "评分")} <span className="text-zinc-300 tabular-nums">{fmtScore(leader.score)}</span></span>
-          <span className="text-zinc-700">·</span>
-          <span>{t("hl.medHold", "持仓时长")} <span className="text-zinc-300 tabular-nums">{fmtHold(leader.medianHoldingS)}</span></span>
-        </div>
-      </div>
-      <div className="shrink-0 ml-3">
-        {subscribed ? (
-          <span className="flex items-center gap-1 px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[11px] font-medium">
-            <Check className="w-3 h-3" /> {t("hl.copying", "跟单中")}
-          </span>
-        ) : (
-          <button
-            onClick={() => onFollow(leader)}
-            disabled={copying}
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-medium text-[12px] rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-colors disabled:opacity-60"
-          >
-            {copying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-            {copying ? t("hl.starting", "启动中") : t("hl.copyNow", "跟单")}
-          </button>
+      <div className="shimmer-sweep" />
+      <div className="absolute -top-8 -right-8 w-32 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="grid grid-cols-3 gap-2 relative z-10">
+        {cell(
+          t("hl.accountValue", "账户净值"),
+          loading
+            ? <Skeleton className="h-5 w-16 rounded" />
+            : <p className="text-sm font-bold text-foreground tabular-nums truncate">{wallet ? fmtUsd(accountValue) : "—"}</p>,
+        )}
+        {cell(
+          t("hl.unrealized", "未实现盈亏"),
+          loading
+            ? <Skeleton className="h-5 w-16 rounded" />
+            : <p className={cn("text-sm font-bold tabular-nums truncate", pnlPos ? "text-emerald-400" : "text-red-400")}>{wallet ? `${pnlPos ? "+" : ""}${fmtUsd(unrealizedPnl)}` : "—"}</p>,
+        )}
+        {cell(
+          t("hl.copying", "跟单中"),
+          <p className="text-sm font-bold text-foreground tabular-nums">{followCount}</p>,
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-// ── Follow-config dialog — styled like the mockup's 跟单配置 ──────────────────
-//
-// Chips for 跟单比例 / 最大杠杆 + 止盈/止损 inputs. The chosen HlFollowConfig is
-// handed to copy(leader, config); the engine create route validates/clamps it.
+// ── 参数配置 — pill toggles feeding the real HlFollowConfig ───────────────────
 
-function ChipRow({
-  label, children,
-}: { label: string; children: React.ReactNode }) {
+function Pill({
+  active, onClick, children, reduce,
+}: { active: boolean; onClick: () => void; children: React.ReactNode; reduce: boolean }) {
   return (
-    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
-      <div className="text-[13px] font-medium text-white mb-2.5">{label}</div>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
-    </div>
+    <motion.button
+      type="button"
+      onClick={onClick}
+      {...(reduce ? {} : { whileTap: { scale: 0.94 } })}
+      className={cn(
+        "flex-1 py-2 text-xs font-medium rounded-lg transition-colors",
+        active
+          ? "bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)]"
+          : "text-foreground/60 hover:bg-white/10 hover:text-foreground",
+      )}
+    >
+      {children}
+    </motion.button>
   );
 }
 
-function FollowConfigDialog({
-  leader, onClose, onConfirm, pending,
-}: {
-  leader: HlLeader | null;
-  onClose: () => void;
-  onConfirm: (l: HlLeader, cfg: HlFollowConfig) => void;
-  pending: boolean;
-}) {
+function ConfigPanel({
+  cfg, setCfg, reduce,
+}: { cfg: HlFollowConfig; setCfg: React.Dispatch<React.SetStateAction<HlFollowConfig>>; reduce: boolean }) {
   const { t } = useTranslation();
-  const [cfg, setCfg] = useState<HlFollowConfig>(HL_DEFAULT_FOLLOW);
-
-  // Reset to defaults whenever a new leader is selected.
-  useMemo(() => {
-    if (leader) setCfg(HL_DEFAULT_FOLLOW);
-  }, [leader?.address]);
-
   const ratios = [0.05, 0.1, 0.25, 0.5];
   const leverages = [2, 3, 5, 10];
+  const tps = [20, 50, 100];
+  const sls = [10, 20, 50];
 
-  const chip = (active: boolean) =>
-    cn(
-      "px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-colors",
-      active
-        ? "bg-amber-500 text-black border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
-        : "bg-black/40 text-zinc-300 border-white/10 hover:border-white/20",
-    );
+  const rightVal = (v: React.ReactNode) => <span className="text-xs font-mono font-bold text-amber-400">{v}</span>;
 
   return (
-    <Dialog open={!!leader} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="bg-[#0d0b08] border-amber-500/20 w-[calc(100vw-2rem)] max-w-md rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-sm font-bold flex items-center gap-2 text-white">
-            <Settings className="w-4 h-4 text-amber-400" />{t("hl.followConfig", "跟单配置")}
-          </DialogTitle>
-          <DialogDescription className="text-[12px] leading-relaxed">
-            {t("hl.followConfigDesc", "为该交易员设置跟单参数。引擎会按比例镜像其仓位并执行止盈/止损。")}
-            {leader && <span className="block mt-1 font-mono text-foreground/70">{leader.label || shortAddr(leader.address)}</span>}
-          </DialogDescription>
-        </DialogHeader>
+    <motion.div
+      {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { type: "spring", stiffness: 220, damping: 26, delay: 0.05 } })}
+      className="glass-panel p-5"
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Settings className="h-4 w-4 text-amber-400" />
+        <h3 className="text-sm font-medium text-foreground/90">{t("hl.paramConfig", "参数配置")}</h3>
+      </div>
 
+      <div className="space-y-5">
+        {/* 跟单比例 */}
         <div className="space-y-2">
-          <ChipRow label={t("hl.cfgRatio", "跟单比例(镜像名义价值)")}>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-foreground/70">{t("hl.allocationLabel", "跟单比例(仓位占比)")}</span>
+            {rightVal(`${(cfg.notionalRatio * 100).toFixed(0)}%`)}
+          </div>
+          <div className="flex gap-2 bg-black/20 p-1 rounded-xl border border-white/5">
             {ratios.map((r) => (
-              <button key={r} className={chip(cfg.notionalRatio === r)} onClick={() => setCfg((c) => ({ ...c, notionalRatio: r }))}>
+              <Pill key={r} active={cfg.notionalRatio === r} reduce={reduce} onClick={() => setCfg((c) => ({ ...c, notionalRatio: r }))}>
                 {(r * 100).toFixed(0)}%
-              </button>
+              </Pill>
             ))}
-          </ChipRow>
-
-          <ChipRow label={t("hl.cfgLeverage", "最大杠杆")}>
-            {leverages.map((lv) => (
-              <button key={lv} className={chip(cfg.maxLeverage === lv)} onClick={() => setCfg((c) => ({ ...c, maxLeverage: lv }))}>
-                {lv}x
-              </button>
-            ))}
-          </ChipRow>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-[13px] font-medium text-white mb-2">{t("hl.cfgTp", "止盈 %")}</div>
-              <Input
-                value={cfg.takeProfitPct ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9.]/g, "");
-                  setCfg((c) => ({ ...c, takeProfitPct: v === "" ? null : Number(v) }));
-                }}
-                placeholder={t("hl.cfgOff", "关闭")}
-                inputMode="decimal"
-                className="bg-black/40 text-sm border-white/10"
-              />
-            </div>
-            <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-[13px] font-medium text-white mb-2">{t("hl.cfgSl", "止损 %")}</div>
-              <Input
-                value={cfg.stopLossPct ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9.]/g, "");
-                  setCfg((c) => ({ ...c, stopLossPct: v === "" ? null : Number(v) }));
-                }}
-                placeholder={t("hl.cfgOff", "关闭")}
-                inputMode="decimal"
-                className="bg-black/40 text-sm border-white/10"
-              />
-            </div>
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" className="w-full sm:w-auto" onClick={onClose}>{t("common.cancel", "取消")}</Button>
-          <Button
-            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-[0_0_15px_rgba(245,158,11,0.3)] disabled:opacity-50"
-            disabled={!leader || pending}
-            onClick={() => leader && onConfirm(leader, cfg)}
-          >
-            {pending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Zap className="h-4 w-4 mr-1.5" />}
-            {t("hl.confirmFollow", "确认跟单")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* 杠杆倍数 */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-foreground/70">{t("hl.leverageLabel", "杠杆倍数")}</span>
+            {rightVal(`${cfg.maxLeverage}x`)}
+          </div>
+          <div className="flex gap-2 bg-black/20 p-1 rounded-xl border border-white/5">
+            {leverages.map((lv) => (
+              <Pill key={lv} active={cfg.maxLeverage === lv} reduce={reduce} onClick={() => setCfg((c) => ({ ...c, maxLeverage: lv }))}>
+                {lv}x
+              </Pill>
+            ))}
+          </div>
+        </div>
+
+        {/* 止盈 / 止损 — toggleable (click active to turn off) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-foreground/70">{t("hl.cfgTp", "止盈 %")}</span>
+              {rightVal(cfg.takeProfitPct == null ? t("hl.off", "关") : `${cfg.takeProfitPct}%`)}
+            </div>
+            <div className="flex gap-1 bg-black/20 border border-white/5 rounded-xl p-1">
+              {tps.map((v) => (
+                <Pill key={v} active={cfg.takeProfitPct === v} reduce={reduce} onClick={() => setCfg((c) => ({ ...c, takeProfitPct: c.takeProfitPct === v ? null : v }))}>
+                  {v}%
+                </Pill>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-foreground/70">{t("hl.cfgSl", "止损 %")}</span>
+              {rightVal(cfg.stopLossPct == null ? t("hl.off", "关") : `${cfg.stopLossPct}%`)}
+            </div>
+            <div className="flex gap-1 bg-black/20 border border-white/5 rounded-xl p-1">
+              {sls.map((v) => (
+                <Pill key={v} active={cfg.stopLossPct === v} reduce={reduce} onClick={() => setCfg((c) => ({ ...c, stopLossPct: c.stopLossPct === v ? null : v }))}>
+                  {v}%
+                </Pill>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
-// ── 策略 tab — leaders grouped into expandable risk-tier categories ──────────
+// ── 选择策略 — multi-select leader card (real HlLeader fields) ────────────────
 
-function StrategyPacksTab({
-  network, userId, subscribedLeaders,
-}: { network: HlNetwork; userId?: string; subscribedLeaders: Set<string> }) {
+function StrategyCard({
+  leader, selected, subscribed, copying, onToggle, reduce,
+}: {
+  leader: HlLeader; selected: boolean; subscribed: boolean; copying: boolean;
+  onToggle: (l: HlLeader) => void; reduce: boolean;
+}) {
   const { t } = useTranslation();
-  const leadersQ = useHlLeaders(network);
-  const { copy, pendingFor } = useHlCopy(userId, network);
-  const [open, setOpen] = useState<Record<string, boolean>>({ conservative: true, steady: true });
-  const [followLeader, setFollowLeader] = useState<HlLeader | null>(null);
-
-  const grouped = useMemo(() => groupByTier(leadersQ.data?.leaders ?? []), [leadersQ.data]);
-
-  if (leadersQ.isLoading) {
-    return <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>;
-  }
-  const total = (leadersQ.data?.leaders ?? []).length;
-  if (total === 0) {
-    return <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />;
-  }
-
+  const meta = TIER_META[tierOf(leader)];
+  const Icon = meta.icon;
+  const interactive = !subscribed;
   return (
-    <>
-    <div className="space-y-2.5">
-      {HL_TIERS.map((tier) => {
-        const list = grouped[tier];
-        const meta = TIER_META[tier];
-        const Icon = meta.icon;
-        const isOpen = open[tier] ?? false;
-        return (
-          <div key={tier} className="glass-panel overflow-hidden">
-            <button
-              onClick={() => setOpen((s) => ({ ...s, [tier]: !isOpen }))}
-              className="w-full flex items-center gap-3 px-3.5 py-3 text-left"
-            >
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${meta.color}18`, border: `1px solid ${meta.color}35` }}>
-                <Icon className="h-4 w-4" style={{ color: meta.color }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-bold text-foreground/90">{t(meta.labelKey)}</span>
-                  <Badge className="text-[9px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{list.length}</Badge>
-                </div>
-                <div className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{t(meta.descKey)}</div>
-              </div>
-              {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-            </button>
-            {isOpen && (
-              <div className="px-2.5 pb-2.5 pt-0.5 space-y-2 border-t border-border/30">
-                {list.length === 0 ? (
-                  <p className="text-[12px] text-muted-foreground/60 text-center py-4">{t("hl.tierEmpty")}</p>
-                ) : (
-                  list.map((l) => (
-                    <LeaderCard
-                      key={l.address}
-                      leader={l}
-                      meta={meta}
-                      onFollow={setFollowLeader}
-                      copying={pendingFor?.toLowerCase() === l.address.toLowerCase()}
-                      subscribed={subscribedLeaders.has(l.address.toLowerCase())}
-                    />
-                  ))
-                )}
-              </div>
-            )}
+    <motion.div
+      {...(reduce || !interactive ? {} : { whileTap: { scale: 0.985 } })}
+      onClick={() => interactive && onToggle(leader)}
+      className={cn(
+        "glass-panel p-4 transition-all",
+        interactive && "cursor-pointer",
+        subscribed
+          ? "border-emerald-500/30 shadow-[0_0_14px_rgba(52,211,153,0.12)]"
+          : selected
+            ? "border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] bg-[rgba(36,28,14,0.6)]"
+            : "hover:border-white/20",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
+          >
+            <Icon className="w-5 h-5" />
           </div>
-        );
-      })}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-foreground truncate">{leader.label || shortAddr(leader.address)}</span>
+              {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
+            </div>
+            <div className="text-[10px] text-foreground/50 mt-1 flex items-center gap-2">
+              <Badge className="text-[8px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{t(meta.labelKey)}</Badge>
+              <code className="font-mono truncate">{shortAddr(leader.address)}</code>
+            </div>
+          </div>
+        </div>
+        {subscribed ? (
+          <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-[11px] font-medium">
+            {copying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}{t("hl.copying", "跟单中")}
+          </span>
+        ) : (
+          <div className={cn(
+            "shrink-0 w-5 h-5 rounded-full flex items-center justify-center border transition-colors",
+            selected ? "bg-amber-500 border-amber-500 text-black" : "border-white/20 text-transparent",
+          )}>
+            <Check className="w-3 h-3" strokeWidth={3} />
+          </div>
+        )}
+      </div>
+
+      {/* Real leader metrics */}
+      <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-white/10">
+        <div className="bg-black/20 rounded-lg p-2 border border-white/5">
+          <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.score", "评分")}</p>
+          <p className="text-xs font-bold text-foreground tabular-nums">{fmtScore(leader.score)}</p>
+        </div>
+        <div className="bg-black/20 rounded-lg p-2 border border-white/5">
+          <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.medHold", "中位持仓")}</p>
+          <p className="text-xs font-bold text-foreground tabular-nums">{fmtHold(leader.medianHoldingS)}</p>
+        </div>
+        <div className="bg-black/20 rounded-lg p-2 border border-white/5">
+          <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.style", "风格")}</p>
+          <p className="text-xs font-bold text-foreground">{leader.isHft ? t("hl.styleHft", "高频") : t("hl.styleSwing", "波段")}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function StrategySelect({
+  leaders, loading, selected, subscribedLeaders, pendingFor, onToggle, reduce,
+}: {
+  leaders: HlLeader[];
+  loading: boolean;
+  selected: Set<string>;
+  subscribedLeaders: Set<string>;
+  pendingFor?: string;
+  onToggle: (l: HlLeader) => void;
+  reduce: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-amber-400" />
+          <h3 className="text-sm font-medium text-foreground/90">{t("hl.selectStrategy", "选择策略")}</h3>
+        </div>
+        <span className="text-[10px] text-foreground/50 bg-white/10 px-2 py-0.5 rounded border border-white/10">{t("hl.multiSelect", "可多选")}</span>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}</div>
+      ) : leaders.length === 0 ? (
+        <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
+      ) : (
+        <div className="space-y-3">
+          {leaders.map((l) => {
+            const key = l.address.toLowerCase();
+            return (
+              <StrategyCard
+                key={l.address}
+                leader={l}
+                selected={selected.has(key)}
+                subscribed={subscribedLeaders.has(key)}
+                copying={pendingFor?.toLowerCase() === key}
+                onToggle={onToggle}
+                reduce={reduce}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
-    <FollowConfigDialog
-      leader={followLeader}
-      onClose={() => setFollowLeader(null)}
-      onConfirm={(l, cfg) => { copy(l, cfg); setFollowLeader(null); }}
-      pending={!!pendingFor}
-    />
-    </>
   );
 }
 
@@ -715,6 +672,7 @@ function StrategyPacksTab({
 
 function SignalRow({ s }: { s: HlSignal }) {
   const { t } = useTranslation();
+  const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
   const long = s.side === "LONG";
   return (
     <div className="glass-panel p-3">
@@ -727,7 +685,7 @@ function SignalRow({ s }: { s: HlSignal }) {
           <span className="text-[13px] font-bold text-foreground/90">{s.coin}</span>
           {s.isClose && <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{t("hl.close")}</Badge>}
         </div>
-        <span className="text-[10px] text-muted-foreground/60 shrink-0">{fmtTimeAgo(s.happenedAt, t)}</span>
+        <span className="text-[10px] text-muted-foreground/60 shrink-0">{fmtTimeAgo(s.happenedAt, tAgo)}</span>
       </div>
       <div className="grid grid-cols-3 gap-1 mt-2 text-center">
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.price")}</div><div className="text-[12px] font-bold tabular-nums">{s.px > 0 ? s.px.toLocaleString() : "—"}</div></div>
@@ -780,6 +738,7 @@ function PositionRow({ p }: { p: HlPosition }) {
 
 function HistoryRow({ s }: { s: HlSignal }) {
   const { t } = useTranslation();
+  const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
   const long = s.side === "LONG";
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
@@ -790,7 +749,7 @@ function HistoryRow({ s }: { s: HlSignal }) {
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-[11px] tabular-nums num-gold">{fmtUsd(s.notionalUsd)}</span>
-        <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(s.happenedAt, t)}</span>
+        <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(s.happenedAt, tAgo)}</span>
       </div>
     </div>
   );
@@ -874,100 +833,17 @@ function ActiveSubs({ userId }: { userId?: string }) {
   );
 }
 
-// ── Section ──────────────────────────────────────────────────────────────────
+// ── 持仓 / 数据源 secondary section (kept functionality, restyled control) ────
 
-type HlTab = "packs" | "data" | "positions";
-
-/**
- * HlCopySection — drop-in body for the Strategy page's "strategies" tab.
- * Renders the network toggle, 开户/enable strip, account stats, active follows,
- * and the 策略 / 数据源 / 持仓 inner tabs. No page chrome (the Strategy page
- * already supplies the header + outer tabbar).
- */
-export function HlCopySection() {
+function SecondaryPanels({ network }: { network: HlNetwork }) {
   const { t } = useTranslation();
-  const account = useActiveAccount();
-  const wallet = account?.address;
-  const [network, setNetwork] = useState<HlNetwork>("mainnet");
-  const [tab, setTab] = useState<HlTab>("packs");
-
-  const userQ = useEngineUser(wallet);
-  const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-
-  const acctQ = useHlAccount(wallet, network);
-  const subsQ = useHlSubs(userId);
-
-  const subscribedLeaders = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of subsQ.data?.subscriptions ?? []) {
-      if ((s as any).status !== "stopped") set.add(String((s as any).leaderAddress).toLowerCase());
-    }
-    return set;
-  }, [subsQ.data]);
-
-  const acct = acctQ.data;
-  const openPnl = acct?.unrealizedPnl ?? 0;
-
+  const [tab, setTab] = useState<"positions" | "data">("positions");
   return (
-    <div className="space-y-4" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
-      {/* Intro line — frames the section as HL one-click-follow strategies */}
-      <div>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h2 className="font-display text-[15px] font-bold text-foreground">
-            {t("hl.sectionTitle")}
-          </h2>
-          <NetworkToggle value={network} onChange={setNetwork} />
-        </div>
-        <p className="mt-1 text-[12px] text-foreground/55 leading-relaxed">{t("hl.subtitle")}</p>
-      </div>
-
-      {/* 开户 / enable strip — reflects the real engine-user onboarding state */}
-      <HlAccountStrip
-        wallet={wallet}
-        userLoading={!!wallet && userQ.isLoading}
-        userError={!!wallet && userQ.isError}
-        userId={userId}
-        onRetryUser={() => userQ.refetch()}
-        followCount={subscribedLeaders.size}
-      />
-
-      {/* Account status card — real HL account state for the connected wallet */}
-      {wallet && (
-        acctQ.isLoading ? (
-          <Skeleton className="h-52 rounded-2xl" />
-        ) : (
-          <HlStatusCard
-            network={network}
-            enabled={!!userId}
-            accountValue={acct?.accountValue ?? 0}
-            unrealizedPnl={openPnl}
-            openPositions={acct?.positions.length ?? 0}
-            withdrawable={acct?.withdrawable ?? 0}
-            margin={acct?.margin ?? 0}
-            followCount={subscribedLeaders.size}
-          />
-        )
-      )}
-
-      {/* 充值 / 提现 —— 账户已开通(userId 解析出来)时显示;地址 = 引擎托管 EOA。
-          未开通则上方 HlAccountStrip 显示「开通账户」,开通后地址即出现(修"充值地址生成不出来")。 */}
-      {userId && (
-        <HlFunding
-          userId={userId}
-          network={network}
-          depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
-          withdrawable={acct?.withdrawable ?? 0}
-        />
-      )}
-
-      <ActiveSubs userId={userId} />
-
-      {/* Inner tabs: 策略 / 数据源 / 持仓 */}
+    <div className="space-y-3">
       <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
         {([
-          { id: "packs", labelKey: "hl.tabStrategies", icon: Users },
-          { id: "data", labelKey: "hl.tabData", icon: Activity },
           { id: "positions", labelKey: "hl.tabPositions", icon: Layers },
+          { id: "data", labelKey: "hl.tabData", icon: Activity },
         ] as const).map((x) => {
           const Icon = x.icon;
           const active = tab === x.id;
@@ -988,12 +864,163 @@ export function HlCopySection() {
           );
         })}
       </div>
-
       <div style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
-        {tab === "packs" && <StrategyPacksTab network={network} userId={userId} subscribedLeaders={subscribedLeaders} />}
-        {tab === "data" && <DataSourceTab network={network} />}
         {tab === "positions" && <MyPositionsTab network={network} />}
+        {tab === "data" && <DataSourceTab network={network} />}
       </div>
+    </div>
+  );
+}
+
+// ── Section ──────────────────────────────────────────────────────────────────
+
+/**
+ * HlCopySection — drop-in body for the Strategy page's "strategies" tab.
+ * Renders the mockup glass design (header + Engine Live pill, 3-up account
+ * stats, 参数配置 panel, 选择策略 multi-select, sticky 开启跟单 CTA) plus the
+ * preserved onboarding / funding / active-follows / positions functionality.
+ * No page chrome (the Strategy page already supplies the header + outer tabbar).
+ */
+export function HlCopySection() {
+  const { t } = useTranslation();
+  const reduce = !!useReducedMotion();
+  const account = useActiveAccount();
+  const wallet = account?.address;
+  const [network, setNetwork] = useState<HlNetwork>("mainnet");
+
+  const userQ = useEngineUser(wallet);
+  const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
+
+  const acctQ = useHlAccount(wallet, network);
+  const subsQ = useHlSubs(userId);
+  const leadersQ = useHlLeaders(network);
+  const { copy, copyMany, pendingFor, batchPending } = useHlCopy(userId, network);
+
+  const subscribedLeaders = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of subsQ.data?.subscriptions ?? []) {
+      if ((s as any).status !== "stopped") set.add(String((s as any).leaderAddress).toLowerCase());
+    }
+    return set;
+  }, [subsQ.data]);
+
+  const acct = acctQ.data;
+  const leaders = leadersQ.data?.leaders ?? [];
+
+  const [cfg, setCfg] = useState<HlFollowConfig>(HL_DEFAULT_FOLLOW);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set<string>());
+
+  const toggle = (l: HlLeader) => {
+    const key = l.address.toLowerCase();
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const selectedCount = selected.size;
+
+  async function startCopy() {
+    // Only follow leaders that exist on the *current* network (drops any stale
+    // cross-network selection), sequentially, then keep any that failed.
+    const chosen = leaders.filter((l) => selected.has(l.address.toLowerCase()));
+    if (chosen.length === 0) return;
+    if (chosen.length === 1) {
+      await copy(chosen[0], cfg);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(chosen[0].address.toLowerCase());
+        return next;
+      });
+      return;
+    }
+    const succeeded = await copyMany(chosen, cfg);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const addr of succeeded) next.delete(addr);
+      return next;
+    });
+  }
+
+  const busy = !!pendingFor || batchPending;
+  const showStickyBar = !leadersQ.isLoading && leaders.length > 0;
+
+  return (
+    <div className="space-y-5" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
+      <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} />
+
+      <StatsGrid
+        wallet={wallet}
+        loading={!!wallet && acctQ.isLoading}
+        accountValue={acct?.accountValue ?? 0}
+        unrealizedPnl={acct?.unrealizedPnl ?? 0}
+        followCount={subscribedLeaders.size}
+        reduce={reduce}
+      />
+
+      {/* 开户 / enable strip — reflects the real engine-user onboarding state */}
+      <HlAccountStrip
+        wallet={wallet}
+        userLoading={!!wallet && userQ.isLoading}
+        userError={!!wallet && userQ.isError}
+        userId={userId}
+        onRetryUser={() => userQ.refetch()}
+        followCount={subscribedLeaders.size}
+      />
+
+      {/* 充值 / 提现 —— 账户已开通(userId 解析出来)时显示;地址 = 引擎托管 EOA。 */}
+      {userId && (
+        <HlFunding
+          userId={userId}
+          network={network}
+          depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
+          withdrawable={acct?.withdrawable ?? 0}
+        />
+      )}
+
+      <ConfigPanel cfg={cfg} setCfg={setCfg} reduce={reduce} />
+
+      <StrategySelect
+        leaders={leaders}
+        loading={leadersQ.isLoading}
+        selected={selected}
+        subscribedLeaders={subscribedLeaders}
+        pendingFor={pendingFor}
+        onToggle={toggle}
+        reduce={reduce}
+      />
+
+      <ActiveSubs userId={userId} />
+
+      <SecondaryPanels network={network} />
+
+      {/* Sticky 开启跟单 CTA — clears the mobile bottom-nav; reuses one-click follow. */}
+      {showStickyBar && (
+        <div className="sticky bottom-20 lg:bottom-4 z-30 -mx-4 px-4 pt-6 pb-1 pointer-events-none bg-gradient-to-t from-background via-background/85 to-transparent">
+          <motion.button
+            type="button"
+            disabled={selectedCount === 0 || busy}
+            onClick={startCopy}
+            {...(reduce ? {} : { whileTap: selectedCount > 0 && !busy ? { scale: 0.98 } : undefined })}
+            className={cn(
+              "pointer-events-auto w-full relative overflow-hidden rounded-xl font-bold text-sm py-4 flex items-center justify-center gap-2 transition-all",
+              selectedCount > 0 && !busy
+                ? "bg-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.35)]"
+                : "glass-panel text-foreground/50 cursor-not-allowed border-white/10",
+            )}
+            data-testid="button-hl-start-copy"
+          >
+            {selectedCount > 0 && !busy && <span className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />}
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} /> : <Zap className="h-4 w-4" strokeWidth={2.5} />}
+            <span className="relative">
+              {selectedCount > 0
+                ? `${t("hl.startCopy", "开启跟单")} · ${t("hl.selectedCount", "已选 {{count}}", { count: selectedCount })}`
+                : t("hl.selectAtLeastOne", "请选择至少一个策略")}
+            </span>
+          </motion.button>
+        </div>
+      )}
     </div>
   );
 }

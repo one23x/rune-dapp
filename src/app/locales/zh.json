@@ -1924,6 +1924,20 @@
     "openErrorTitle": "无法读取账户",
     "openErrorDesc": "连接引擎失败,请检查网络后重试。",
     "needOnboard": "请先开通交易账户",
-    "needOnboardDesc": "在上方点击「开通交易账户」后即可一键跟单。"
+    "needOnboardDesc": "在上方点击「开通交易账户」后即可一键跟单。",
+    "engineLive": "实时引擎",
+    "configSubtitle": "配置参数 · 选择策略一键跟单",
+    "paramConfig": "参数配置",
+    "allocationLabel": "跟单比例(仓位占比)",
+    "leverageLabel": "杠杆倍数",
+    "cfgTp": "止盈 %",
+    "cfgSl": "止损 %",
+    "off": "关",
+    "selectStrategy": "选择策略",
+    "multiSelect": "可多选",
+    "startCopy": "开启跟单",
+    "selectedCount": "已选 {{count}}",
+    "selectAtLeastOne": "请选择至少一个策略",
+    "copyStartedBatch": "已开始跟单 {{count}} 个策略"
   }
 }

@@ -7,6 +7,7 @@
  * No mocked arrays.
  */
 
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@app/lib/utils";
@@ -167,14 +168,22 @@ interface CopyVars {
   config: HlFollowConfig;
 }
 
+type CopyOutcome = "ok" | "no_user" | "pending" | "error";
+
 export function useHlCopy(userId: string | undefined, network: HlNetwork) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  // We track the in-flight leader ourselves so a *batch* (copyMany) can surface
+  // a single spinner per row while it walks the selection sequentially.
+  const [pendingFor, setPendingFor] = useState<string | undefined>(undefined);
+  const [batchPending, setBatchPending] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: async ({ leader, config }: CopyVars) => {
+  // Raw follow request — shared by single + batch flows so the request shape
+  // stays in one place. Throws a typed error the callers categorize.
+  const submit = useCallback(
+    async (leader: HlLeader, config: HlFollowConfig): Promise<CopyOutcome> => {
       if (!userId) throw new Error("no_user");
-      return hyperliquid.subscribeCreate(userId, {
+      await hyperliquid.subscribeCreate(userId, {
         leaderAddress: leader.address,
         network,
         // User-configured risk params; the engine create route validates/clamps.
@@ -183,35 +192,95 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
         takeProfitPct: config.takeProfitPct ?? undefined,
         stopLossPct: config.stopLossPct ?? undefined,
       });
+      return "ok";
     },
-    onSuccess: () => {
-      toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedDesc") });
-      if (userId) queryClient.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
-    },
-    onError: (err: unknown) => {
-      // Not onboarded yet → guide the user to 开通 instead of a raw error string.
-      if (String((err as any)?.message ?? err) === "no_user") {
-        toast({
-          title: t("hl.needOnboard", "请先开通交易账户"),
-          description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。"),
-        });
-        return;
-      }
-      if (isEndpointMissing(err)) {
-        toast({
-          title: t("hl.copyPending"),
-          description: t("hl.copyPendingDesc"),
-        });
-        return;
-      }
-      toast({ title: t("common.error"), description: String((err as any)?.message ?? err), variant: "destructive" });
-    },
-  });
+    [userId, network],
+  );
 
-  return {
-    copy: (leader: HlLeader, config: HlFollowConfig) => mutation.mutate({ leader, config }),
-    pendingFor: mutation.isPending ? (mutation.variables as CopyVars | undefined)?.leader?.address : undefined,
-  };
+  const categorize = useCallback((err: unknown): CopyOutcome => {
+    if (String((err as any)?.message ?? err) === "no_user") return "no_user";
+    if (isEndpointMissing(err)) return "pending";
+    return "error";
+  }, []);
+
+  const invalidate = useCallback(() => {
+    if (userId) queryClient.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
+  }, [userId]);
+
+  // Single follow — one toast per the categorized outcome (unchanged UX).
+  const copy = useCallback(
+    async (leader: HlLeader, config: HlFollowConfig) => {
+      setPendingFor(leader.address);
+      try {
+        await submit(leader, config);
+        toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedDesc") });
+        invalidate();
+      } catch (err) {
+        const kind = categorize(err);
+        if (kind === "no_user") {
+          toast({ title: t("hl.needOnboard", "请先开通交易账户"), description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。") });
+        } else if (kind === "pending") {
+          toast({ title: t("hl.copyPending"), description: t("hl.copyPendingDesc") });
+        } else {
+          toast({ title: t("common.error"), description: String((err as any)?.message ?? err), variant: "destructive" });
+        }
+      } finally {
+        setPendingFor(undefined);
+      }
+    },
+    [submit, categorize, invalidate, toast, t],
+  );
+
+  // Batch follow — walks the selection sequentially (no request bursts) and
+  // emits a SINGLE summarized toast instead of one per leader. Returns the set
+  // of leader addresses that succeeded so the caller can keep failed ones.
+  const copyMany = useCallback(
+    async (leaders: HlLeader[], config: HlFollowConfig): Promise<Set<string>> => {
+      const succeeded = new Set<string>();
+      if (leaders.length === 0) return succeeded;
+      // Single follow → defer to copy() so the user gets the precise toast.
+      if (leaders.length === 1) {
+        await copy(leaders[0], config);
+        return succeeded; // caller treats single via copy()'s own UX
+      }
+      setBatchPending(true);
+      let okCount = 0, pendingCount = 0, errCount = 0, needOnboard = false;
+      let lastErr: unknown;
+      try {
+        for (const leader of leaders) {
+          setPendingFor(leader.address);
+          try {
+            await submit(leader, config);
+            okCount += 1;
+            succeeded.add(leader.address.toLowerCase());
+          } catch (err) {
+            const kind = categorize(err);
+            if (kind === "no_user") { needOnboard = true; break; }
+            if (kind === "pending") pendingCount += 1;
+            else { errCount += 1; lastErr = err; }
+          }
+        }
+      } finally {
+        setPendingFor(undefined);
+        setBatchPending(false);
+        invalidate();
+      }
+      // One summarized toast, priority: onboard > started > pending > error.
+      if (needOnboard) {
+        toast({ title: t("hl.needOnboard", "请先开通交易账户"), description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。") });
+      } else if (okCount > 0) {
+        toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedBatch", "已开始跟单 {{count}} 个策略", { count: okCount }) });
+      } else if (pendingCount > 0) {
+        toast({ title: t("hl.copyPending"), description: t("hl.copyPendingDesc") });
+      } else if (errCount > 0) {
+        toast({ title: t("common.error"), description: String((lastErr as any)?.message ?? lastErr), variant: "destructive" });
+      }
+      return succeeded;
+    },
+    [copy, submit, categorize, invalidate, toast, t],
+  );
+
+  return { copy, copyMany, pendingFor, batchPending };
 }
 
 // ─── State atoms ─────────────────────────────────────────────────────────────

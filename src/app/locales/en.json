@@ -1924,6 +1924,20 @@
     "openErrorTitle": "Can not load account",
     "openErrorDesc": "Failed to reach the engine. Check your connection and retry.",
     "needOnboard": "Open a trading account first",
-    "needOnboardDesc": "Tap “Open trading account” above, then follow with one click."
+    "needOnboardDesc": "Tap “Open trading account” above, then follow with one click.",
+    "engineLive": "Engine Live",
+    "configSubtitle": "Configure params · follow strategies in one tap",
+    "paramConfig": "Parameters",
+    "allocationLabel": "Allocation (position size)",
+    "leverageLabel": "Leverage",
+    "cfgTp": "Take-Profit %",
+    "cfgSl": "Stop-Loss %",
+    "off": "Off",
+    "selectStrategy": "Select Strategy",
+    "multiSelect": "Multi-select",
+    "startCopy": "Start Copy",
+    "selectedCount": "{{count}} selected",
+    "selectAtLeastOne": "Select at least one strategy",
+    "copyStartedBatch": "Started copying {{count}} strategies"
   }
 }
