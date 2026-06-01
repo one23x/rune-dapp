@@ -6,7 +6,6 @@ import {
 } from "recharts";
 import { motion } from "framer-motion";
 import { TrendingUp, BarChart2, Target, Zap, Rocket, Flame } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import { usePoolStatsRune } from "@app/lib/data-rune";
 
@@ -43,9 +42,9 @@ const CustomTooltipAlloc = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
-    <div className="rounded-lg px-3 py-2 text-xs bg-popover border border-border/50 shadow-lg">
+    <div className="rounded-lg px-3 py-2 text-xs glass-panel shadow-lg">
       <div className="font-bold" style={{ color: d.color }}>{d.name}</div>
-      <div className="text-muted-foreground mt-0.5">{d.pct}%</div>
+      <div className="text-white/60 mt-0.5">{d.pct}%</div>
     </div>
   );
 };
@@ -100,7 +99,7 @@ const PoolGrowthTooltip = ({ active, payload, label }: any) => {
       <div className="space-y-0.5 tabular-nums">
         <div className="flex justify-between gap-4"><span className="text-teal-300">USDT 侧</span><span className="font-bold">${(row.usdtSide).toLocaleString()}K</span></div>
         <div className="flex justify-between gap-4"><span className="text-amber-300">RUNE 侧</span><span className="font-bold">${(row.runeSideUsdt).toLocaleString()}K</span></div>
-        <div className="flex justify-between gap-4 pt-1 mt-1 border-t border-border/40"><span className="text-foreground/80 font-semibold">TVL</span><span className="font-bold text-amber-200">${tvl.toLocaleString()}K</span></div>
+        <div className="flex justify-between gap-4 pt-1 mt-1 border-t border-white/10"><span className="text-white/80 font-semibold">TVL</span><span className="font-bold text-amber-200">${tvl.toLocaleString()}K</span></div>
         <div className="flex justify-between gap-4"><span className="text-pink-300">RUNE 价</span><span className="font-bold text-pink-200">${row.runePrice.toFixed(4)}</span></div>
       </div>
     </div>
@@ -183,15 +182,15 @@ export function VaultRecruitment() {
   const roundProgress = Math.min((inRoundUsdt / ROUND_TARGET_USDT) * 100, 100);
 
   return (
-    <div className="px-4 lg:px-6">
-      <Card className="relative overflow-hidden surface-3d border-amber-400/35 bg-gradient-to-br from-amber-950/35 via-card/70 to-card/40 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.55),0_0_28px_rgba(251,191,36,0.10),inset_0_1px_0_rgba(255,255,255,0.08)]">
-        {/* Ambient glow orbs */}
-        <div className="pointer-events-none absolute -top-16 -right-10 h-44 w-44 rounded-full bg-amber-400/25 blur-[60px]" />
-        <div className="pointer-events-none absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-orange-500/15 blur-[50px]" />
-        {/* Top accent glow line */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
+    <div className="glass-panel-strong relative overflow-hidden">
+      <div className="shimmer-sweep" />
+      {/* Ambient glow orbs */}
+      <div className="pointer-events-none absolute -top-16 -right-10 h-44 w-44 rounded-full bg-amber-400/25 blur-[60px]" />
+      <div className="pointer-events-none absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-orange-500/15 blur-[50px]" />
+      {/* Top accent glow line */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
 
-        <CardContent className="relative p-4 space-y-3.5">
+      <div className="relative p-5 space-y-3.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-amber-400/40 to-amber-700/20 ring-1 ring-amber-400/55 shadow-[0_3px_10px_rgba(251,191,36,0.4)]">
@@ -300,7 +299,7 @@ export function VaultRecruitment() {
               />
             </div>
             <div className="mt-1.5 flex items-center justify-between text-[10px]">
-              <span className="text-muted-foreground">
+              <span className="text-white/60">
                 {t("vault.charts.fundraiseTarget", "募集目标")} · 8M USDT
               </span>
               <span className="text-amber-300 tabular-nums font-bold">{nodeProgress.toFixed(1)}%</span>
@@ -328,7 +327,7 @@ export function VaultRecruitment() {
               />
             </div>
             <div className="mt-1.5 flex items-center justify-between text-[10px]">
-              <span className="text-muted-foreground">
+              <span className="text-white/60">
                 {t("vault.charts.lpInjectTarget", "LP 注入目标")} · 2.8M USDT
               </span>
               <span className="text-cyan-300 tabular-nums font-bold">
@@ -341,8 +340,7 @@ export function VaultRecruitment() {
             <span className="flex items-center gap-1"><Zap className="h-3 w-3" />{t("vault.charts.launchOnFullRecruitment", "100% 募集即上线")}</span>
             <span className="flex items-center gap-1 text-amber-300"><Target className="h-3 w-3" />100M RUNE @ $0.028</span>
           </div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
@@ -376,7 +374,7 @@ export function VaultCharts() {
         <div className="h-5 w-5 rounded flex items-center justify-center bg-blue-500/15 ring-1 ring-blue-500/25">
           <BarChart2 className="h-3 w-3 text-blue-400" />
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
           {t("vault.charts.protocolAnalytics")}
         </span>
       </div>
@@ -384,28 +382,28 @@ export function VaultCharts() {
       {/* KPI row — deposit/pool totals hidden; only the yield estimate stays */}
       <div className="grid grid-cols-1 gap-2">
         {[
-          { icon: TrendingUp, color: TEAL,   label: t("vault.charts.annualEst"),     val: 8,           prefix: "",  suffix: "%", dec: 0, ringClass: "ring-teal-500/25 bg-teal-500/[0.06]" },
-        ].map(({ icon: Icon, color, label, val, prefix, suffix, dec, ringClass }) => (
+          { icon: TrendingUp, color: TEAL,   label: t("vault.charts.annualEst"),     val: 8,           prefix: "",  suffix: "%", dec: 0 },
+        ].map(({ icon: Icon, color, label, val, prefix, suffix, dec }) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className={`rounded-xl px-3 py-3 text-center ring-1 ${ringClass}`}
+            className="glass-panel px-3 py-3 text-center"
           >
             <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
             <div className="text-sm font-bold tabular-nums" style={{ color }}>
               <AnimCount value={val} prefix={prefix} suffix={suffix} decimals={dec} />
             </div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
+            <div className="text-[10px] text-white/60 mt-0.5">{label}</div>
           </motion.div>
         ))}
       </div>
 
       {/* Allocation donut + legend */}
-      <Card className="premium-card border-border">
-        <CardContent className="p-3">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
+      <div className="glass-panel">
+        <div className="p-4">
+          <div className="text-[10px] font-bold text-white/60 uppercase tracking-wider mb-3">
             {t("vault.charts.allocation")}
           </div>
           <div className="flex items-center gap-4">
@@ -437,10 +435,10 @@ export function VaultCharts() {
                 <div key={d.name} className="flex items-center justify-between text-[10px]">
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
-                    <span className="text-muted-foreground">{d.name}</span>
+                    <span className="text-white/60">{d.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-16 h-1 rounded-full overflow-hidden bg-muted/40">
+                    <div className="w-16 h-1 rounded-full overflow-hidden bg-white/10">
                       <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${d.pct}%`, background: d.color }} />
                     </div>
                     <span className="font-bold tabular-nums w-10 text-right" style={{ color: d.color }}>{d.pct}%</span>
@@ -449,11 +447,11 @@ export function VaultCharts() {
               ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* ── Pool growth narrative ─────────────────────────────────────────── */}
-      <Card className="relative overflow-hidden surface-3d border-amber-400/30 bg-gradient-to-br from-slate-900/60 via-card/70 to-slate-900/40 shadow-[0_12px_36px_-12px_rgba(0,0,0,0.6),0_0_24px_rgba(251,191,36,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="glass-panel relative overflow-hidden">
         {/* Ambient color glows */}
         <div className="pointer-events-none absolute -top-20 -left-10 h-56 w-56 rounded-full bg-amber-400/20 blur-[80px]" />
         <div className="pointer-events-none absolute -bottom-16 -right-8 h-48 w-48 rounded-full bg-cyan-400/14 blur-[70px]" />
@@ -469,7 +467,7 @@ export function VaultCharts() {
           transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
         />
 
-        <CardContent className="relative p-3 pb-4">
+        <div className="relative p-4 pb-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
@@ -552,7 +550,7 @@ export function VaultCharts() {
                   strokeWidth={1.5}
                   strokeDasharray="3 3"
                   label={{
-                    value: "🚀 LAUNCH",
+                    value: "LAUNCH",
                     position: "top",
                     fill: AMBER_LITE,
                     fontSize: 9,
@@ -613,14 +611,14 @@ export function VaultCharts() {
               {t("vault.charts.legendRunePrice", "RUNE 价")}
             </span>
           </div>
-          <div className="text-[10px] text-muted-foreground/85 leading-snug text-center mt-1.5 px-2">
+          <div className="text-[10px] text-white/60 leading-snug text-center mt-1.5 px-2">
             {t(
               "vault.charts.poolGrowthCaption",
               "上线前 35% 募集资金 → 100M RUNE 启动底池；上线后每笔入金 17.5% 回购 + 17.5% USDT 配对，价格上涨 × 底池加厚的双轮飞轮。"
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

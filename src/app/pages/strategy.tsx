@@ -196,16 +196,16 @@ export default function StrategyPage() {
       <TradingVaultBanner />
 
       <div className="px-4 space-y-3">
-        <div className="flex gap-1.5 rounded-xl border border-border/55 bg-card/60 p-1 surface-3d" data-testid="strategy-tabs">
+        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1" data-testid="strategy-tabs">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                className={`flex-1 min-w-0 py-2.5 px-2 sm:px-3 rounded-lg text-[12px] font-bold tracking-wide whitespace-nowrap truncate transition-all ${
+                className={`flex-1 min-w-0 py-2.5 px-2 sm:px-3 rounded-xl text-[12px] font-bold tracking-wide whitespace-nowrap truncate transition-all ${
                   isActive
-                    ? "bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-amber-700/10 ring-1 ring-amber-500/35 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card/80"
+                    ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-white/55 hover:text-white/90 hover:bg-white/5"
                 }`}
                 onClick={() => setActiveTab(tab.id)}
                 data-testid={`tab-${tab.id}`}

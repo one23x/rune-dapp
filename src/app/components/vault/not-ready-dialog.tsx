@@ -21,7 +21,7 @@ export function NotReadyDialog({
   const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="bg-[#080f1e] border border-amber-500/40 max-w-sm p-0 overflow-hidden">
+      <DialogContent className="glass-panel-strong border-0 max-w-sm p-0 overflow-hidden">
         <div className="absolute -top-16 -right-12 w-44 h-44 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
         <div className="relative p-6 text-center space-y-4">
           <div className="mx-auto w-14 h-14 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
@@ -39,7 +39,7 @@ export function NotReadyDialog({
           </div>
           <Button
             onClick={onClose}
-            className="w-full h-10 bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-semibold"
+            className="w-full h-10 gold-button font-semibold"
           >
             {t("common.gotIt", "知道了")}
           </Button>

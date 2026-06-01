@@ -275,7 +275,30 @@ function DashboardRoutes() {
 export default function DashboardShell() {
   return (
     <WouterRouter base="/app">
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
+        {/* Shared liquid-glass orb background — drifting champagne glows on the
+            near-black base, behind all dashboard content (z-0). */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <motion.div
+            className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full opacity-60 blur-[100px]"
+            style={{ background: "var(--orb-1)" }}
+            animate={{ x: [0, 50, -20, 0], y: [0, -30, 40, 0], scale: [1, 1.1, 0.9, 1] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute top-[20%] -right-[20%] w-[70%] h-[60%] rounded-full opacity-50 blur-[120px]"
+            style={{ background: "var(--orb-2)" }}
+            animate={{ x: [0, -40, 30, 0], y: [0, 50, -20, 0], scale: [1, 1.2, 0.8, 1] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute -bottom-[10%] left-[10%] w-[50%] h-[40%] rounded-full opacity-60 blur-[90px]"
+            style={{ background: "var(--orb-3)" }}
+            animate={{ x: [0, 30, -40, 0], y: [0, -20, 50, 0], scale: [1, 0.9, 1.1, 1] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+          />
+        </div>
+        <div className="relative z-10">
         <ShellHeader />
         <div className="flex">
           <DesktopSidebar />
@@ -286,6 +309,7 @@ export default function DashboardShell() {
           </main>
         </div>
         <BottomNav />
+        </div>
       </div>
     </WouterRouter>
   );

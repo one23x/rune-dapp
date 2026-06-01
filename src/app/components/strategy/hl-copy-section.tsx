@@ -32,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { PremiumCard } from "@app/components/premium-card";
 import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { queryClient } from "@app/lib/queryClient";
@@ -204,7 +203,7 @@ function HlAccountStrip({
   // Not connected → 开户 CTA (connect wallet to enable HL copy-trading).
   if (!wallet) {
     return (
-      <PremiumCard className="p-4">
+      <div className="glass-panel p-4">
         <div className="flex items-center gap-3">
           <div
             className="shrink-0 flex items-center justify-center rounded-xl h-11 w-11"
@@ -223,14 +222,14 @@ function HlAccountStrip({
             <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">{t("hl.openDesc")}</p>
           </div>
         </div>
-      </PremiumCard>
+      </div>
     );
   }
 
   // Resolving the engine user for this wallet → skeleton (don't claim 已开通).
   if (userLoading) {
     return (
-      <PremiumCard className="p-3.5">
+      <div className="glass-panel p-3.5">
         <div className="flex items-center gap-3">
           <Skeleton className="shrink-0 h-10 w-10 rounded-xl" />
           <div className="min-w-0 flex-1 space-y-1.5">
@@ -238,14 +237,14 @@ function HlAccountStrip({
             <Skeleton className="h-2.5 w-40 rounded" />
           </div>
         </div>
-      </PremiumCard>
+      </div>
     );
   }
 
   // Engine user lookup failed → friendly error + retry (don't silently claim 已开通).
   if (userError) {
     return (
-      <PremiumCard className="p-4">
+      <div className="glass-panel p-4">
         <div className="flex items-center gap-3">
           <div
             className="shrink-0 flex items-center justify-center rounded-xl h-11 w-11"
@@ -264,7 +263,7 @@ function HlAccountStrip({
             <RefreshCw className="h-3 w-3" />{t("common.retry", "重试")}
           </button>
         </div>
-      </PremiumCard>
+      </div>
     );
   }
 
@@ -276,7 +275,7 @@ function HlAccountStrip({
       t("hl.openStep3", "启用交易"),
     ];
     return (
-      <PremiumCard className="p-4 space-y-3">
+      <div className="glass-panel p-4 space-y-3">
         <div className="flex items-center gap-3">
           <div
             className="shrink-0 flex items-center justify-center rounded-xl h-11 w-11"
@@ -324,13 +323,13 @@ function HlAccountStrip({
           {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           {isPending ? t("hl.opening", "开通中…") : t("hl.openCta", "开通交易账户")}
         </button>
-      </PremiumCard>
+      </div>
     );
   }
 
   // Engine user present → account enabled banner with quick state.
   return (
-    <PremiumCard className="p-3.5">
+    <div className="glass-panel p-3.5">
       <div className="flex items-center gap-3">
         <div
           className="shrink-0 flex items-center justify-center rounded-xl h-10 w-10"
@@ -352,7 +351,7 @@ function HlAccountStrip({
           </div>
         </div>
       </div>
-    </PremiumCard>
+    </div>
   );
 }
 
@@ -394,8 +393,9 @@ function HlStatusCard({
   const wdRatio = accountValue > 0 ? withdrawable / accountValue : 0;
   const pnlPos = unrealizedPnl >= 0;
   return (
-    <div className="relative rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-black to-black p-5 overflow-hidden">
-      <div className="absolute top-0 right-0 p-28 bg-amber-500/5 blur-[100px] rounded-full pointer-events-none" />
+    <div className="glass-panel-strong relative p-5 overflow-hidden">
+      <div className="shimmer-sweep" />
+      <div className="absolute -top-8 -right-8 w-36 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
       <div className="relative z-10">
         {/* pills — real account context */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -662,7 +662,7 @@ function StrategyPacksTab({
         const Icon = meta.icon;
         const isOpen = open[tier] ?? false;
         return (
-          <PremiumCard key={tier} className="overflow-hidden">
+          <div key={tier} className="glass-panel overflow-hidden">
             <button
               onClick={() => setOpen((s) => ({ ...s, [tier]: !isOpen }))}
               className="w-full flex items-center gap-3 px-3.5 py-3 text-left"
@@ -697,7 +697,7 @@ function StrategyPacksTab({
                 )}
               </div>
             )}
-          </PremiumCard>
+          </div>
         );
       })}
     </div>
@@ -717,7 +717,7 @@ function SignalRow({ s }: { s: HlSignal }) {
   const { t } = useTranslation();
   const long = s.side === "LONG";
   return (
-    <PremiumCard className="p-3">
+    <div className="glass-panel p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className={cn("inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
@@ -734,7 +734,7 @@ function SignalRow({ s }: { s: HlSignal }) {
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.notional")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(s.notionalUsd)}</div></div>
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.leader")}</div><div className="text-[11px] font-mono font-bold truncate">{shortAddr(s.leaderAddress)}</div></div>
       </div>
-    </PremiumCard>
+    </div>
   );
 }
 
@@ -758,7 +758,7 @@ function PositionRow({ p }: { p: HlPosition }) {
   const { t } = useTranslation();
   const long = p.side === "LONG";
   return (
-    <PremiumCard className="p-3">
+    <div className="glass-panel p-3">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-bold text-foreground/90">{p.coin}</span>
@@ -774,7 +774,7 @@ function PositionRow({ p }: { p: HlPosition }) {
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry")}</div><div className="text-[12px] font-bold tabular-nums">{p.entryPx != null ? p.entryPx.toLocaleString() : "—"}</div></div>
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(p.positionValue)}</div></div>
       </div>
-    </PremiumCard>
+    </div>
   );
 }
 
@@ -853,7 +853,7 @@ function ActiveSubs({ userId }: { userId?: string }) {
   const subs = (subsQ.data?.subscriptions ?? []).filter((s: any) => s.status !== "stopped");
   if (!userId || subsQ.isLoading || subs.length === 0) return null;
   return (
-    <PremiumCard className="p-3">
+    <div className="glass-panel p-3">
       <div className="flex items-center gap-1.5 mb-2">
         <Crown className="h-3.5 w-3.5 text-amber-300" />
         <span className="text-[11px] uppercase tracking-wider text-foreground/50 font-semibold">{t("hl.activeFollows")}</span>
@@ -870,7 +870,7 @@ function ActiveSubs({ userId }: { userId?: string }) {
           </div>
         ))}
       </div>
-    </PremiumCard>
+    </div>
   );
 }
 
@@ -963,7 +963,7 @@ export function HlCopySection() {
       <ActiveSubs userId={userId} />
 
       {/* Inner tabs: 策略 / 数据源 / 持仓 */}
-      <div className="flex gap-1.5 rounded-xl border border-border/55 bg-card/60 p-1 surface-3d">
+      <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
         {([
           { id: "packs", labelKey: "hl.tabStrategies", icon: Users },
           { id: "data", labelKey: "hl.tabData", icon: Activity },
@@ -976,13 +976,13 @@ export function HlCopySection() {
               key={x.id}
               onClick={() => setTab(x.id)}
               className={cn(
-                "flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-[12px] font-bold tracking-wide transition-all",
+                "flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[12px] font-bold tracking-wide transition-all",
                 active
-                  ? "bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-amber-700/10 ring-1 ring-amber-500/35 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/80",
+                  ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                  : "text-white/55 hover:text-white/90 hover:bg-white/5",
               )}
             >
-              <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+              <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-black" : "text-white/55")} />
               <span className="truncate">{t(x.labelKey)}</span>
             </button>
           );

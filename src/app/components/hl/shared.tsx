@@ -108,7 +108,7 @@ export function NetworkToggle({
     { id: "testnet", labelKey: "hl.testnet" },
   ];
   return (
-    <div className="inline-flex gap-1 rounded-xl border border-border/55 bg-card/60 p-1 surface-3d">
+    <div className="inline-flex gap-1 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
       {opts.map((o) => {
         const active = value === o.id;
         return (
@@ -116,10 +116,10 @@ export function NetworkToggle({
             key={o.id}
             onClick={() => onChange(o.id)}
             className={cn(
-              "px-3.5 py-1.5 rounded-lg text-[12px] font-bold tracking-wide transition-colors",
+              "px-3.5 py-1.5 rounded-xl text-[12px] font-bold tracking-wide transition-colors",
               active
-                ? "bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-amber-700/10 ring-1 ring-amber-500/35 text-primary"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                : "text-white/55 hover:text-white/90",
             )}
           >
             {t(o.labelKey)}

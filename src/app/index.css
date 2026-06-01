@@ -1233,3 +1233,156 @@
   100% { transform: translateX(120%); opacity: 0; }
 }
 .animate-hero-sweep { animation: hero-sweep 8s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+
+/* ───────────────────────────────────────────────────────────────────────
+   RUNE liquid-glass theme (GOLD + BLACK) — global foundation.
+   Ported from the approved rune-glass mockups (_group.css). Near-black base +
+   champagne glass panels + 3D gold buttons + metallic headings. Appended LAST
+   so token overrides win over the earlier "premium reactor" values, and the
+   unlayered utility classes win over Tailwind utilities (matches mockup).
+─────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Deep near-black base (#0c0a07) */
+  --background: 36 26% 4%;
+
+  /* Deep near-black glass: higher opacity = crisp legible content, less haze */
+  --glass-bg: rgba(16, 13, 8, 0.74);
+  --glass-bg-strong: rgba(20, 16, 9, 0.84);
+  /* Champagne-gold hairline edges */
+  --glass-border: rgba(246, 209, 138, 0.26);
+  --glass-border-strong: rgba(246, 209, 138, 0.48);
+  /* Tighter, deeper shadow for crisp separation from background */
+  --glass-shadow: 0 10px 38px rgba(0, 0, 0, 0.72), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --glass-inner-shadow:
+    inset 0 1px 0 rgba(255, 244, 214, 0.26),
+    inset 0 0 0 1px rgba(246, 209, 138, 0.06);
+
+  /* Antique, muted orbs — balanced top-to-bottom */
+  --orb-1: #463009;
+  --orb-2: #5a3f0e;
+  --orb-3: #2c1e06;
+
+  /* Metallic champagne gold */
+  --gold-bright: #f6d18a;
+  --gold: #f59e0b;
+  --gold-deep: #b45309;
+}
+.dark {
+  --background: 36 26% 4%;
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes drift-reverse {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-30px, 50px) scale(1.1); }
+  66% { transform: translate(20px, -20px) scale(0.9); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes glassShimmer {
+  0% { transform: translateX(-150%) skewX(-15deg); }
+  50% { transform: translateX(150%) skewX(-15deg); }
+  100% { transform: translateX(150%) skewX(-15deg); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inner-shadow);
+  border-radius: 1.5rem;
+}
+.glass-panel-strong {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: var(--glass-shadow), var(--glass-inner-shadow);
+  border-radius: 1.5rem;
+}
+
+/* Dark glass button — raised bevel: bright top edge, inset bottom shadow */
+.glass-button {
+  background: linear-gradient(180deg, rgba(44, 35, 20, 0.92) 0%, rgba(17, 13, 7, 0.94) 100%);
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 244, 214, 0.30),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+  transition: all 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.glass-button:hover {
+  border-color: rgba(246, 209, 138, 0.6);
+  box-shadow:
+    0 9px 24px rgba(0, 0, 0, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 244, 214, 0.42),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+}
+.glass-button:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 244, 214, 0.12);
+}
+
+/* Primary raised glossy GOLD button — strong 3D depth, high-contrast dark text */
+.gold-button {
+  position: relative;
+  background: linear-gradient(180deg, #ffe39c 0%, #fbbf4f 38%, #f59e0b 70%, #d97706 100%);
+  color: #1c1303;
+  border: 1px solid rgba(255, 230, 170, 0.85);
+  box-shadow:
+    0 8px 22px rgba(245, 158, 11, 0.42),
+    0 2px 5px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -3px 6px rgba(146, 64, 14, 0.55);
+  transition: all 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.gold-button:hover {
+  background: linear-gradient(180deg, #ffe9ad 0%, #fcc55e 38%, #f7a91d 70%, #e07d08 100%);
+  box-shadow:
+    0 11px 32px rgba(245, 158, 11, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(146, 64, 14, 0.55);
+}
+.gold-button:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow:
+    0 3px 10px rgba(245, 158, 11, 0.4),
+    inset 0 2px 6px rgba(146, 64, 14, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.shimmer-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 244, 214, 0.16), transparent);
+  animation: glassShimmer 4s infinite;
+  pointer-events: none;
+}
+
+/* Metallic champagne-gold text for headings / hero accents */
+.gold-text {
+  background: linear-gradient(135deg, #fff0cc 0%, #f6d18a 35%, #f59e0b 60%, #b45309 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

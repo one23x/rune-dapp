@@ -2,3 +2,4 @@
 - [Previewing gated pages](app-preview-gating.md) — app lives under `/app`; add `?preview=1` to bypass the not-connected redirect; CopyGate still needs a real wallet.
 - [Canvas update payload](canvas-update-payload.md) — applyCanvasActions update uses `updates:{shapeType,...}` (NOT `shape:`); shapeType is required or it errors.
 - [Mockup screenshot quirk](mockup-screenshot-quirk.md) — app_preview screenshot hits main app (port 5000), not the /__mockup/ sandbox; verify mockup renders via subagent screenshot or curl HTML.
+- [Reskin data bindings](reskin-data-bindings.md) — after a delegated reskin/port, re-verify live bindings; subagents silently bake mockup placeholder literals over real data.
