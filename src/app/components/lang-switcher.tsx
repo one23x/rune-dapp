@@ -18,12 +18,12 @@ const LANGUAGES = [
 ];
 
 // Map dashboard switcher codes (12) to the custom i18n system's supported
-// Language codes (9). Codes that the custom system does not yet support
-// (fr/de/ar/pt) fall back to "en" so the rest of the UI stays consistent.
+// Language codes. All 12 are now natively supported (fr/de/ar/pt dictionaries
+// added), so every code maps 1:1 — no English fallback.
 const customLangMap: Record<string, Language> = {
   en: "en", zh: "zh", "zh-TW": "zh-TW", ja: "ja", ko: "ko",
   vi: "vi", es: "es", ru: "ru",
-  fr: "en", de: "en", ar: "en", pt: "en",
+  fr: "fr", de: "de", ar: "ar", pt: "pt",
 };
 
 export default function LangSwitcher() {
