@@ -17,6 +17,7 @@ import {
   Search, Globe, Brain, Newspaper, TrendingUp, TrendingDown,
   ExternalLink, BarChart3, Clock, Trophy, Minus, Sparkles,
   ChevronDown, Flame, Star, AlertCircle, Wallet, RefreshCw,
+  Users, BarChart2, ShieldCheck, Zap, ChevronRight,
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
 import { Link } from "wouter";
@@ -930,34 +931,84 @@ export default function Trade() {
 
       {/* ── Smart Copy-Trading hero card ────────────── */}
       <div className="px-4 lg:px-6 mt-3">
-        <Link href="/copy-trading">
-          <div className="relative rounded-xl overflow-hidden cursor-pointer group transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{
-              background: "linear-gradient(135deg, rgba(251,191,36,0.14) 0%, rgba(180,90,10,0.08) 50%, rgba(18,14,6,0.98) 100%)",
-              border: "1px solid rgba(212,168,50,0.35)",
-              boxShadow: "0 4px 20px -8px rgba(212,168,50,0.25)",
-            }}>
-            <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(90deg, rgba(251,191,36,0.04) 0%, transparent 60%)" }} />
-            <div className="relative flex items-center gap-3 px-4 py-3">
-              <div className="shrink-0 flex items-center justify-center rounded-xl h-10 w-10"
-                style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.28), rgba(180,90,10,0.12))", border: "1px solid rgba(251,191,36,0.4)" }}>
-                <Sparkles className="h-4.5 w-4.5 text-amber-300" style={{ width: 18, height: 18 }} />
+        <div className="relative rounded-2xl overflow-hidden border border-[#f59e0b]/25 bg-gradient-to-br from-[#1a1408] via-[#161100] to-[#0c0a07]"
+          style={{ boxShadow: "0 0 40px rgba(245,158,11,0.08), inset 0 1px 0 rgba(245,158,11,0.15)" }}>
+
+          {/* Background glow blobs */}
+          <div className="absolute -top-8 -right-8 w-36 h-36 bg-[#f59e0b]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 -left-4 w-24 h-24 bg-amber-600/10 rounded-full blur-2xl pointer-events-none" />
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#f59e0b]/60 to-transparent" />
+
+          <div className="relative z-10 p-5">
+            {/* Badge row */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5 bg-[#f59e0b]/12 border border-[#f59e0b]/25 rounded-full px-2.5 py-1">
+                <Zap size={11} className="text-[#f59e0b]" />
+                <span className="text-[10px] font-semibold text-[#f59e0b] uppercase tracking-wider">
+                  Smart Copy-Trading
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-[11px] uppercase tracking-[0.15em] text-amber-300/75 font-medium">One-Agents</span>
-                  <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[11px] text-emerald-400/80">Live</span>
-                </div>
-                <div className="text-[14px] font-bold text-foreground leading-tight">Smart Copy-Trading</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">AI 决策 · 自动跟单 · L1–L5 策略包</div>
-              </div>
-              <div className="shrink-0 flex items-center gap-1 text-[12px] font-semibold text-amber-300/90 group-hover:translate-x-0.5 transition-transform">
-                进入 <Star className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1 text-[10px] text-[#10b981] font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                已激活
               </div>
             </div>
+
+            {/* Headline */}
+            <h2 className="text-[22px] font-bold text-white leading-tight tracking-tight mb-1">
+              让 AI 帮你<br />
+              <span className="bg-gradient-to-r from-[#f59e0b] via-amber-300 to-[#f59e0b] bg-clip-text text-transparent">
+                自动跟单预测市场
+              </span>
+            </h2>
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+              One-Agents 引擎实时复制顶级交易员策略，自动执行 YES / NO 仓位
+            </p>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                <div className="flex items-center gap-1 mb-1">
+                  <Users size={10} className="text-zinc-500" />
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-wide">跟随者</span>
+                </div>
+                <p className="text-sm font-bold text-white">2,847</p>
+              </div>
+              <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                <div className="flex items-center gap-1 mb-1">
+                  <BarChart2 size={10} className="text-zinc-500" />
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-wide">胜率</span>
+                </div>
+                <p className="text-sm font-bold text-[#10b981]">68.4%</p>
+              </div>
+              <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                <div className="flex items-center gap-1 mb-1">
+                  <TrendingUp size={10} className="text-zinc-500" />
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-wide">月收益</span>
+                </div>
+                <p className="text-sm font-bold text-[#f59e0b]">+24.1%</p>
+              </div>
+            </div>
+
+            {/* CTA button */}
+            <Link href="/copy-trading">
+              <button className="w-full relative overflow-hidden rounded-xl bg-[#f59e0b] text-black font-bold text-sm py-3 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
+                style={{ boxShadow: "0 4px 20px rgba(245,158,11,0.35)" }}>
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                <Zap size={15} strokeWidth={2.5} className="relative z-10" />
+                <span className="relative z-10">进入智能跟单</span>
+                <ChevronRight size={15} strokeWidth={2.5} className="relative z-10 ml-0.5" />
+              </button>
+            </Link>
+
+            {/* Trust line */}
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              <ShieldCheck size={11} className="text-zinc-500" />
+              <span className="text-[10px] text-zinc-500">资金托管在 Polymarket · Polygon 网络</span>
+            </div>
           </div>
-        </Link>
+        </div>
       </div>
 
       {/* ── Market list ─────────────────────────────── */}
