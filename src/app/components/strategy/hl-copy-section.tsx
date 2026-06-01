@@ -27,7 +27,7 @@ import {
   Users, Activity, Layers, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
-  Settings, ChevronRight, Sparkles, ArrowLeft,
+  Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ import { useToast } from "@app/hooks/use-toast";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { arbitrum } from "@/lib/thirdweb/chains";
 import {
-  useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs,
+  useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations,
 } from "@app/lib/engine-hooks";
 import { hyperliquid } from "@app/lib/engine";
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
@@ -985,9 +985,17 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
 
 function ActiveSubs({ userId }: { userId?: string }) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const subsQ = useHlSubs(userId);
+  const mut = useHlSubMutations(userId);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const subs = (subsQ.data?.subscriptions ?? []).filter((s: any) => s.status !== "stopped");
   if (!userId || subsQ.isLoading || subs.length === 0) return null;
+
+  async function run(fn: () => Promise<unknown>, errKey: string) {
+    try { await fn(); } catch (e: any) { toast({ title: t(errKey, "操作失败"), description: String(e?.message ?? e), variant: "destructive" }); }
+  }
+
   return (
     <div className="glass-panel p-3">
       <div className="flex items-center gap-1.5 mb-2">
@@ -996,15 +1004,39 @@ function ActiveSubs({ userId }: { userId?: string }) {
         <Badge className="text-[9px] px-1.5 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate ml-auto">{subs.length}</Badge>
       </div>
       <div className="space-y-1.5">
-        {subs.map((s: any) => (
-          <div key={s.id} className="flex items-center justify-between gap-2 text-[12px]">
-            <code className="font-mono text-foreground/80 truncate">{shortAddr(s.leaderAddress)}</code>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] text-muted-foreground/70">{(Number(s.ratio) * 100).toFixed(0)}% · {s.maxLeverage}x</span>
-              <Badge className="text-[9px] px-1.5 py-0 border-0 bg-emerald-500/15 text-emerald-300 no-default-hover-elevate no-default-active-elevate">{s.status}</Badge>
+        {subs.map((s: any) => {
+          const paused = s.status === "paused";
+          const confirming = confirmId === s.id;
+          return (
+            <div key={s.id} className="flex items-center justify-between gap-2 text-[12px]">
+              <code className="font-mono text-foreground/80 truncate">{shortAddr(s.leaderAddress)}</code>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] text-muted-foreground/70">{(Number(s.ratio) * 100).toFixed(0)}% · {s.maxLeverage}x</span>
+                <Badge className={cn("text-[9px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate", paused ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300")}>{s.status}</Badge>
+                {confirming ? (
+                  <>
+                    <button onClick={() => run(() => mut.cancel(s.id).then(() => setConfirmId(null)), "hl.cancelFollowFailed")} disabled={mut.isPending}
+                      className="text-[10px] text-rose-300 hover:underline px-1">{t("common.confirm", "确认")}</button>
+                    <button onClick={() => setConfirmId(null)} className="text-[10px] text-muted-foreground/70 hover:underline px-1">{t("common.cancel", "取消")}</button>
+                  </>
+                ) : (
+                  <>
+                    <button title={paused ? t("hl.resumeFollow", "恢复") : t("hl.pauseFollow", "暂停")} disabled={mut.isPending}
+                      onClick={() => run(() => (paused ? mut.resume(s.id) : mut.pause(s.id)), "hl.pauseResumeFailed")}
+                      className="p-1 rounded hover:bg-white/5 text-foreground/60 hover:text-foreground">
+                      {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                    </button>
+                    <button title={t("hl.cancelFollow", "取消跟单")} disabled={mut.isPending}
+                      onClick={() => setConfirmId(s.id)}
+                      className="p-1 rounded hover:bg-rose-500/10 text-foreground/60 hover:text-rose-300">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
