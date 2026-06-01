@@ -22,7 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "wouter";
-import { useActiveAccount, PayEmbed } from "thirdweb/react";
+import { useActiveAccount } from "thirdweb/react";
 import {
   Users, Activity, Layers, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
@@ -40,7 +40,6 @@ import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { queryClient } from "@app/lib/queryClient";
 import { useToast } from "@app/hooks/use-toast";
-import { thirdwebClient } from "@/lib/thirdweb/client";
 import { arbitrum } from "@/lib/thirdweb/chains";
 import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations,
@@ -53,7 +52,7 @@ import {
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
   HL_DEFAULT_FOLLOW, type HlFollowConfig,
 } from "@app/components/hl/shared";
-import { useOnboardFlow } from "@app/components/copy-trading/shared";
+import { useOnboardFlow, DepositBuyPanel } from "@app/components/copy-trading/shared";
 
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
@@ -69,59 +68,6 @@ const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${strin
 // 跨链 / 买币直充(thirdweb PayEmbed)—— Arbitrum USDC 直接到托管 EOA(=seller)。
 // 资金只会进引擎托管地址(HL 下单账户),与 copy-trading 的 DepositBridge 同构,
 // 仅链/资产不同(Arbitrum USDC)。先输金额→下一步→PayEmbed,弹窗内可滚动且自适应宽度。
-function HlDepositBridge({ seller }: { seller: string }) {
-  const { t } = useTranslation();
-  const account = useActiveAccount();
-  const [amount, setAmount] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const amt = Number(amount);
-  if (!account || !seller) return null;
-  return (
-    <div className="border-t border-border/40 pt-3 space-y-2">
-      <label className="text-[12px] text-muted-foreground block">
-        {t("hl.bridgeFundLabel", "用卡 / 跨链买 USDC 直充(Arbitrum)")}
-      </label>
-      {!confirmed || !(amt > 0) ? (
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="USDC"
-            className="text-xs"
-            data-testid="input-hl-bridge-amount"
-          />
-          <Button size="sm" disabled={!(amt > 0)} onClick={() => setConfirmed(true)}>
-            {t("common.next", "下一步")}
-          </Button>
-        </div>
-      ) : (
-        <div className="rounded-xl w-full">
-          <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setConfirmed(false)}>
-            ← {t("common.back", "改数量")}
-          </button>
-          <div className="-mx-2 overflow-x-auto">
-            <PayEmbed
-              client={thirdwebClient}
-              className="tw-pay-embed-fit"
-              payOptions={{
-                mode: "direct_payment",
-                paymentInfo: {
-                  chain: arbitrum,
-                  sellerAddress: seller as `0x${string}`,
-                  token: { address: USDC_ARBITRUM },
-                  amount: String(amt),
-                },
-              }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function HlFunding({
   userId, network, depositAddress, withdrawable,
 }: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number }) {
@@ -174,17 +120,17 @@ function HlFunding({
         </Button>
       </div>
 
-      {/* 充值 —— 镜像 copy-trading 入金弹窗设计(渐变圆形图标头 + 地址行 + 资产徽章 + PayEmbed) */}
+      {/* 充值 —— 与 copy-trading 共享 DepositBuyPanel(冲动买单)+ 转账地址次路径 */}
       <Dialog open={depOpen} onOpenChange={setDepOpen}>
-        <DialogContent className="bg-card border-border w-[calc(100vw-0.75rem)] max-w-md p-3 rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border w-[calc(100vw-1.5rem)] max-w-md p-4 rounded-2xl max-h-[88dvh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
                 <ArrowDownToLine className="h-4 w-4 text-black" />
               </div>
-              <div>
-                <DialogTitle className="text-sm font-bold">{t("hl.depositTitle", "充值到 HL 交易账户")}</DialogTitle>
-                <DialogDescription className="text-[12px]">
+              <div className="min-w-0">
+                <DialogTitle className="text-[15px] font-bold leading-tight">{t("hl.depositTitle", "充值到 HL 交易账户")}</DialogTitle>
+                <DialogDescription className="text-[12px] leading-tight">
                   {network === "testnet"
                     ? t("hl.depositDescTestnet", "测试网:用 Hyperliquid 测试网水龙头/桥把测试 USDC 充到下面这个托管地址。")
                     : t("hl.depositDescMainnet", "主网:从 Arbitrum 把 USDC 充到下面这个托管地址,引擎用它在 HL 下单。")}
@@ -193,15 +139,24 @@ function HlFunding({
             </div>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <label className="text-[12px] text-muted-foreground">{t("hl.depositAddressLabel", "充值地址(托管 EOA)")}</label>
+          <div className="space-y-3 mt-1">
+            {/* 主路径:用卡 / 跨链一键买入 USDC 直充托管 EOA(仅主网且已有地址) */}
+            {network === "mainnet" && depositAddress && (
+              <DepositBuyPanel chain={arbitrum} token={USDC_ARBITRUM} seller={depositAddress} assetLabel="USDC" />
+            )}
+
+            {/* 次路径:转账到地址 */}
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+              <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
+                <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                {network === "testnet" ? t("hl.depositAddressLabel", "充值地址(托管 EOA)") : t("deposit.manualTransfer", "或转账到地址")}
+              </div>
               {depositAddress ? (
-                <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">ARBITRUM</div>
+                <div className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
+                  <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">ARBITRUM · USDC</div>
                   <div className="flex items-center gap-2">
-                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1" data-testid="text-hl-deposit-address">{depositAddress}</code>
-                    <button onClick={copyAddr} className="shrink-0 text-muted-foreground hover:text-primary transition-colors" data-testid="button-hl-copy-address">
+                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-deposit-address">{depositAddress}</code>
+                    <button onClick={copyAddr} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors" data-testid="button-hl-copy-address">
                       <Copy className="h-4 w-4" />
                     </button>
                   </div>
@@ -209,25 +164,11 @@ function HlFunding({
               ) : (
                 <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
               )}
+              <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+                {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
+              </p>
             </div>
-
-            <div>
-              <label className="text-[12px] text-muted-foreground mb-1.5 block">{t("hl.supportedAssets", "支持资产")}</label>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="outline" className="text-[11px] no-default-hover-elevate no-default-active-elevate">USDC</Badge>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-              {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
-            </p>
-
-            {network === "mainnet" && depositAddress && <HlDepositBridge seller={depositAddress} />}
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDepOpen(false)}>{t("common.close", "关闭")}</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

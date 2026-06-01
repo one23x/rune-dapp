@@ -335,107 +335,157 @@ export function DepositDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-card border-border w-[calc(100vw-0.75rem)] max-w-md p-3 rounded-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="bg-card border-border w-[calc(100vw-1.5rem)] max-w-md p-4 rounded-2xl max-h-[88dvh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
               <ArrowDownToLine className="h-4 w-4 text-black" />
             </div>
-            <div>
-              <DialogTitle className="text-sm font-bold">{t("copyTrading.depositTitle")}</DialogTitle>
-              <DialogDescription className="text-[12px]">{t("copyTrading.depositDesc")}</DialogDescription>
+            <div className="min-w-0">
+              <DialogTitle className="text-[15px] font-bold leading-tight">{t("copyTrading.depositTitle")}</DialogTitle>
+              <DialogDescription className="text-[12px] leading-tight">{t("copyTrading.depositDesc")}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-3">
-          {load.isPending ? (
-            <div className="py-6 text-center"><Loader2 className="h-5 w-5 text-amber-300 animate-spin mx-auto" /></div>
-          ) : addresses.length > 0 ? (
-            <div className="space-y-2">
-              <label className="text-[12px] text-muted-foreground">{t("copyTrading.depositAddressLabel")}</label>
-              {addresses.map((a) => (
-                <div key={a.chain + a.address} className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  {a.chain && <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">{a.chain}</div>}
-                  <div className="flex items-center gap-2">
-                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1">{a.address}</code>
-                    <button onClick={() => onCopy(a.address)} className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
-                      <Copy className="h-4 w-4" />
-                    </button>
+        <div className="space-y-3 mt-1">
+          {/* 主路径:用卡 / 跨链一键买入(冲动买单) */}
+          <DepositBuyPanel chain={polygon} token={PUSD_POLYGON} assetLabel="pUSD" />
+
+          {/* 次路径:转账到地址 */}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
+              <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+              {t("deposit.manualTransfer", "或转账到地址")}
+            </div>
+            {load.isPending ? (
+              <div className="py-5 text-center"><Loader2 className="h-5 w-5 text-amber-300 animate-spin mx-auto" /></div>
+            ) : addresses.length > 0 ? (
+              <div className="space-y-2">
+                {addresses.map((a) => (
+                  <div key={a.chain + a.address} className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
+                    {a.chain && <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">{a.chain}</div>}
+                    <div className="flex items-center gap-2">
+                      <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0">{a.address}</code>
+                      <button onClick={() => onCopy(a.address)} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors">
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[12px] text-muted-foreground text-center py-4">{t("copyTrading.noDepositAddress")}</p>
-          )}
-
-          {assets.length > 0 && (
-            <div>
-              <label className="text-[12px] text-muted-foreground mb-1.5 block">{t("copyTrading.supportedAssetsLabel")}</label>
-              <div className="flex flex-wrap gap-1.5">
-                {assets.map((a) => (
-                  <Badge key={a} variant="outline" className="text-[11px] no-default-hover-elevate no-default-active-elevate">{a}</Badge>
                 ))}
+                {assets.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {assets.map((a) => (
+                      <Badge key={a} variant="outline" className="text-[11px] no-default-hover-elevate no-default-active-elevate">{a}</Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-
-          <DepositBridge />
+            ) : (
+              <p className="text-[12px] text-muted-foreground text-center py-3">{t("copyTrading.noDepositAddress")}</p>
+            )}
+          </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{t("common.close", "Close")}</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ─── 跨链 / 买币直充(thirdweb PayEmbed)──────────────────────────────────────
-// 无 AA:连接钱包 = Polymarket 交易钱包,故 sellerAddress = 连接钱包(资金只会进用户
-// 自己的钱包,无错址风险)。买 pUSD@Polygon 直接到钱包,补足 demo-rune 的「跨链/Swap」方式。
-function DepositBridge() {
+// ─── 直充买入面板(thirdweb PayEmbed)——「冲动买单」:预设金额 + 一键买入 ──────────
+// 共享组件:Polymarket(polygon/pUSD,seller=连接钱包)与 Hyperliquid(arbitrum/USDC,
+// seller=引擎托管 EOA)复用同一套视觉,仅 chain/token/seller 不同。资金只进指定 seller。
+// 预设金额 chips 驱动冲动买单;PayEmbed 用 .tw-pay-embed-fit(400px pin + zoom 自适配手机)。
+const BUY_PRESETS = [50, 100, 500, 1000];
+
+export function DepositBuyPanel({
+  chain, token, seller, assetLabel,
+}: {
+  chain: any; // thirdweb Chain（polygon / arbitrum）
+  token: `0x${string}`;
+  seller?: string; // 不传 = 连接钱包（Polymarket 直充本钱包）
+  assetLabel: string;
+}) {
   const { t } = useTranslation();
   const account = useActiveAccount();
   const [amount, setAmount] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const amt = Number(amount);
-  if (!account) return null;
+  const sellerAddr = seller ?? account?.address;
+  if (!account || !sellerAddr) return null;
+
   return (
-    <div className="border-t border-border/40 pt-3 space-y-2">
-      <label className="text-[12px] text-muted-foreground block">
-        {t("copyTrading.bridgeFundLabel", "用卡 / 跨链买 pUSD 直充到钱包")}
-      </label>
-      {!confirmed || !(amt > 0) ? (
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="pUSD"
-            className="text-xs"
-          />
-          <Button size="sm" disabled={!(amt > 0)} onClick={() => setConfirmed(true)}>
-            {t("common.next", "下一步")}
-          </Button>
+    <div
+      className="rounded-2xl p-3.5 space-y-3"
+      style={{ background: "linear-gradient(155deg, rgba(251,191,36,0.10), rgba(245,158,11,0.02))", border: "1px solid rgba(251,191,36,0.20)" }}
+    >
+      <div className="flex items-center gap-2">
+        <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 grid place-items-center shrink-0">
+          <Zap className="h-3.5 w-3.5 text-black" />
         </div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-bold leading-tight">{t("deposit.buyTitle", "用卡 / 跨链一键买入")}</div>
+          <div className="text-[11px] text-muted-foreground leading-tight truncate">{t("deposit.buyDesc", "几秒到账,立即开始跟单")}</div>
+        </div>
+      </div>
+
+      {!confirmed || !(amt > 0) ? (
+        <>
+          <div className="grid grid-cols-4 gap-1.5">
+            {BUY_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setAmount(String(p))}
+                className={cn(
+                  "h-11 rounded-xl text-[13px] font-bold tabular-nums transition active:scale-95",
+                  amt === p
+                    ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-black border border-amber-400"
+                    : "bg-white/[0.04] text-foreground/80 border border-white/10 hover:border-amber-400/40",
+                )}
+              >
+                ${p}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center rounded-xl bg-background/60 border border-white/10 px-3 h-11 focus-within:border-amber-400/50 transition-colors">
+            <span className="text-[13px] text-muted-foreground mr-1">$</span>
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={t("deposit.customAmount", "自定义金额")}
+              className="border-0 bg-transparent px-0 h-auto text-[15px] font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{assetLabel}</span>
+          </div>
+          <Button
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-600 text-black text-[15px] font-extrabold hover:opacity-95 disabled:opacity-40 active:scale-[0.99]"
+            disabled={!(amt > 0)}
+            onClick={() => setConfirmed(true)}
+          >
+            <Zap className="h-4 w-4 mr-1.5" />
+            {amt > 0 ? `${t("deposit.buyNow", "立即买入")} $${amt}` : t("deposit.enterAmount", "输入或选择金额")}
+          </Button>
+        </>
       ) : (
-        <div className="rounded-xl w-full">
-          <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setConfirmed(false)}>
-            ← {t("common.back", "改数量")}
+        <div className="w-full">
+          <button
+            className="mb-2 inline-flex items-center gap-1 text-[12px] text-amber-300 hover:underline"
+            onClick={() => setConfirmed(false)}
+          >
+            ← {t("common.back", "改数量")} · <span className="font-bold tabular-nums">${amt}</span>
           </button>
-          <div className="-mx-2 overflow-x-auto">
+          <div className="rounded-xl overflow-hidden overflow-x-auto bg-background/40 grid place-items-center">
             <PayEmbed
               client={thirdwebClient}
               className="tw-pay-embed-fit"
               payOptions={{
                 mode: "direct_payment",
                 paymentInfo: {
-                  chain: polygon,
-                  sellerAddress: account.address as `0x${string}`,
-                  token: { address: PUSD_POLYGON },
+                  chain,
+                  sellerAddress: sellerAddr as `0x${string}`,
+                  token: { address: token },
                   amount: String(amt),
                 },
               }}
