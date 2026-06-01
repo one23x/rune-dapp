@@ -923,7 +923,8 @@
       "monthTotal": "本月累计"
     },
     "followStrategyClosed": "即将开放",
-    "followStrategyClosedDesc": "跟单功能将在协议正式上线后开放，敬请期待。"
+    "followStrategyClosedDesc": "跟单功能将在协议正式上线后开放，敬请期待。",
+    "pmLabTab": "预测实验室"
   },
   "profile": {
     "assetsOverview": "资产概览",
@@ -1971,5 +1972,48 @@
     "withdrawSubmitting": "提交中…",
     "withdrawSuccess": "提现已提交",
     "withdrawSuccessDesc": "USDC 将经官方桥到达目标 Arbitrum 地址（约几分钟，含 ~$1 桥费）。"
+  },
+  "pmLab": {
+    "title": "预测 AI 实验室",
+    "subtitle": "6 个模型解读预测市场",
+    "live": "实时",
+    "liveConsole": "实时推理控制台",
+    "modelsLabel": "模型",
+    "hitRateLabel": "命中率",
+    "resolvedLabel": "已结算",
+    "openLabel": "持仓",
+    "edgeLabel": "优势",
+    "confLabel": "置信度",
+    "avgEdge": "平均优势",
+    "marketsHit": "命中市场",
+    "recentMarkets": "近期市场",
+    "resolvedSummary": "命中 {{wins}}/{{total}} · {{open}} 持仓",
+    "orders": "订单",
+    "place": "建仓",
+    "close": "平仓",
+    "statusOpen": "持仓中",
+    "shares": "份",
+    "opened": "开仓",
+    "closed": "平仓",
+    "win": "胜率",
+    "avgPnl": "平均盈亏",
+    "total": "总计",
+    "collapse": "收起",
+    "expandMore": "展开另 {{count}} 条"
+  },
+  "pmConsole": {
+    "title": "推理控制台",
+    "analyzing": "分析中...",
+    "idle": "空闲",
+    "initializing": "正在初始化 {{model}}...",
+    "scanning": "扫描“{{market}}”",
+    "orderBook": "订单簿：{{outcome}} 买 {{bid}}¢ / 卖 {{ask}}¢ · 价差 {{spread}}¢",
+    "volume": "24小时成交额 ${{vol}}K，{{traders}} 名交易者",
+    "sentiment": "资讯情绪 {{pct}}% 利好（近6小时）",
+    "baseRate": "基础概率 {{base}}% vs 市场隐含 {{impl}}%",
+    "edge": "优势 {{edge}}% · 置信度 {{conf}}%",
+    "place": "建仓 {{outcome}} @ {{price}}¢ — {{reason}}",
+    "close": "平仓 {{outcome}} @ {{price}}¢ · 盈亏 {{pnl}}% — {{reason}}",
+    "hold": "观望 — {{reason}}"
   }
 }

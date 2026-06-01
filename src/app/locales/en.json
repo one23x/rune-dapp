@@ -923,7 +923,8 @@
       "monthTotal": "Month total"
     },
     "followStrategyClosed": "Coming soon",
-    "followStrategyClosedDesc": "Copy-trading will open after the protocol launch."
+    "followStrategyClosedDesc": "Copy-trading will open after the protocol launch.",
+    "pmLabTab": "PM Lab"
   },
   "profile": {
     "assetsOverview": "Assets Overview",
@@ -1971,5 +1972,48 @@
     "withdrawSubmitting": "Submitting…",
     "withdrawSuccess": "Withdrawal submitted",
     "withdrawSuccessDesc": "USDC will arrive at the destination Arbitrum address via the official bridge (a few minutes, ~$1 fee)."
+  },
+  "pmLab": {
+    "title": "Prediction AI Lab",
+    "subtitle": "6 models reading prediction markets",
+    "live": "Live",
+    "liveConsole": "Live Reasoning Console",
+    "modelsLabel": "Models",
+    "hitRateLabel": "Hit Rate",
+    "resolvedLabel": "Resolved",
+    "openLabel": "Open",
+    "edgeLabel": "Edge",
+    "confLabel": "Conf",
+    "avgEdge": "Avg Edge",
+    "marketsHit": "Markets hit",
+    "recentMarkets": "Recent Markets",
+    "resolvedSummary": "{{wins}}/{{total}} hit · {{open}} open",
+    "orders": "Orders",
+    "place": "PLACE",
+    "close": "CLOSE",
+    "statusOpen": "OPEN",
+    "shares": "shares",
+    "opened": "Opened",
+    "closed": "Closed",
+    "win": "Win",
+    "avgPnl": "Avg PnL",
+    "total": "Total",
+    "collapse": "Collapse",
+    "expandMore": "Show {{count}} more"
+  },
+  "pmConsole": {
+    "title": "Reasoning Console",
+    "analyzing": "analyzing...",
+    "idle": "idle",
+    "initializing": "Initializing {{model}}...",
+    "scanning": "scanning “{{market}}”",
+    "orderBook": "order book: {{outcome}} {{bid}}¢ / {{ask}}¢ · spread {{spread}}¢",
+    "volume": "24h volume ${{vol}}K across {{traders}} traders",
+    "sentiment": "news sentiment {{pct}}% favorable (last 6h)",
+    "baseRate": "base rate {{base}}% vs market-implied {{impl}}%",
+    "edge": "edge {{edge}}% · confidence {{conf}}%",
+    "place": "PLACE {{outcome}} @ {{price}}¢ — {{reason}}",
+    "close": "CLOSE {{outcome}} @ {{price}}¢ · pnl {{pnl}}% — {{reason}}",
+    "hold": "HOLD — {{reason}}"
   }
 }
