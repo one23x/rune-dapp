@@ -10,8 +10,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity, CheckCircle2, Check, TrendingUp, BarChart2, Shield, Zap, Trophy,
 } from "lucide-react";
-import { useLeaderSignals, useHotMarkets, useLeaders } from "@app/lib/engine-hooks";
+import { useActiveAccount } from "thirdweb/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLeaderSignals, useHotMarkets, useLeaders, useEngineUser, useCopySubs } from "@app/lib/engine-hooks";
+import { copySubscriptions } from "@app/lib/engine";
 import { useToast } from "@app/hooks/use-toast";
+
+const isAddr = (v: unknown): v is string => typeof v === "string" && /^0x[a-fA-F0-9]{40}$/.test(v);
+const extractWallet = (r: any): string | null => {
+  const w = r?.wallet ?? r?.address ?? r?.leaderWallet ?? r?.leader;
+  return isAddr(w) ? w : null;
+};
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { SectionError, SectionEmpty, asArray, asNumber } from "@app/components/copy-trading/shared";
 
@@ -64,6 +73,43 @@ export default function CopyTradingSignalsPage() {
   const hotQ = useHotMarkets();
   const leaderboardQ = useLeaders("7d");
 
+  // Real copy-trade follow (leaderboard rows carry a 0x wallet; leader SIGNALS are
+  // market-consensus = no single wallet, so the signal-card toggle stays cosmetic).
+  const account = useActiveAccount();
+  const userQ = useEngineUser(account?.address);
+  const userId: string | undefined = userQ.data?.id as string | undefined;
+  const copySubsQ = useCopySubs(userId);
+  const qc = useQueryClient();
+  // lower(leaderWallet) -> subscription id, from real subs.
+  const subByWallet = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of asArray(copySubsQ.data?.subscriptions ?? copySubsQ.data)) {
+      const w = (s as any)?.leaderWallet;
+      if (isAddr(w) && (s as any)?.status !== "stopped") m.set(w.toLowerCase(), String((s as any).id));
+    }
+    return m;
+  }, [copySubsQ.data]);
+
+  const followMut = useMutation({
+    mutationFn: async ({ wallet, on }: { wallet: string; on: boolean }) => {
+      if (!userId) throw new Error("not_connected");
+      if (on) return copySubscriptions.create(userId, { leaderWallet: wallet });
+      const id = subByWallet.get(wallet.toLowerCase());
+      if (!id) return;
+      return copySubscriptions.delete(userId, id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["engine", "copy-subs", userId] }),
+    onError: (e: any) =>
+      toast({ title: t("copyTrading.followFailed", "操作失败"), description: String(e?.message ?? e), variant: "destructive" }),
+  });
+
+  async function followWallet(wallet: string) {
+    if (!account?.address) { toast({ title: t("copyTrading.connectToFollow", "请先连接钱包") }); return; }
+    const on = !subByWallet.has(wallet.toLowerCase());
+    await followMut.mutateAsync({ wallet, on });
+    toast({ title: on ? t("copyTrading.copyStarted", "跟单已开启") : t("copyTrading.copyStopped", "跟单已停止"), description: `${wallet.slice(0, 6)}…${wallet.slice(-4)}` });
+  }
+
   const leaderSignals = useMemo<LeaderSignal[]>(() => {
     return asArray(leadersQ.data).map((r: any, i: number) => ({
       id: String(r?.id ?? r?.marketId ?? i),
@@ -111,6 +157,7 @@ export default function CopyTradingSignalsPage() {
         score: score > 0 ? score.toFixed(1) : "—",
         pnl: pnlPct,
         width: `${Math.min(100, Math.max(6, (score / maxScore) * 100))}%`,
+        wallet: extractWallet(r),
       };
     });
   }, [leaderboardQ.data]);
@@ -310,6 +357,23 @@ export default function CopyTradingSignalsPage() {
                   <div className={`text-[13px] font-bold shrink-0 ${l.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                     {l.pnl >= 0 ? "+" : ""}{l.pnl.toFixed(1)}%
                   </div>
+                  {l.wallet && (() => {
+                    const isFollowing = subByWallet.has(l.wallet.toLowerCase());
+                    return (
+                      <button
+                        onClick={() => followWallet(l.wallet!)}
+                        disabled={followMut.isPending || !account?.address}
+                        title={!account?.address ? t("copyTrading.connectToFollow", "请先连接钱包") : undefined}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0 transition-colors disabled:opacity-40 ${
+                          isFollowing
+                            ? "text-emerald-400 border border-emerald-500/25 bg-emerald-500/10"
+                            : "text-black bg-gradient-to-br from-amber-500 to-amber-600 hover:opacity-90"
+                        }`}
+                      >
+                        {isFollowing ? t("copyTrading.following", "已跟单") : t("copyTrading.follow", "跟单")}
+                      </button>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
