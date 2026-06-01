@@ -430,7 +430,6 @@ function DepositBridge() {
             <PayEmbed
               client={thirdwebClient}
               className="tw-pay-embed-fit"
-              style={{ width: "100%" }}
               payOptions={{
                 mode: "direct_payment",
                 paymentInfo: {
