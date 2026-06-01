@@ -27,7 +27,7 @@ import {
   Users, Activity, Layers, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
-  Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X,
+  Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X, ExternalLink,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,14 @@ import { useOnboardFlow, DepositBuyPanel } from "@app/components/copy-trading/sh
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
 const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
+
+// On-chain authenticity: the HL read plane exposes no per-fill txHash, so the
+// honest "verify on chain" link is the address page on Hyperliquid's own
+// explorer — it shows that address's real fills/positions.
+function hlExplorerAddress(addr: string, network: HlNetwork): string {
+  const base = network === "testnet" ? "https://app.hyperliquid-testnet.xyz" : "https://app.hyperliquid.xyz";
+  return `${base}/explorer/address/${addr}`;
+}
 
 // ── HL 充值 / 提现(响应式)──────────────────────────────────────────────────
 //
@@ -831,20 +839,40 @@ function DataSourceTab({ network }: { network: HlNetwork }) {
 
 // ── 持仓 / 平仓 / 历史 tab ───────────────────────────────────────────────────
 
-function PositionRow({ p }: { p: HlPosition }) {
+function PositionRow({ p, network, address }: { p: HlPosition; network: HlNetwork; address?: string }) {
   const { t } = useTranslation();
   const long = p.side === "LONG";
+  const lev = p.leverage && p.leverage > 0 ? p.leverage : null;
+  // ROE% = uPnL / initial margin (positionValue / leverage) — exchange convention.
+  const initMargin = lev ? p.positionValue / lev : p.positionValue;
+  const roe = initMargin > 0 ? (p.upnl / initMargin) * 100 : 0;
+  const pos = p.upnl >= 0;
   return (
     <div className="glass-panel p-3">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-[13px] font-bold text-foreground/90">{p.coin}</span>
           <span className={cn("inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
             {p.side}
           </span>
-          {p.leverage != null && <Badge className="text-[9px] px-1 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate">{p.leverage}x</Badge>}
+          {lev != null && <Badge className="text-[9px] px-1 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate">{lev}x</Badge>}
+          {address && (
+            <a
+              href={hlExplorerAddress(address, network)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
+              title={t("hl.viewOnExplorer", "区块链浏览器查看")}
+              className="h-6 w-6 grid place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition shrink-0"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
         </div>
-        <span className={cn("text-[12px] font-bold tabular-nums", p.upnl >= 0 ? "text-emerald-400" : "text-red-400")}>{fmtUsd(p.upnl)}</span>
+        <div className="text-right shrink-0">
+          <div className={cn("text-[12px] font-bold tabular-nums", pos ? "text-emerald-400" : "text-red-400")}>{pos ? "+" : ""}{fmtUsd(p.upnl)}</div>
+          <div className={cn("text-[10px] tabular-nums", pos ? "text-emerald-400/70" : "text-red-400/70")}>{pos ? "+" : ""}{roe.toFixed(2)}%</div>
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-1 text-center">
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.size")}</div><div className="text-[12px] font-bold tabular-nums">{Math.abs(p.size).toLocaleString()}</div></div>
@@ -855,7 +883,7 @@ function PositionRow({ p }: { p: HlPosition }) {
   );
 }
 
-function HistoryRow({ s }: { s: HlSignal }) {
+function HistoryRow({ s, network }: { s: HlSignal; network: HlNetwork }) {
   const { t } = useTranslation();
   const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
   const long = s.side === "LONG";
@@ -866,9 +894,21 @@ function HistoryRow({ s }: { s: HlSignal }) {
         <span className="text-[12px] font-bold text-foreground/85">{s.coin}</span>
         <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{s.isClose ? t("hl.close") : t("hl.open")}</Badge>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 shrink-0">
         <span className="text-[11px] tabular-nums num-gold">{fmtUsd(s.notionalUsd)}</span>
         <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(s.happenedAt, tAgo)}</span>
+        {/* 区块链浏览器:在 HL 浏览器查看该 leader 地址的真实成交 */}
+        <a
+          href={hlExplorerAddress(s.leaderAddress, network)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
+          title={t("hl.viewOnExplorer", "区块链浏览器查看")}
+          className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
       </div>
     </div>
   );
@@ -888,7 +928,8 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
     return <HlEmpty icon={Wallet} title={t("hl.connectTitle")} desc={t("hl.connectDesc")} />;
   }
 
-  const positions = acctQ.data?.positions ?? [];
+  const acct = acctQ.data;
+  const positions = acct?.positions ?? [];
   const history = (sigQ.data?.signals ?? []).filter((s) => s.isClose);
 
   return (
@@ -899,6 +940,15 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
       </TabsList>
 
       <TabsContent value="open" className="space-y-2 mt-0">
+        {acct && (
+          <div className="glass-panel p-3">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.accountValue", "账户净值")}</div><div className="text-[13px] font-bold num-gold tabular-nums">{fmtUsd(acct.accountValue)}</div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.unrealized", "未实现盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", acct.unrealizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.unrealizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.unrealizedPnl)}</div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.realized", "已实现盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", acct.realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.realizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.realizedPnl)}</div></div>
+            </div>
+          </div>
+        )}
         {acctQ.isLoading ? (
           <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
         ) : acctQ.isError ? (
@@ -906,7 +956,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         ) : positions.length === 0 ? (
           <HlEmpty icon={Layers} title={t("hl.noPositions")} desc={t("hl.noPositionsDesc")} />
         ) : (
-          positions.map((p, i) => <PositionRow key={`${p.coin}-${i}`} p={p} />)
+          positions.map((p, i) => <PositionRow key={`${p.coin}-${i}`} p={p} network={network} address={acct?.address} />)
         )}
       </TabsContent>
 
@@ -916,7 +966,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         ) : history.length === 0 ? (
           <HlEmpty icon={HistoryIcon} title={t("hl.noHistory")} desc={t("hl.noHistoryDesc")} />
         ) : (
-          history.map((s) => <HistoryRow key={s.id} s={s} />)
+          history.map((s) => <HistoryRow key={s.id} s={s} network={network} />)
         )}
       </TabsContent>
     </Tabs>
