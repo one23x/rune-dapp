@@ -37,6 +37,12 @@ export default function CopyTradingPage() {
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
 
+  // Temporary design-preview bypass: visit /copy-trading?preview=1 to skip the
+  // wallet/onboarding gates and render the active dashboard (real data hooks
+  // stay wired — they just show 0 / empty when there's no userId yet).
+  const previewMode =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
+
   const balanceQ = usePusdBalance(userId);
   const openQ = useOpenOrders(userId);
   const ordersQ = useOrders(userId);
@@ -62,7 +68,7 @@ export default function CopyTradingPage() {
   const statsLoading = balanceQ.isLoading || openQ.isLoading || ordersQ.isLoading;
 
   // ── Gate 1: no wallet ──────────────────────────────────────────────────────
-  if (!wallet) {
+  if (!wallet && !previewMode) {
     return (
       <CopyTradingLayout>
         <PremiumCard className="p-7 text-center space-y-2">
@@ -75,7 +81,7 @@ export default function CopyTradingPage() {
   }
 
   // ── Gate 2: resolving user ────────────────────────────────────────────────
-  if (userQ.isLoading) {
+  if (userQ.isLoading && !previewMode) {
     return (
       <CopyTradingLayout>
         <Skeleton className="h-44 w-full rounded-2xl" />
@@ -84,7 +90,7 @@ export default function CopyTradingPage() {
   }
 
   // ── Gate 3: connected but not onboarded → 开户 ────────────────────────────
-  if (!userId) {
+  if (!userId && !previewMode) {
     return (
       <CopyTradingLayout>
         <OnboardCard wallet={wallet} />
@@ -263,8 +269,8 @@ export default function CopyTradingPage() {
         <span>{t("copyTrading.fundsFooter", "充值/提现通过 Polygon 网络 pUSD · 即时到账")}</span>
       </div>
 
-      <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId} />
-      <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId} available={balance} />
+      <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} />
+      <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} />
     </CopyTradingLayout>
   );
 }
