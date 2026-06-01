@@ -4,13 +4,13 @@ import {
   ArrowUp, 
   Activity, 
   TrendingUp, 
-  Copy, 
   BarChart2, 
   Wallet,
   Zap,
   ChevronRight,
   TrendingDown,
-  Clock
+  Plus,
+  Sparkles
 } from 'lucide-react';
 
 export function CopyTrading() {
@@ -60,63 +60,88 @@ export function CopyTrading() {
       <div className="max-w-[390px] mx-auto bg-[#0d0b08] min-h-screen relative shadow-2xl border-x border-white/5">
         
         {/* Header Section */}
-        <header className="px-4 py-6 relative overflow-hidden border-b border-white/5 bg-gradient-to-b from-[#f59e0b]/10 to-transparent">
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#f59e0b]/50 to-transparent opacity-50"></div>
-          
-          <div className="flex justify-between items-start mb-6">
+        <header className="px-4 pt-5 pb-4 relative overflow-hidden bg-gradient-to-b from-[#f59e0b]/8 to-transparent border-b border-white/5">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#f59e0b]/40 to-transparent"></div>
+          <div className="absolute -top-12 right-0 w-40 h-40 bg-[#f59e0b]/8 rounded-full blur-3xl pointer-events-none"></div>
+
+          {/* Title row */}
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
-                </div>
-                <span className="text-xs font-medium text-[#10b981] uppercase tracking-wider">Account Active</span>
-              </div>
-              <h1 className="text-lg font-semibold text-white tracking-tight">One-Agents Engine</h1>
-              <p className="text-xs text-zinc-500">Smart Copy-Trading</p>
+              <h1 className="text-base font-semibold text-white tracking-tight leading-tight">One-Agents Engine</h1>
+              <p className="text-[11px] text-zinc-500">Smart Copy-Trading</p>
             </div>
-            
-            <div className="flex gap-2">
-              <button className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors">
-                <ArrowDown size={14} className="text-[#f59e0b]" />
-              </button>
-              <button className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors">
-                <ArrowUp size={14} className="text-zinc-400" />
-              </button>
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
+              </div>
+              <span className="text-[11px] font-medium text-[#10b981]">Active</span>
             </div>
           </div>
 
-          {/* Balance Overview */}
-          <div className="mb-6">
-            <p className="text-sm text-zinc-400 mb-1">pUSD Balance</p>
-            <h2 className="text-4xl font-light text-[#f59e0b] tracking-tight">$12,450<span className="text-2xl text-[#f59e0b]/60">.00</span></h2>
+          {/* Balance */}
+          <div className="mb-4">
+            <p className="text-xs text-zinc-500 mb-0.5">pUSD Balance</p>
+            <h2 className="text-3xl font-light text-[#f59e0b] tracking-tight">$12,450<span className="text-xl text-[#f59e0b]/50">.00</span></h2>
           </div>
+
+          {/* ── PRIMARY ACTION BUTTONS ── */}
+          <div className="flex gap-2 mb-4">
+            {/* Deposit — gold, most prominent */}
+            <button className="flex-1 relative overflow-hidden rounded-xl bg-[#f59e0b] text-black font-bold text-sm py-3 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.35)] active:scale-[0.98] transition-transform">
+              <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
+              <ArrowDown size={16} strokeWidth={2.5} />
+              <span>充值</span>
+            </button>
+            {/* Withdraw */}
+            <button className="flex-1 rounded-xl bg-white/6 border border-white/12 text-white font-semibold text-sm py-3 flex items-center justify-center gap-2 hover:bg-white/10 active:scale-[0.98] transition-all">
+              <ArrowUp size={16} strokeWidth={2.5} />
+              <span>提现</span>
+            </button>
+          </div>
+
+          {/* ── OPEN TRADING ACCOUNT CTA ── */}
+          <button className="w-full relative overflow-hidden rounded-xl border border-[#f59e0b]/30 bg-gradient-to-r from-[#f59e0b]/10 to-[#f59e0b]/5 py-3 px-4 flex items-center justify-between group active:scale-[0.98] transition-transform">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#f59e0b]/15 flex items-center justify-center shrink-0">
+                <Plus size={16} className="text-[#f59e0b]" strokeWidth={2.5} />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-[#f59e0b] leading-tight">开通交易账户</p>
+                <p className="text-[10px] text-zinc-400 leading-tight mt-0.5">激活 One-Agents 智能跟单引擎</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <Sparkles size={12} className="text-[#f59e0b]/60" />
+              <ChevronRight size={16} className="text-[#f59e0b]/60 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Open Pos</p>
-              <p className="text-sm font-medium text-white">3</p>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">持仓</p>
+              <p className="text-sm font-semibold text-white">3</p>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Notional</p>
-              <p className="text-sm font-medium text-white">$8,200</p>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">名义价值</p>
+              <p className="text-sm font-semibold text-white">$8,200</p>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Win Rate</p>
-              <p className="text-sm font-medium text-[#10b981]">68%</p>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">胜率</p>
+              <p className="text-sm font-semibold text-[#10b981]">68%</p>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Signals</p>
-              <p className="text-sm font-medium text-white">14</p>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">信号</p>
+              <p className="text-sm font-semibold text-white">14</p>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Realized PnL</p>
-              <p className="text-sm font-medium text-[#10b981]">+$1,240</p>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">已实现盈亏</p>
+              <p className="text-sm font-semibold text-[#10b981]">+$1,240</p>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Trades</p>
-              <p className="text-sm font-medium text-white">47</p>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">交易次数</p>
+              <p className="text-sm font-semibold text-white">47</p>
             </div>
           </div>
         </header>
@@ -228,35 +253,11 @@ export function CopyTrading() {
           </div>
         </div>
 
-        {/* Funds Section */}
-        <div className="p-4 pb-10">
-          <h3 className="text-sm font-semibold text-white mb-3">Funds</h3>
-          <div className="bg-gradient-to-br from-[#15120d] to-[#0d0b08] border border-white/10 rounded-xl p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#f59e0b]/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-            
-            <div className="flex items-center gap-2 mb-4 relative z-10">
-              <Wallet size={16} className="text-zinc-400" />
-              <span className="text-sm text-zinc-300">Available Balance</span>
-            </div>
-            
-            <div className="mb-6 relative z-10">
-              <span className="text-2xl font-semibold text-white tracking-tight">$12,450.00</span>
-              <span className="text-sm text-zinc-500 ml-2">pUSD</span>
-            </div>
-            
-            <div className="flex gap-3 mb-4 relative z-10">
-              <button className="flex-1 bg-[#f59e0b] hover:bg-[#f59e0b]/90 text-black font-semibold text-sm py-2.5 rounded-lg flex justify-center items-center gap-2 transition-colors">
-                <ArrowDown size={16} /> Deposit
-              </button>
-              <button className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-sm py-2.5 rounded-lg flex justify-center items-center gap-2 transition-colors">
-                <ArrowUp size={16} /> Withdraw
-              </button>
-            </div>
-            
-            <div className="flex items-start gap-2 text-[10px] text-zinc-500 relative z-10 border-t border-white/5 pt-3">
-              <Activity size={12} className="shrink-0 mt-0.5" />
-              <p>Funds deposited via Polymarket pUSD on Polygon network. Withdrawals are processed instantly.</p>
-            </div>
+        {/* Funds info footer */}
+        <div className="px-4 pb-10 pt-2">
+          <div className="flex items-center gap-2 text-[10px] text-zinc-600 border border-white/4 rounded-lg px-3 py-2.5 bg-white/[0.01]">
+            <Wallet size={11} className="shrink-0 text-zinc-500" />
+            <span>充值/提现通过 Polygon 网络 pUSD · 即时到账</span>
           </div>
         </div>
 
