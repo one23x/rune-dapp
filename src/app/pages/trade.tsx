@@ -19,7 +19,7 @@ import {
   ChevronDown, Flame, Star, AlertCircle, Wallet, RefreshCw,
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
-import { CopyTradingEntry } from "@app/components/copy-trading-entry";
+import { Link } from "wouter";
 import type { AiPrediction, PredictionBet } from "@app-shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -928,9 +928,36 @@ export default function Trade() {
         </div>
       )}
 
-      {/* ── Smart Copy-Trading entry ────────────────── */}
+      {/* ── Smart Copy-Trading hero card ────────────── */}
       <div className="px-4 lg:px-6 mt-3">
-        <CopyTradingEntry />
+        <Link href="/copy-trading">
+          <div className="relative rounded-xl overflow-hidden cursor-pointer group transition-all hover:scale-[1.01] active:scale-[0.99]"
+            style={{
+              background: "linear-gradient(135deg, rgba(251,191,36,0.14) 0%, rgba(180,90,10,0.08) 50%, rgba(18,14,6,0.98) 100%)",
+              border: "1px solid rgba(212,168,50,0.35)",
+              boxShadow: "0 4px 20px -8px rgba(212,168,50,0.25)",
+            }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(90deg, rgba(251,191,36,0.04) 0%, transparent 60%)" }} />
+            <div className="relative flex items-center gap-3 px-4 py-3">
+              <div className="shrink-0 flex items-center justify-center rounded-xl h-10 w-10"
+                style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.28), rgba(180,90,10,0.12))", border: "1px solid rgba(251,191,36,0.4)" }}>
+                <Sparkles className="h-4.5 w-4.5 text-amber-300" style={{ width: 18, height: 18 }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[11px] uppercase tracking-[0.15em] text-amber-300/75 font-medium">One-Agents</span>
+                  <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[11px] text-emerald-400/80">Live</span>
+                </div>
+                <div className="text-[14px] font-bold text-foreground leading-tight">Smart Copy-Trading</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">AI 决策 · 自动跟单 · L1–L5 策略包</div>
+              </div>
+              <div className="shrink-0 flex items-center gap-1 text-[12px] font-semibold text-amber-300/90 group-hover:translate-x-0.5 transition-transform">
+                进入 <Star className="h-3.5 w-3.5" />
+              </div>
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* ── Market list ─────────────────────────────── */}
