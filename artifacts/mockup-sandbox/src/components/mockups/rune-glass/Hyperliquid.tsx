@@ -316,7 +316,7 @@ export function Hyperliquid() {
               </div>
 
               {/* CTA button */}
-              <button className="w-full py-3.5 rounded-xl bg-[#f59e0b] text-black font-bold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-transform active:scale-[0.98]">
+              <button className="w-full py-3.5 rounded-xl gold-button font-bold text-sm flex items-center justify-center gap-2">
                 <Zap size={16} className="fill-black/20" />
                 <span>进入智能跟单</span>
                 <ChevronRight size={16} />
@@ -408,7 +408,7 @@ export function Hyperliquid() {
                       <div className="relative z-10 flex items-center justify-between gap-3 pt-3 border-t border-white/5">
                         <span className="text-[10px] text-white/45">管理费 <span className="text-white/70 font-mono">{v.commission}%</span></span>
                         {v.hot ? (
-                          <button className="flex items-center gap-1.5 bg-[#f59e0b] text-black font-bold text-xs px-4 py-2 rounded-lg shadow-[0_0_14px_rgba(245,158,11,0.3)] transition-transform active:scale-[0.97]">
+                          <button className="flex items-center gap-1.5 gold-button font-bold text-xs px-4 py-2 rounded-lg">
                             <Zap size={13} className="fill-black/20" />
                             跟单
                             <ChevronRight size={13} />

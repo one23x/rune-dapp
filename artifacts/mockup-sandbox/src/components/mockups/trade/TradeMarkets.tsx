@@ -272,7 +272,7 @@ export function TradeMarkets() {
               </div>
 
               {/* CTA button */}
-              <button className="w-full py-3.5 rounded-xl bg-[#f59e0b] text-black font-bold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-transform active:scale-[0.98]">
+              <button className="w-full py-3.5 rounded-xl gold-button font-bold text-sm flex items-center justify-center gap-2">
                 <Zap size={16} className="fill-black/20" />
                 <span>进入智能跟单</span>
                 <ChevronRight size={16} />

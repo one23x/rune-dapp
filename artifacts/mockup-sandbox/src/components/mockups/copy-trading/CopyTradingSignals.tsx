@@ -172,7 +172,7 @@ export function CopyTradingSignals() {
                   ) : (
                     <button 
                       onClick={() => toggleFollow(s.name)}
-                      className="text-[11px] font-bold text-black bg-[#f59e0b] shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all px-4 py-1.5 rounded-lg"
+                      className="text-[11px] font-bold gold-button px-4 py-1.5 rounded-lg"
                     >
                       跟单
                     </button>

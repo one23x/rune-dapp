@@ -234,7 +234,7 @@ function LockTab() {
           </div>
         </div>
 
-        <button className="w-full py-3.5 rounded-xl bg-[#f59e0b] text-black font-bold text-sm glass-button shadow-[0_0_20px_rgba(245,158,11,0.35)]">
+        <button className="w-full py-3.5 rounded-xl gold-button font-bold text-sm">
           确认锁仓
         </button>
       </div>

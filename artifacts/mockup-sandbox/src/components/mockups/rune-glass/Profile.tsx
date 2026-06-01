@@ -222,7 +222,7 @@ export function Profile() {
                   <Copy size={14} />
                 </button>
               </div>
-              <button className="px-4 py-2 rounded-lg bg-[#f59e0b] text-black font-medium text-xs glass-button flex items-center justify-center">
+              <button className="px-4 py-2 rounded-lg gold-button font-medium text-xs flex items-center justify-center">
                 <Share2 size={14} />
               </button>
             </div>

@@ -169,7 +169,7 @@ export function CopyTrading() {
             {/* ── PRIMARY ACTION BUTTONS ── */}
             <div className="flex gap-2 mb-4 relative z-10">
               {/* Deposit — gold, most prominent */}
-              <button className="flex-1 py-3 rounded-xl bg-[#f59e0b] text-black font-bold text-sm glass-button shadow-[0_0_20px_rgba(245,158,11,0.35)] flex items-center justify-center gap-2">
+              <button className="flex-1 py-3 rounded-xl gold-button font-bold text-sm flex items-center justify-center gap-2">
                 <ArrowDown size={16} strokeWidth={2.5} />
                 <span>充值</span>
               </button>

@@ -474,7 +474,7 @@ export default function Dashboard() {
 
         {/* Floating CTA */}
         <div className="px-5 pt-4 pb-8 relative z-20 mt-auto">
-          <button className="w-full py-4 rounded-xl bg-[#f59e0b] text-black font-bold text-sm glass-button shadow-[0_0_30px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2">
+          <button className="w-full py-4 rounded-xl gold-button font-bold text-sm flex items-center justify-center gap-2">
             <BarChart3 size={16} />
             前往分析 / Go to Analysis
           </button>
