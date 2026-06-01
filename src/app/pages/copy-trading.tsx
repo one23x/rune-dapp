@@ -192,7 +192,7 @@ export default function CopyTradingPage() {
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <h3 className="text-sm font-semibold text-foreground">{t("copyTrading.activePositions", "Active Positions")}</h3>
-          <Link href="/copy-trading/positions" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+          <Link href="/copy-trading/history" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
             {t("copyTrading.viewAll", "View All")} <ChevronRight size={12} />
           </Link>
         </div>
@@ -257,7 +257,7 @@ export default function CopyTradingPage() {
         <div className="grid grid-cols-2 gap-3">
           <QuickAction href="/copy-trading/auto" icon={Zap} iconColor="#f59e0b" bg="rgba(245,158,11,0.1)" label={t("copyTrading.tabAutoCopy")} />
           <QuickAction href="/copy-trading/signals" icon={Activity} iconColor="#818cf8" bg="rgba(99,102,241,0.1)" label={t("copyTrading.tabSignals")} />
-          <QuickAction href="/copy-trading/positions" icon={BarChart2} iconColor="#10b981" bg="rgba(16,185,129,0.1)" label={t("copyTrading.tabPositions")} />
+          <QuickAction href="/copy-trading/history" icon={BarChart2} iconColor="#10b981" bg="rgba(16,185,129,0.1)" label={t("copyTrading.tabHistory")} />
           <QuickAction href="/strategy" icon={Sparkles} iconColor="#38bdf8" bg="rgba(56,189,248,0.1)" label={t("hl.navTitle", "Hyperliquid")} />
         </div>
       </div>

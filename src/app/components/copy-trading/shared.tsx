@@ -26,7 +26,7 @@ import { useActiveAccount, PayEmbed } from "thirdweb/react";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
 import {
-  LayoutDashboard, Zap, Activity, Layers, TrendingUp, History as HistoryIcon,
+  LayoutDashboard, Zap, Activity, History as HistoryIcon,
   Wallet, Copy, CheckCircle2, Circle, Loader2, ArrowDownToLine, ArrowUpFromLine, AlertTriangle,
 } from "lucide-react";
 
@@ -109,13 +109,10 @@ export function fmtUsd(n: number, digits = 2): string {
 // ─── Sub-tab nav (mirrors DashboardSubTabs, route-aware) ─────────────────────
 
 const SUB_TABS = [
-  { href: "/copy-trading",           labelKey: "copyTrading.tabOverview",  fallback: "Overview",  icon: LayoutDashboard },
-  { href: "/copy-trading/auto",      labelKey: "copyTrading.tabAutoCopy",  fallback: "Auto-Copy", icon: Zap },
-  { href: "/copy-trading/signals",   labelKey: "copyTrading.tabSignals",   fallback: "Signals",   icon: Activity },
-  { href: "/copy-trading/positions", labelKey: "copyTrading.tabPositions", fallback: "Positions", icon: Layers },
-  { href: "/copy-trading/earnings",  labelKey: "copyTrading.tabEarnings",  fallback: "Earnings",  icon: TrendingUp },
-  { href: "/copy-trading/history",   labelKey: "copyTrading.tabHistory",   fallback: "History",   icon: HistoryIcon },
-  { href: "/copy-trading/funds",     labelKey: "copyTrading.tabFunds",     fallback: "Funds",     icon: Wallet },
+  { href: "/copy-trading",         labelKey: "copyTrading.tabOverview", fallback: "Overview",  icon: LayoutDashboard },
+  { href: "/copy-trading/auto",    labelKey: "copyTrading.tabAutoCopy", fallback: "Strategy",  icon: Zap },
+  { href: "/copy-trading/signals", labelKey: "copyTrading.tabSignals",  fallback: "Signals",   icon: Activity },
+  { href: "/copy-trading/history", labelKey: "copyTrading.tabHistory",  fallback: "History",   icon: HistoryIcon },
 ] as const;
 
 export function CopyTradingSubNav() {

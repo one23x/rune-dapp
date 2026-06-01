@@ -1,129 +1,78 @@
 /**
- * Smart Copy-Trading — Strategy & Tiers (策略与档位), at /copy-trading/auto.
+ * Smart Copy-Trading — Strategy & Tiers (策略跟单), at /copy-trading/auto.
  *
- * Sections:
- *  1. Current status card (membership tier, daily copy progress, AI decisions)
- *  2. L1-L5 strategy tier selector (lock/unlock by tier)
- *  3. AI decision packages (buy with points)
- *  4. Copy config toggles (auto-copy, AI filter, confidence threshold)
- *  5. Membership comparison table
- *
- * Activation still calls the real engine (recommendations.onboardPreset →
- * copySubscriptions.create fallback). Active subs shown with stop control.
+ * Real-data flow: pick an L1–L5 strategy tier → its system params auto-fill
+ * (risk preset, notional ratio, per-trade & monthly caps) → ONE click activates
+ * copy-trading via the engine (recommendations.onboardPreset → copySubscriptions
+ * fallback). Active subscriptions are listed with a stop control. Secondary
+ * content (advanced config, tier comparison) lives in dialogs — not tiled down
+ * the page. No mock data: status/stats are derived from real orders & subs.
  */
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Zap, Check, Loader2, Users, Crown, TrendingUp, Lock, ArrowRight,
-  ToggleLeft, ToggleRight, Settings, ChevronDown, Shield, Sparkles,
+  Zap, Check, Loader2, Sliders, Settings, BarChart3, ToggleLeft, ToggleRight, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { cn } from "@app/lib/utils";
 import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
-import { useEngineUser, useCopySubs } from "@app/lib/engine-hooks";
+import { useEngineUser, useCopySubs, useOrders } from "@app/lib/engine-hooks";
 import { recommendations, copySubscriptions, signals } from "@app/lib/engine";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
-import { CopyGate, SectionEmpty, asArray, fmtUsd } from "@app/components/copy-trading/shared";
+import { CopyGate, asArray, normalizeOrder, fmtUsd } from "@app/components/copy-trading/shared";
 
-// ─── Tier definitions ─────────────────────────────────────────────────────────
+// ─── Tier definitions (each carries the real system params it applies) ────────
 
 interface TierDef {
   key: string;
-  label: string;
+  preset: "conservative" | "balanced" | "aggressive";
+  riskLabel: string;
   dailyLimit: string;
   monthLimit: string;
-  dailyCopies: number;
-  aiDecisions: number;
-  signalsPerDay: number;
-  fillRate: string;
-  winRate: string;
-  requiredTier: "Free" | "Pro" | "Elite" | "Institutional";
+  notionalRatio: number;   // fraction of leader notional copied
+  notionalCapUsd: number;  // per-trade cap
   color: string;
-  glowColor: string;
-  borderActive: string;
-  bgActive: string;
+  accent: string;
+  glow: string;
 }
 
 const TIERS: TierDef[] = [
-  {
-    key: "L1", label: "L1", dailyLimit: "$100", monthLimit: "$2,000",
-    dailyCopies: 3, aiDecisions: 5, signalsPerDay: 5, fillRate: "85%", winRate: "62%",
-    requiredTier: "Free", color: "text-zinc-400", glowColor: "",
-    borderActive: "rgba(255,255,255,0.12)", bgActive: "rgba(255,255,255,0.04)",
-  },
-  {
-    key: "L2", label: "L2", dailyLimit: "$200", monthLimit: "$5,000",
-    dailyCopies: 15, aiDecisions: 50, signalsPerDay: 20, fillRate: "91%", winRate: "68%",
-    requiredTier: "Pro", color: "text-indigo-400", glowColor: "rgba(99,102,241,0.15)",
-    borderActive: "rgba(99,102,241,0.4)", bgActive: "rgba(99,102,241,0.08)",
-  },
-  {
-    key: "L3", label: "L3", dailyLimit: "$500", monthLimit: "$10,000",
-    dailyCopies: 50, aiDecisions: 200, signalsPerDay: 60, fillRate: "94%", winRate: "73%",
-    requiredTier: "Elite", color: "text-amber-400", glowColor: "rgba(245,158,11,0.1)",
-    borderActive: "rgba(245,158,11,0.4)", bgActive: "rgba(245,158,11,0.06)",
-  },
-  {
-    key: "L4", label: "L4", dailyLimit: "$1,000", monthLimit: "$100,000",
-    dailyCopies: 200, aiDecisions: 1000, signalsPerDay: 200, fillRate: "97%", winRate: "79%",
-    requiredTier: "Institutional", color: "text-orange-400", glowColor: "",
-    borderActive: "rgba(249,115,22,0.4)", bgActive: "rgba(249,115,22,0.05)",
-  },
-  {
-    key: "L5", label: "L5", dailyLimit: "$2,000", monthLimit: "$200,000",
-    dailyCopies: -1, aiDecisions: -1, signalsPerDay: -1, fillRate: "99%", winRate: "84%",
-    requiredTier: "Institutional", color: "text-red-400", glowColor: "",
-    borderActive: "rgba(239,68,68,0.4)", bgActive: "rgba(239,68,68,0.05)",
-  },
+  { key: "L1", preset: "conservative", riskLabel: "保守", dailyLimit: "$100",   monthLimit: "$2,000",   notionalRatio: 0.03, notionalCapUsd: 50,   color: "text-zinc-300",   accent: "rgba(161,161,170,0.5)", glow: "" },
+  { key: "L2", preset: "balanced",     riskLabel: "均衡", dailyLimit: "$200",   monthLimit: "$5,000",   notionalRatio: 0.05, notionalCapUsd: 100,  color: "text-indigo-300", accent: "rgba(99,102,241,0.45)", glow: "rgba(99,102,241,0.15)" },
+  { key: "L3", preset: "aggressive",   riskLabel: "进取", dailyLimit: "$500",   monthLimit: "$10,000",  notionalRatio: 0.08, notionalCapUsd: 200,  color: "text-amber-300",  accent: "rgba(245,158,11,0.5)",  glow: "rgba(245,158,11,0.12)" },
+  { key: "L4", preset: "aggressive",   riskLabel: "高阶", dailyLimit: "$1,000", monthLimit: "$100,000", notionalRatio: 0.10, notionalCapUsd: 500,  color: "text-orange-300", accent: "rgba(249,115,22,0.5)",  glow: "" },
+  { key: "L5", preset: "aggressive",   riskLabel: "机构", dailyLimit: "$2,000", monthLimit: "$200,000", notionalRatio: 0.12, notionalCapUsd: 1000, color: "text-red-300",    accent: "rgba(239,68,68,0.5)",   glow: "" },
 ];
 
-const AI_PACKAGES = [
-  { label: "基础包", decisions: "+50", points: 200, recommended: false },
-  { label: "标准包", decisions: "+150", points: 500, recommended: true },
-  { label: "高级包", decisions: "+500", points: 1500, recommended: false },
-];
+const PRESET_TO_TIER: Record<string, string> = { conservative: "L1", balanced: "L2", aggressive: "L3" };
 
-// Mock membership — in a real app this comes from a user profile hook
-const MOCK_TIER = "Pro";
-const MOCK_TIER_MAP: Record<string, string> = {
-  Free: "L1",
-  Pro: "L2",
-  Elite: "L3",
-  Institutional: "L5",
-};
-
-const TIER_ORDER = ["Free", "Pro", "Elite", "Institutional"];
-
-function isUnlocked(tier: TierDef, memberTier: string): boolean {
-  return TIER_ORDER.indexOf(memberTier) >= TIER_ORDER.indexOf(tier.requiredTier);
-}
-
-function ProgressBar({ used, total, accent }: { used: number; total: number; accent: string }) {
-  const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
-  return (
-    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: accent }} />
-    </div>
-  );
+function deriveActiveTier(subs: any[]): string | null {
+  for (const s of subs) {
+    const status = String(s?.status ?? "active").toLowerCase();
+    if (status !== "active" && status !== "running") continue;
+    const cap = Number(s?.notionalCapUsd ?? s?.notionalCap ?? 0);
+    if (cap > 0) {
+      const byCap = TIERS.find((t) => t.notionalCapUsd === cap);
+      if (byCap) return byCap.key;
+    }
+    const preset = String(s?.riskPreset ?? s?.preset ?? "").toLowerCase();
+    for (const k of Object.keys(PRESET_TO_TIER)) if (preset.includes(k)) return PRESET_TO_TIER[k];
+  }
+  return null;
 }
 
 function AutoCopyInner({ userId }: { userId: string }) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [selectedTier, setSelectedTier] = useState("L2");
-  const [autoCopy, setAutoCopy] = useState(true);
-  const [aiFilter, setAiFilter] = useState(true);
-  const [showTable, setShowTable] = useState(false);
-
-  const activeTierDef = TIERS.find(t => t.key === MOCK_TIER_MAP[MOCK_TIER]) ?? TIERS[1];
-  const todayCopies = 8;
-  const aiRemaining = 23;
 
   const presetsQ = useQuery({
     queryKey: ["engine", "rec-presets"],
@@ -132,35 +81,75 @@ function AutoCopyInner({ userId }: { userId: string }) {
     retry: false,
   });
   const enginePresets = asArray(presetsQ.data);
+
   const subsQ = useCopySubs(userId);
   const subs = asArray(subsQ.data);
+  const ordersQ = useOrders(userId);
+  const orders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
 
-  const tierKeyToPreset: Record<string, string> = {
-    L1: "conservative", L2: "balanced", L3: "aggressive", L4: "aggressive", L5: "aggressive",
-  };
+  const activeTierKey = useMemo(() => deriveActiveTier(subs), [subs]);
+  const activeSubs = subs.filter((s: any) => {
+    const st = String(s?.status ?? "active").toLowerCase();
+    return st === "active" || st === "running";
+  });
+  const copiesThisMonth = useMemo(() => {
+    const now = new Date();
+    return orders.filter((o) => {
+      const d = new Date(o.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
+  }, [orders]);
+  const realizedPnl = orders.filter((o) => o.pnl != null).reduce((s, o) => s + (o.pnl ?? 0), 0);
+  const isRunning = activeSubs.length > 0;
+
+  // Selection — defaults to the active tier once it resolves, until the user picks.
+  const [selectedTier, setSelectedTier] = useState<string>("L2");
+  const [touched, setTouched] = useState(false);
+  useEffect(() => {
+    if (activeTierKey && !touched) setSelectedTier(activeTierKey);
+  }, [activeTierKey, touched]);
+
+  const [autoCopy, setAutoCopy] = useState(true);
+  const [aiFilter, setAiFilter] = useState(true);
+  const [minConfidence, setMinConfidence] = useState(70);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  const selDef = TIERS.find((t) => t.key === selectedTier) ?? TIERS[1];
+  const isActiveSelected = selectedTier === activeTierKey;
 
   const activate = useMutation({
     mutationFn: async (tierKey: string) => {
-      const presetKey = tierKeyToPreset[tierKey] ?? "balanced";
+      const tier = TIERS.find((t) => t.key === tierKey)!;
+      const presetKey = tier.preset;
       const match = enginePresets.find((p: any) => {
         const id = String(p?.id ?? p?.key ?? p?.preset ?? p?.name ?? "").toLowerCase();
         return id.includes(presetKey);
       });
       const presetId = String((match as any)?.id ?? (match as any)?.key ?? presetKey);
+      const body = {
+        preset: presetId,
+        riskPreset: presetKey,
+        notionalRatio: tier.notionalRatio,
+        notionalCapUsd: tier.notionalCapUsd,
+        autoExecute: autoCopy,
+        aiFilter,
+        minConfidence: minConfidence / 100,
+      };
       try {
-        return await recommendations.onboardPreset(userId, { preset: presetId, riskPreset: presetKey });
+        return await recommendations.onboardPreset(userId, body);
       } catch {
         const top = asArray(await signals.leadersTop("7d").catch(() => null));
         const topWallet = top
           .map((r: any) => r?.wallet ?? r?.proxyWallet ?? r?.address)
           .find((w: any) => typeof w === "string" && w.startsWith("0x"));
-        if (!topWallet) throw new Error(t("copyTrading.noLeaderForPreset", "暂无可跟的 Leader,请稍后再试"));
-        const caps = presetKey.includes("aggress")
-          ? { notionalRatio: 0.1, notionalCapUsd: 200 }
-          : presetKey.includes("conserv")
-            ? { notionalRatio: 0.03, notionalCapUsd: 50 }
-            : { notionalRatio: 0.05, notionalCapUsd: 100 };
-        return await copySubscriptions.create(userId, { leaderWallet: topWallet, ...caps, status: "active" });
+        if (!topWallet) throw new Error(t("copyTrading.noLeaderForPreset", "暂无可跟的 Leader，请稍后再试"));
+        return await copySubscriptions.create(userId, {
+          leaderWallet: topWallet,
+          notionalRatio: tier.notionalRatio,
+          notionalCapUsd: tier.notionalCapUsd,
+          status: "active",
+        });
       }
     },
     onSuccess: () => {
@@ -179,337 +168,272 @@ function AutoCopyInner({ userId }: { userId: string }) {
     onError: (e: any) => toast({ title: t("common.error"), description: String(e?.message ?? e), variant: "destructive" }),
   });
 
-  const buyPackage = (pkg: typeof AI_PACKAGES[0]) => {
-    toast({ title: t("common.comingSoon"), description: `${pkg.label} (${pkg.decisions} 次 · ${pkg.points} 积分)` });
-  };
-
   return (
     <div className="space-y-5">
 
-      {/* ── 1. Current Status Card ── */}
+      {/* ── 1. Status card (real) ── */}
       <div className="relative rounded-2xl p-5 overflow-hidden"
-        style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(0,0,0,1) 60%)", border: "1px solid rgba(245,158,11,0.3)" }}>
+        style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(0,0,0,1) 60%)", border: "1px solid rgba(245,158,11,0.25)" }}>
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
           style={{ background: "rgba(245,158,11,0.04)", filter: "blur(80px)" }} />
-
         <div className="relative z-10">
-          <div className="flex flex-wrap items-center gap-2 mb-5">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium"
-              style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
-              <Crown className="h-3.5 w-3.5" /> Pro 会员
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium"
-              style={{ background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
-              <TrendingUp className="h-3.5 w-3.5" /> L2 策略包激活中
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-[13px]">
-                <span className="text-muted-foreground">今日跟单</span>
-                <span className="font-medium text-foreground">{todayCopies} / <span className="text-muted-foreground">{activeTierDef.dailyCopies} 次</span></span>
-              </div>
-              <ProgressBar used={todayCopies} total={activeTierDef.dailyCopies} accent="rgba(156,163,175,0.8)" />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-[13px]">
-                <span className="text-muted-foreground">AI 决策剩余</span>
-                <span className="font-medium text-amber-400">{aiRemaining} / <span className="text-amber-600/70">{activeTierDef.aiDecisions} 次</span></span>
-              </div>
-              <ProgressBar used={aiRemaining} total={activeTierDef.aiDecisions}
-                accent="linear-gradient(90deg, #f59e0b, #d97706)" />
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-[11px] text-muted-foreground">{t("copyTrading.tabAutoCopy", "Strategy")}</span>
+            <div className="flex items-center gap-1.5">
+              {isRunning ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                  </span>
+                  <span className="text-[11px] font-medium text-emerald-400">{t("copyTrading.strategyRunning", "策略运行中")}</span>
+                </>
+              ) : (
+                <span className="text-[11px] font-medium text-muted-foreground">{t("copyTrading.strategyIdle", "未激活")}</span>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-5 pt-4 border-t border-white/[0.06]">
-            <button className="text-[12px] font-medium flex items-center gap-0.5 transition-colors"
-              style={{ color: "#a5b4fc" }}
-              onClick={() => toast({ title: t("common.comingSoon") })}>
-              升级会员 <ArrowRight className="h-3 w-3 ml-0.5" />
-            </button>
-            <button className="text-[12px] font-medium text-amber-400 hover:text-amber-300 flex items-center gap-0.5 transition-colors"
-              onClick={() => toast({ title: t("common.comingSoon") })}>
-              购买决策包 <ArrowRight className="h-3 w-3 ml-0.5" />
-            </button>
+          <div className="grid grid-cols-3 gap-2.5">
+            <StatCell label={t("copyTrading.activeSubsShort", "活跃订阅")}
+              value={subsQ.isLoading ? "—" : String(activeSubs.length)} />
+            <StatCell label={t("copyTrading.copiesThisMonth", "本月跟单")}
+              value={ordersQ.isLoading ? "—" : String(copiesThisMonth)} />
+            <StatCell label={t("copyTrading.statRealized", "已实现盈亏")}
+              value={ordersQ.isLoading ? "—" : fmtUsd(realizedPnl)}
+              accent={realizedPnl >= 0 ? "#10b981" : "#f87171"} />
           </div>
         </div>
       </div>
 
-      {/* ── 2. Strategy Tier Selector ── */}
+      {/* ── 2. Strategy tier selector ── */}
       <section className="space-y-3">
         <div className="flex items-baseline gap-2">
-          <h2 className="text-[15px] font-semibold text-foreground">策略包</h2>
-          <span className="text-[12px] text-muted-foreground">选择并激活</span>
+          <h2 className="text-[15px] font-semibold text-foreground">{t("copyTrading.strategyPacks", "策略包")}</h2>
+          <span className="text-[12px] text-muted-foreground">{t("copyTrading.selectAndActivate", "选择并激活")}</span>
         </div>
 
         <div className="space-y-2.5">
-          {TIERS.map(tier => {
-            const unlocked = isUnlocked(tier, MOCK_TIER);
-            const isActive = tier.key === MOCK_TIER_MAP[MOCK_TIER];
+          {TIERS.map((tier) => {
+            const isActive = tier.key === activeTierKey;
             const isSelected = selectedTier === tier.key;
-
-            if (!unlocked) {
-              return (
-                <div key={tier.key} className="flex items-center p-4 rounded-xl opacity-60"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-lg border font-bold mr-4 ${tier.color}`}
-                    style={{ background: "rgba(0,0,0,0.3)", borderColor: "rgba(255,255,255,0.1)" }}>
-                    {tier.label}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[17px] font-medium text-foreground/60">{tier.dailyLimit}<span className="text-xs text-muted-foreground ml-1">/日</span></div>
-                    <div className="text-[12px] text-muted-foreground">{tier.monthLimit} /月</div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                      <Lock className="h-3 w-3" /> 需要 {tier.requiredTier}
-                    </div>
-                    <button className="text-[10px] px-2 py-1 rounded transition-colors"
-                      style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#fbbf24" }}
-                      onClick={() => toast({ title: t("common.comingSoon"), description: "积分临时升级功能即将开放" })}>
-                      用积分临时升级 ↗
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-
             return (
-              <button key={tier.key} onClick={() => setSelectedTier(tier.key)}
-                className={cn("w-full flex items-center p-4 rounded-xl transition-all text-left", isSelected && "ring-1 ring-amber-500/30")}
+              <button key={tier.key}
+                onClick={() => { setSelectedTier(tier.key); setTouched(true); }}
+                className={cn("w-full flex items-center p-4 rounded-xl transition-all text-left")}
                 style={{
-                  background: isActive ? tier.bgActive : isSelected ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.025)",
-                  border: `1px solid ${isActive ? tier.borderActive : isSelected ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
-                  boxShadow: isActive && tier.glowColor ? `0 0 20px ${tier.glowColor}` : undefined,
+                  background: isSelected ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.025)",
+                  border: `1px solid ${isSelected ? tier.accent : "rgba(255,255,255,0.06)"}`,
+                  boxShadow: isSelected && tier.glow ? `0 0 20px ${tier.glow}` : undefined,
                 }}>
                 <div className={cn("flex items-center justify-center w-10 h-10 rounded-lg border font-bold mr-4", tier.color)}
-                  style={{ background: isActive ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)", borderColor: isActive ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.1)" }}>
-                  {tier.label}
+                  style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}>
+                  {tier.key}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={cn("text-[17px] font-medium", isActive ? "text-amber-400" : "text-foreground")}>
-                    {tier.dailyLimit}<span className="text-xs text-muted-foreground ml-1">/日</span>
+                  <div className={cn("text-[17px] font-medium", isSelected ? "text-amber-400" : "text-foreground")}>
+                    {tier.dailyLimit}<span className="text-xs text-muted-foreground ml-1">/{t("copyTrading.perDay", "日")}</span>
                   </div>
-                  <div className="text-[12px] text-muted-foreground">{tier.monthLimit} /月</div>
+                  <div className="text-[12px] text-muted-foreground">{tier.monthLimit} /{t("copyTrading.perMonth", "月")} · {tier.riskLabel}</div>
                 </div>
                 {isActive ? (
                   <div className="flex items-center gap-1 px-2.5 py-1 rounded text-[12px] font-medium"
                     style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#34d399" }}>
-                    <Check className="h-3 w-3" /> 激活中
+                    <Check className="h-3 w-3" /> {t("copyTrading.subStatusActive", "激活中")}
                   </div>
                 ) : isSelected ? (
-                  <Check className="h-4 w-4 text-foreground/40" />
+                  <Check className="h-4 w-4 text-amber-400" />
                 ) : null}
               </button>
             );
           })}
         </div>
 
-        {selectedTier !== MOCK_TIER_MAP[MOCK_TIER] && (
-          <Button className="w-full font-bold" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
+        {/* Selected tier → auto-filled system params + ONE-CLICK follow */}
+        <div className="rounded-xl p-4 space-y-3.5"
+          style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
+          <div className="flex items-center gap-2">
+            <Sliders className="h-4 w-4 text-amber-400" />
+            <span className="text-[13px] font-semibold text-foreground">
+              {selDef.key} · {selDef.riskLabel}{t("copyTrading.paramsSuffix", "策略 · 系统参数")}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Param label={t("copyTrading.paramRatio", "跟单比例")} value={`${(selDef.notionalRatio * 100).toFixed(0)}%`} />
+            <Param label={t("copyTrading.paramTradeCap", "单笔上限")} value={`$${selDef.notionalCapUsd}`} />
+            <Param label={t("copyTrading.paramDailyCap", "单日上限")} value={selDef.dailyLimit} />
+            <Param label={t("copyTrading.paramMonthCap", "月度上限")} value={selDef.monthLimit} />
+            <Param label={t("copyTrading.paramRisk", "风险档位")} value={selDef.riskLabel} />
+            <Param label={t("copyTrading.paramAiFilter", "AI 过滤")} value={aiFilter ? `${t("common.on", "开启")} · ≥${minConfidence}%` : t("common.off", "关闭")} />
+          </div>
+
+          <Button className="w-full font-bold h-11"
+            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
             onClick={() => activate.mutate(selectedTier)}
             disabled={activate.isPending}>
-            {activate.isPending
-              ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />激活中…</>
-              : <><Zap className="h-4 w-4 mr-1.5" />激活 {selectedTier} 策略包</>}
+            {activate.isPending ? (
+              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("copyTrading.activating", "激活中…")}</>
+            ) : isActiveSelected ? (
+              <><Check className="h-4 w-4 mr-1.5" />{t("copyTrading.reapply", "已激活 · 重新应用参数")}</>
+            ) : (
+              <><Zap className="h-4 w-4 mr-1.5" />{t("copyTrading.oneClickFollow", "一键开始跟单")}</>
+            )}
           </Button>
-        )}
+
+          <div className="flex gap-2">
+            <button onClick={() => setConfigOpen(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium text-foreground/80 transition-colors hover:bg-white/5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Settings className="h-3.5 w-3.5" /> {t("copyTrading.advancedConfig", "高级设置")}
+            </button>
+            <button onClick={() => setCompareOpen(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium text-foreground/80 transition-colors hover:bg-white/5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <BarChart3 className="h-3.5 w-3.5" /> {t("copyTrading.compareTiers", "档位对比")}
+            </button>
+          </div>
+        </div>
       </section>
 
-      {/* ── 3. Active Subscriptions ── */}
-      {(subsQ.isLoading || subs.length > 0) && (
-        <div>
-          <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+      {/* ── 3. Active subscriptions (real) ── */}
+      {(subsQ.isLoading || activeSubs.length > 0) && (
+        <section className="space-y-2">
+          <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             {t("copyTrading.activeSubs", "Active Subscriptions")}
           </h3>
           {subsQ.isLoading ? (
             <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
           ) : (
             <div className="space-y-2">
-              {subs.map((s: any, i: number) => {
+              {activeSubs.map((s: any, i: number) => {
                 const id = String(s?.id ?? i);
-                const status = String(s?.status ?? "active").toLowerCase();
-                const active = status === "active" || status === "running";
-                const label = String(s?.leaderWallet ?? s?.leader ?? s?.preset ?? s?.name ?? id);
+                const label = String(s?.leaderWallet ?? s?.leader ?? s?.preset ?? s?.riskPreset ?? id);
                 return (
                   <div key={id} className="premium-card rounded-xl p-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-[13px] font-semibold text-foreground/85 truncate font-mono">{label}</div>
-                      <Badge className={cn("mt-1 text-[10px] no-default-hover-elevate no-default-active-elevate",
-                        active ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : "bg-muted/30 text-muted-foreground border-border")}>
-                        {active ? t("copyTrading.subStatusActive") : t("copyTrading.subStatusStopped")}
+                      <Badge className="mt-1 text-[10px] no-default-hover-elevate no-default-active-elevate bg-emerald-500/15 text-emerald-400 border-emerald-500/25">
+                        {t("copyTrading.subStatusActive", "激活中")}
                       </Badge>
                     </div>
-                    {active && (
-                      <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] border-red-500/30 text-red-400"
-                        onClick={() => stop.mutate(id)} disabled={stop.isPending}>
-                        {t("copyTrading.stopSub", "Stop")}
-                      </Button>
-                    )}
+                    <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] border-red-500/30 text-red-400"
+                      onClick={() => stop.mutate(id)} disabled={stop.isPending}>
+                      {t("copyTrading.stopSub", "Stop")}
+                    </Button>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
       )}
 
-      {/* ── 4. AI Decision Packages ── */}
-      <section className="space-y-3 pt-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[15px] font-semibold text-foreground flex items-center gap-1">
-            AI 决策包 <Zap className="h-4 w-4 text-amber-400" />
-          </h2>
-          <span className="text-[12px] text-muted-foreground">提升跟单可信度</span>
-        </div>
-
-        <div className="p-4 rounded-xl text-[13px] text-muted-foreground leading-relaxed"
-          style={{ background: "rgba(26,21,13,0.8)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <p className="mb-2.5">AI 决策引擎分析每条跟单信号，自动跳过低可信度订单，让跟单更稳定。决策次数越多，过滤越精准。</p>
-          <div className="font-mono text-[11px] flex flex-wrap items-center gap-1.5 p-2 rounded-lg"
-            style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.04)" }}>
-            <span className="text-foreground/80">[信号源 12条]</span>
-            <ArrowRight className="h-3 w-3" />
-            <span className="text-red-400">[AI过滤 ✕3跳过]</span>
-            <ArrowRight className="h-3 w-3" />
-            <span className="text-emerald-400">[执行 9条]</span>
-            <ArrowRight className="h-3 w-3" />
-            <span className="text-amber-400">可信度 ↑87%</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-[13px] font-medium text-foreground">购买决策包</h3>
-          <span className="text-[12px] text-muted-foreground font-mono">我的积分: <span className="text-amber-400">680 pts</span></span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5">
-          {AI_PACKAGES.map((pkg, i) => (
-            <div key={i} className={cn("p-3 rounded-xl flex flex-col relative overflow-hidden")}
-              style={{
-                background: pkg.recommended ? "rgba(245,158,11,0.05)" : "rgba(255,255,255,0.025)",
-                border: pkg.recommended ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.06)",
-              }}>
-              {pkg.recommended && (
-                <div className="absolute top-0 right-0 text-black text-[10px] font-bold px-2 py-0.5 rounded-bl-lg"
-                  style={{ background: "#f59e0b" }}>
-                  🔥 推荐
-                </div>
-              )}
-              <div className={`text-[11px] mb-0.5 ${pkg.recommended ? "text-amber-500/70" : "text-muted-foreground"}`}>{pkg.label}</div>
-              <div className={`text-[17px] font-bold mb-3 ${pkg.recommended ? "text-amber-400" : "text-foreground"}`}>
-                {pkg.decisions} <span className={`text-[11px] font-normal ${pkg.recommended ? "text-amber-500/50" : "text-muted-foreground"}`}>次</span>
+      {/* ── Advanced config dialog ── */}
+      <Dialog open={configOpen} onOpenChange={setConfigOpen}>
+        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <Settings className="h-4 w-4 text-amber-400" /> {t("copyTrading.advancedConfig", "高级设置")}
+            </DialogTitle>
+            <DialogDescription className="text-[12px]">
+              {t("copyTrading.configDesc", "这些设置会在你下一次一键跟单时生效。")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <ConfigToggle label={t("copyTrading.cfgAutoCopy", "自动跟单模式")} value={autoCopy} onToggle={() => setAutoCopy((v) => !v)} />
+            <ConfigToggle label={t("copyTrading.cfgAiFilter", "AI 过滤开启")} value={aiFilter} onToggle={() => setAiFilter((v) => !v)} />
+            <div className="p-3.5 rounded-xl space-y-2.5" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-foreground">{t("copyTrading.cfgMinConfidence", "最低可信度阈值")}</span>
+                <span className="text-[13px] font-bold text-amber-400">{minConfidence}%</span>
               </div>
-              <div className="mt-auto flex items-center justify-between gap-1">
-                <span className={`text-[11px] font-mono ${pkg.recommended ? "text-amber-400" : "text-foreground/70"}`}>{pkg.points} 积分</span>
-                <button onClick={() => buyPackage(pkg)}
-                  className={cn("px-2.5 py-1.5 rounded-lg text-[11px] transition-colors font-medium",
-                    pkg.recommended ? "text-black font-bold" : "text-white")}
-                  style={pkg.recommended
-                    ? { background: "linear-gradient(135deg, #f59e0b, #d97706)", boxShadow: "0 0 15px rgba(245,158,11,0.3)" }
-                    : { background: "rgba(255,255,255,0.1)" }}>
-                  购买
-                </button>
+              <div className="flex gap-1.5">
+                {[60, 70, 80, 90].map((v) => (
+                  <button key={v} onClick={() => setMinConfidence(v)}
+                    className={cn("flex-1 py-1.5 rounded-lg text-[12px] font-medium transition-colors",
+                      minConfidence === v ? "bg-amber-500 text-black" : "bg-white/5 text-muted-foreground hover:text-foreground")}>
+                    {v}%
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 5. Copy Config Toggles ── */}
-      <section className="space-y-3 pt-2 border-t border-white/[0.05]">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
-            <Settings className="h-4 w-4 text-muted-foreground" /> 跟单配置
-          </h2>
-        </div>
-
-        <div className="space-y-2">
-          {[
-            { label: "自动跟单模式", value: autoCopy, set: setAutoCopy },
-            { label: "AI 过滤开启", value: aiFilter, set: setAiFilter },
-          ].map(({ label, value, set }, i) => (
-            <div key={i} className="flex items-center justify-between p-3.5 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <span className="text-[13px] font-medium text-foreground">{label}</span>
-              <button onClick={() => set(!value)} className="focus:outline-none">
-                {value
-                  ? <ToggleRight className="h-8 w-8 text-amber-500" />
-                  : <ToggleLeft className="h-8 w-8 text-muted-foreground/40" />}
-              </button>
-            </div>
-          ))}
-
-          <div className="flex items-center justify-between p-3.5 rounded-xl"
-            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <span className="text-[13px] font-medium text-foreground">最低可信度阈值</span>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer"
-              style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}
-              onClick={() => toast({ title: t("common.comingSoon") })}>
-              <span className="text-[13px] font-medium text-amber-400">70%</span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            </div>
+            <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground leading-relaxed pt-1">
+              <Activity className="h-3.5 w-3.5 mt-px shrink-0 text-amber-400/70" />
+              {t("copyTrading.aiFilterNote", "AI 决策引擎会分析每条跟单信号，自动跳过低可信度订单，让跟单更稳定。")}
+            </p>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          <div className="flex items-center justify-between p-3.5 rounded-xl"
-            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <span className="text-[13px] font-medium text-foreground">当前跟单交易员</span>
-            <div className="flex items-center gap-3">
-              <span className="text-[13px] text-muted-foreground">{subs.filter((s: any) => String(s?.status ?? "active").toLowerCase() === "active").length || 3} 位</span>
-              <button className="text-[12px] text-amber-500 hover:text-amber-400 flex items-center transition-colors"
-                onClick={() => toast({ title: t("common.comingSoon") })}>
-                管理 ↗
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 6. Membership Comparison Table ── */}
-      <section className="pt-2 border-t border-white/[0.05]">
-        <button className="w-full flex items-center justify-between p-4 rounded-xl text-[13px] text-muted-foreground hover:text-foreground transition-colors mb-3"
-          style={{ background: "rgba(24,22,17,1)", border: "1px solid rgba(255,255,255,0.05)" }}
-          onClick={() => setShowTable(!showTable)}>
-          <span>查看完整会员权益对比</span>
-          <ChevronDown className={cn("h-4 w-4 transition-transform", showTable && "rotate-180")} />
-        </button>
-
-        {showTable && (
+      {/* ── Tier comparison dialog (real params) ── */}
+      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
+        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-amber-400" /> {t("copyTrading.compareTiers", "档位对比")}
+            </DialogTitle>
+          </DialogHeader>
           <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid rgba(255,255,255,0.05)" }}>
             <table className="w-full text-[12px] text-left border-collapse">
               <thead>
                 <tr>
-                  <th className="py-3 px-3 font-normal text-muted-foreground border-b border-white/[0.04] w-[22%]"></th>
-                  <th className="py-3 px-3 font-medium text-muted-foreground border-b border-white/[0.04] text-center">Free</th>
-                  <th className="py-3 px-3 font-medium text-amber-500 border-b border-amber-500/20 text-center" style={{ background: "rgba(245,158,11,0.05)" }}>Pro</th>
-                  <th className="py-3 px-3 font-medium text-muted-foreground border-b border-white/[0.04] text-center">Elite</th>
-                  <th className="py-3 px-3 font-medium text-muted-foreground border-b border-white/[0.04] text-center">机构</th>
+                  {[
+                    t("copyTrading.colTier", "档位"),
+                    t("copyTrading.paramRisk", "风险"),
+                    t("copyTrading.paramRatio", "比例"),
+                    t("copyTrading.paramTradeCap", "单笔"),
+                    t("copyTrading.paramMonthCap", "月上限"),
+                  ].map((h, i) => (
+                    <th key={i} className="py-2.5 px-3 font-medium text-muted-foreground border-b border-white/[0.06] whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { label: "日跟单次", values: ["3", "15", "50", "无限"] },
-                  { label: "AI决策", values: ["5", "50", "200", "无限"] },
-                  { label: "策略包", values: ["L1", "L2", "L3", "L5"] },
-                  { label: "月上限", values: ["$2K", "$5K", "$10K", "$200K"] },
-                ].map((row, i, arr) => (
-                  <tr key={i}>
-                    <td className={`py-2.5 px-3 text-muted-foreground ${i < arr.length - 1 ? "border-b border-white/[0.03]" : ""}`}>{row.label}</td>
-                    {row.values.map((v, j) => (
-                      <td key={j} className={cn(`py-2.5 px-3 text-center ${i < arr.length - 1 ? "border-b border-white/[0.03]" : ""}`,
-                        j === 1 ? "text-amber-400 font-medium" : "text-foreground/60")}
-                        style={j === 1 ? { background: "rgba(245,158,11,0.03)" } : {}}>
-                        {v}
-                      </td>
-                    ))}
+                {TIERS.map((tier, i) => (
+                  <tr key={tier.key} className={cn(selectedTier === tier.key && "bg-amber-500/5")}>
+                    <td className={cn("py-2.5 px-3 font-bold", tier.color, i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{tier.key}</td>
+                    <td className={cn("py-2.5 px-3 text-foreground/70", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{tier.riskLabel}</td>
+                    <td className={cn("py-2.5 px-3 text-foreground/70 tabular-nums", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{(tier.notionalRatio * 100).toFixed(0)}%</td>
+                    <td className={cn("py-2.5 px-3 text-foreground/70 tabular-nums", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>${tier.notionalCapUsd}</td>
+                    <td className={cn("py-2.5 px-3 text-foreground/70 tabular-nums", i < TIERS.length - 1 && "border-b border-white/[0.03]")}>{tier.monthLimit}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </section>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function StatCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1 truncate">{label}</p>
+      <p className="text-[15px] font-semibold tabular-nums truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>{value}</p>
+    </div>
+  );
+}
+
+function Param({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg px-3 py-2 flex items-center justify-between gap-2"
+      style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="text-[12px] font-semibold text-foreground tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function ConfigToggle({ label, value, onToggle }: { label: string; value: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center justify-between p-3.5 rounded-xl"
+      style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <span className="text-[13px] font-medium text-foreground">{label}</span>
+      <button onClick={onToggle} className="focus:outline-none">
+        {value ? <ToggleRight className="h-8 w-8 text-amber-500" /> : <ToggleLeft className="h-8 w-8 text-muted-foreground/40" />}
+      </button>
     </div>
   );
 }
@@ -521,7 +445,7 @@ export default function CopyTradingAutoPage() {
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
   return (
-    <CopyTradingLayout title={t("copyTrading.tabAutoCopy", "Auto-Copy Strategy")}>
+    <CopyTradingLayout title={t("copyTrading.tabAutoCopy", "Strategy")}>
       <CopyGate wallet={wallet} userLoading={userQ.isLoading} userId={userId}>
         {(uid) => <AutoCopyInner userId={uid} />}
       </CopyGate>

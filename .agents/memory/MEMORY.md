@@ -1,0 +1,2 @@
+- [i18n t() argument order](i18n-t-wrapper.md) — `t(key,{opts},fallback)` is broken & renders the raw key; put fallback before the options object.
+- [Previewing gated pages](app-preview-gating.md) — app lives under `/app`; add `?preview=1` to bypass the not-connected redirect; CopyGate still needs a real wallet.

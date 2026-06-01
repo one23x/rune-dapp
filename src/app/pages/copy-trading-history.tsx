@@ -4,30 +4,22 @@
  * and a sticky summary bar (trade count / win-rate / total PnL).
  */
 
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { History as HistoryIcon, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
-import { useEngineUser, useOrders } from "@app/lib/engine-hooks";
+import { PremiumCard } from "@app/components/premium-card";
+import { useEngineUser, useOrders, useOpenOrders } from "@app/lib/engine-hooks";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import {
   CopyGate, SectionEmpty, SectionError, asArray, normalizeOrder, isClosed, fmtUsd, type NormOrder,
 } from "@app/components/copy-trading/shared";
 
+const EarningsChart = lazy(() => import("@app/components/copy-trading/earnings-chart"));
+
 type SideFilter = "ALL" | "BUY" | "SELL";
 type StatusFilter = "ALL" | "WON" | "LOST";
-
-const SEED_ORDERS: NormOrder[] = [
-  { id: "h-1", market: "Will Bitcoin exceed $100K in Q1?", side: "BUY", price: 0.42, size: 1000, notional: 910, status: "FILLED", pnl: 490, createdAt: Date.now() - 86400000 * 3 },
-  { id: "h-2", market: "US Election pro-crypto winner?", side: "BUY", price: 0.61, size: 2000, notional: 1480, status: "FILLED", pnl: 260, createdAt: Date.now() - 86400000 * 5 },
-  { id: "h-3", market: "Fed rate cut before April?", side: "SELL", price: 0.55, size: 1500, notional: 1170, status: "FILLED", pnl: -345, createdAt: Date.now() - 86400000 * 6 },
-  { id: "h-4", market: "Ethereum ETF AUM > $5B?", side: "BUY", price: 0.38, size: 2500, notional: 2200, status: "FILLED", pnl: 1250, createdAt: Date.now() - 86400000 * 10 },
-  { id: "h-5", market: "AI tokens $300B market cap?", side: "SELL", price: 0.72, size: 1000, notional: 250, status: "FILLED", pnl: 470, createdAt: Date.now() - 86400000 * 13 },
-  { id: "h-6", market: "Solana DEX volume record?", side: "BUY", price: 0.21, size: 3000, notional: 270, status: "FILLED", pnl: -360, createdAt: Date.now() - 86400000 * 16 },
-  { id: "h-7", market: "DOGE revival above $0.50?", side: "SELL", price: 0.68, size: 800, notional: 648, status: "FILLED", pnl: -104, createdAt: Date.now() - 86400000 * 19 },
-  { id: "h-8", market: "BTC dominance > 55%?", side: "BUY", price: 0.55, size: 1200, notional: 1068, status: "FILLED", pnl: 408, createdAt: Date.now() - 86400000 * 21 },
-];
 
 function HistoryOrderCard({ o }: { o: NormOrder }) {
   const isWin = (o.pnl ?? 0) >= 0;
@@ -49,14 +41,10 @@ function HistoryOrderCard({ o }: { o: NormOrder }) {
           }`}>{o.side}</span>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 mb-3 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="grid grid-cols-3 gap-1 mb-3 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.04)" }}>
           <div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Entry</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Price</div>
             <div className="text-[11px] font-mono text-foreground/80">{o.price > 0 ? `$${o.price.toFixed(2)}` : "—"}</div>
-          </div>
-          <div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Exit</div>
-            <div className="text-[11px] font-mono text-foreground/80">{o.price > 0 ? `$${(o.price + (isWin ? 0.2 : -0.15)).toFixed(2)}` : "—"}</div>
           </div>
           <div>
             <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Size</div>
@@ -97,17 +85,27 @@ function HistoryInner({ userId }: { userId: string }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
 
   const ordersQ = useOrders(userId);
+  const openQ = useOpenOrders(userId);
 
-  const allClosed = useMemo<NormOrder[]>(() => {
-    const raw = asArray(ordersQ.data).map(normalizeOrder).filter(isClosed)
-      .sort((a, b) => b.createdAt - a.createdAt);
-    return raw.length > 0 ? raw : SEED_ORDERS;
-  }, [ordersQ.data]);
+  const allClosed = useMemo<NormOrder[]>(() =>
+    asArray(ordersQ.data).map(normalizeOrder).filter(isClosed).sort((a, b) => b.createdAt - a.createdAt),
+    [ordersQ.data]);
 
   const withPnl = allClosed.filter(o => o.pnl != null);
   const wins = withPnl.filter(o => (o.pnl ?? 0) >= 0);
-  const winRate = withPnl.length > 0 ? Math.round((wins.length / withPnl.length) * 100) : 68;
+  const winRate = withPnl.length > 0 ? Math.round((wins.length / withPnl.length) * 100) : 0;
   const totalPnl = withPnl.reduce((s, o) => s + (o.pnl ?? 0), 0);
+
+  // Earnings (merged from the old Earnings tab): unrealized PnL from open orders +
+  // a cumulative realized-PnL equity curve.
+  const unrealized = useMemo(
+    () => asArray(openQ.data).map(normalizeOrder).reduce((s, o) => s + (o.pnl ?? 0), 0),
+    [openQ.data]);
+  const series = useMemo(() => {
+    let cum = 0;
+    return [...withPnl].sort((a, b) => a.createdAt - b.createdAt)
+      .map((o, i) => { cum += o.pnl ?? 0; return { i: i + 1, pnl: Number(cum.toFixed(2)) }; });
+  }, [withPnl]);
 
   const filtered = useMemo(() => {
     return allClosed.filter(o => {
@@ -156,6 +154,24 @@ function HistoryInner({ userId }: { userId: string }) {
           </span>
         </div>
       </div>
+
+      {/* Earnings (realized / unrealized / equity curve) — merged from Earnings tab */}
+      <div className="grid grid-cols-2 gap-2">
+        <EarnTile label={t("copyTrading.statRealized", "已实现")} value={fmtUsd(totalPnl)} accent={totalPnl >= 0 ? "#4ade80" : "#f87171"} />
+        <EarnTile
+          label={t("copyTrading.statUnrealized", "浮动盈亏")}
+          value={openQ.isLoading ? "…" : openQ.isError ? "—" : fmtUsd(unrealized)}
+          accent={openQ.isLoading || openQ.isError ? undefined : unrealized >= 0 ? "#4ade80" : "#f87171"}
+        />
+      </div>
+      {series.length >= 2 && (
+        <PremiumCard className="p-4">
+          <h3 className="text-[11px] uppercase tracking-wider text-foreground/40 font-semibold mb-3">{t("copyTrading.earningsEquityCurve", "Equity Curve")}</h3>
+          <Suspense fallback={<Skeleton className="h-44 w-full rounded-lg" />}>
+            <EarningsChart data={series} />
+          </Suspense>
+        </PremiumCard>
+      )}
 
       {/* Filters */}
       <div className="space-y-2">
@@ -208,6 +224,15 @@ function HistoryInner({ userId }: { userId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function EarnTile({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <PremiumCard className="p-3.5 text-center">
+      <div className="text-lg font-black tabular-nums num-gold" style={accent ? { color: accent } : undefined}>{value}</div>
+      <div className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{label}</div>
+    </PremiumCard>
   );
 }
 

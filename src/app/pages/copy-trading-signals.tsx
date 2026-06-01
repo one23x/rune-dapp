@@ -1,7 +1,7 @@
 /**
  * Smart Copy-Trading — Signals (信号), at /copy-trading/signals.
- * Three sections: leader signals with copy toggle, AI intelligence grid,
- * weekly leaderboard. Uses real engine hooks with seed fallbacks.
+ * Three sections: leader signals with copy toggle, hot-market intelligence grid,
+ * leaderboard. All data comes from the live engine — no mock/seed fallbacks.
  */
 
 import { useMemo, useState } from "react";
@@ -10,10 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity, CheckCircle2, Check, TrendingUp, BarChart2, Shield, Zap, Trophy,
 } from "lucide-react";
-import { useLeaderSignals, useHotMarkets } from "@app/lib/engine-hooks";
+import { useLeaderSignals, useHotMarkets, useLeaders } from "@app/lib/engine-hooks";
 import { useToast } from "@app/hooks/use-toast";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
-import { SectionError, asArray, asNumber } from "@app/components/copy-trading/shared";
+import { SectionError, SectionEmpty, asArray, asNumber } from "@app/components/copy-trading/shared";
 
 interface LeaderSignal {
   id: string;
@@ -27,26 +27,20 @@ interface LeaderSignal {
   category: string;
 }
 
-const SEED_LEADER_SIGNALS: LeaderSignal[] = [
-  { id: "ls-1", name: "CryptoLeader Alpha", initials: "CA", colorClass: "bg-blue-500/20 text-blue-400", direction: "BUY", question: "Bitcoin > $150K by 2026?", score: "87%", timeAgo: "3m", category: "Crypto" },
-  { id: "ls-2", name: "AI Oracle Bot", initials: "AO", colorClass: "bg-purple-500/20 text-purple-400", direction: "SELL", question: "Fed rate cut before July?", score: "72%", timeAgo: "11m", category: "Macro" },
-  { id: "ls-3", name: "NewsArb Pro", initials: "NP", colorClass: "bg-emerald-500/20 text-emerald-400", direction: "BUY", question: "Ethereum ETF AUM > $10B?", score: "91%", timeAgo: "28m", category: "Crypto" },
-  { id: "ls-4", name: "DeFi Maximalist", initials: "DM", colorClass: "bg-amber-500/20 text-amber-400", direction: "BUY", question: "Solana flips ETH in DEX vol?", score: "64%", timeAgo: "1h", category: "DeFi" },
+// Presentation-only palettes (avatar colors / icon set) applied by index — these
+// are styling, not data. All textual/numeric content is engine-derived below.
+const AVATAR_COLORS = [
+  "bg-blue-500/20 text-blue-400",
+  "bg-purple-500/20 text-purple-400",
+  "bg-emerald-500/20 text-emerald-400",
+  "bg-amber-500/20 text-amber-400",
+  "bg-rose-500/20 text-rose-400",
 ];
-
-const AI_INTELLIGENCE = [
-  { icon: TrendingUp, iconColor: "text-emerald-500", title: "动量突破", desc: "BTC链上资金流入连续3日正向，看涨信号强烈", score: 82 },
-  { icon: BarChart2, iconColor: "text-blue-500", title: "情绪指标", desc: "市场恐慌指数降至38，历史底部区间", score: 76 },
-  { icon: Shield, iconColor: "text-amber-500", title: "风险预警", desc: "ETH期权隐含波动率上升，注意仓位风险", score: 68 },
-  { icon: Zap, iconColor: "text-purple-500", title: "套利机会", desc: "Polymarket vs Kalshi价差扩大，跨平台套利窗口", score: 91 },
-];
-
-const LEADERBOARD = [
-  { rank: 1, name: "CryptoLeader Alpha", initials: "CA", colorClass: "bg-blue-500/20 text-blue-400", score: "9.8", pnl: "+34.2%", width: "98%" },
-  { rank: 2, name: "NewsArb Pro", initials: "NP", colorClass: "bg-emerald-500/20 text-emerald-400", score: "9.4", pnl: "+28.7%", width: "94%" },
-  { rank: 3, name: "AI Oracle Bot", initials: "AO", colorClass: "bg-purple-500/20 text-purple-400", score: "8.9", pnl: "+21.3%", width: "89%" },
-  { rank: 4, name: "DeFi Maximalist", initials: "DM", colorClass: "bg-amber-500/20 text-amber-400", score: "8.2", pnl: "+15.8%", width: "82%" },
-  { rank: 5, name: "Momentum Trader", initials: "MT", colorClass: "bg-rose-500/20 text-rose-400", score: "7.6", pnl: "+9.4%", width: "76%" },
+const INTEL_ICONS = [
+  { icon: TrendingUp, iconColor: "text-emerald-500" },
+  { icon: BarChart2, iconColor: "text-blue-500" },
+  { icon: Shield, iconColor: "text-amber-500" },
+  { icon: Zap, iconColor: "text-purple-500" },
 ];
 
 function directionFromRaw(raw: any): "BUY" | "SELL" {
@@ -64,29 +58,62 @@ function scoreFromRaw(raw: any): number {
 export default function CopyTradingSignalsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [followed, setFollowed] = useState<Record<string, boolean>>({
-    "CryptoLeader Alpha": true,
-    "NewsArb Pro": true,
-  });
+  const [followed, setFollowed] = useState<Record<string, boolean>>({});
 
   const leadersQ = useLeaderSignals();
   const hotQ = useHotMarkets();
+  const leaderboardQ = useLeaders("7d");
 
   const leaderSignals = useMemo<LeaderSignal[]>(() => {
-    const raw = asArray(leadersQ.data);
-    if (raw.length === 0) return SEED_LEADER_SIGNALS;
-    return raw.map((r: any, i: number) => ({
+    return asArray(leadersQ.data).map((r: any, i: number) => ({
       id: String(r?.id ?? r?.marketId ?? i),
       name: String(r?.leader ?? r?.leaderName ?? r?.name ?? `Leader ${i + 1}`),
-      initials: String(r?.leader ?? "L").slice(0, 2).toUpperCase(),
-      colorClass: ["bg-blue-500/20 text-blue-400", "bg-purple-500/20 text-purple-400", "bg-emerald-500/20 text-emerald-400", "bg-amber-500/20 text-amber-400"][i % 4],
+      initials: String(r?.leader ?? r?.leaderName ?? r?.name ?? "L").slice(0, 2).toUpperCase(),
+      colorClass: AVATAR_COLORS[i % AVATAR_COLORS.length],
       direction: directionFromRaw(r),
       question: String(r?.question ?? r?.market ?? r?.title ?? r?.marketId ?? "—"),
-      score: `${scoreFromRaw(r) || 75}%`,
+      score: scoreFromRaw(r) > 0 ? `${scoreFromRaw(r)}%` : "—",
       timeAgo: "now",
       category: String(r?.category ?? "Crypto"),
     }));
   }, [leadersQ.data]);
+
+  // Section 2 — hot Polymarket markets surfaced as "intelligence" cards (real).
+  const intelligence = useMemo(() => {
+    return asArray(hotQ.data).slice(0, 4).map((m: any, i: number) => {
+      const title = String(m?.question ?? m?.title ?? m?.market ?? m?.name ?? `Market ${i + 1}`);
+      const prob = asNumber(m?.probability ?? m?.prob ?? m?.yesPrice ?? m?.price);
+      const score = scoreFromRaw(m) || (prob > 0 ? Math.round(prob > 1 ? prob : prob * 100) : 0);
+      const vol = asNumber(m?.volume ?? m?.volume24h ?? m?.liquidity ?? m?.totalVolume);
+      return {
+        ...INTEL_ICONS[i % INTEL_ICONS.length],
+        title: title.length > 22 ? `${title.slice(0, 22)}…` : title,
+        desc: vol > 0 ? `${t("copyTrading.volume", "成交量")} $${Math.round(vol).toLocaleString()}` : String(m?.category ?? title),
+        score,
+      };
+    });
+  }, [hotQ.data, t]);
+
+  // Section 3 — top traders leaderboard (real).
+  const leaderboard = useMemo(() => {
+    const raw = asArray(leaderboardQ.data);
+    const scores = raw.map((r: any) => asNumber(r?.score ?? r?.rating ?? r?.winRate ?? r?.pnlPct));
+    const maxScore = Math.max(1, ...scores);
+    return raw.slice(0, 5).map((r: any, i: number) => {
+      const name = String(r?.leader ?? r?.name ?? r?.handle ?? r?.address ?? `Trader ${i + 1}`);
+      const score = asNumber(r?.score ?? r?.rating ?? r?.winRate);
+      const pnlPct = asNumber(r?.pnlPct ?? r?.roi ?? r?.return7d ?? r?.return ?? r?.pnl);
+      return {
+        rank: i + 1,
+        name: name.length > 18 ? `${name.slice(0, 18)}…` : name,
+        initials: name.slice(0, 2).toUpperCase(),
+        colorClass: AVATAR_COLORS[i % AVATAR_COLORS.length],
+        score: score > 0 ? score.toFixed(1) : "—",
+        pnl: pnlPct,
+        width: `${Math.min(100, Math.max(6, (score / maxScore) * 100))}%`,
+      };
+    });
+  }, [leaderboardQ.data]);
 
   const toggleFollow = (name: string) => {
     setFollowed(prev => {
@@ -128,6 +155,8 @@ export default function CopyTradingSignalsPage() {
             <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
           ) : leadersQ.isError ? (
             <SectionError onRetry={() => leadersQ.refetch()} />
+          ) : leaderSignals.length === 0 ? (
+            <SectionEmpty icon={Activity} title={t("copyTrading.noSignals", "暂无信号")} desc={t("copyTrading.noSignalsDesc", "交易员信号将在此实时显示")} />
           ) : (
             <div className="space-y-2">
               {leaderSignals.map(s => (
@@ -196,29 +225,37 @@ export default function CopyTradingSignalsPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            {AI_INTELLIGENCE.map((d, i) => (
-              <div key={i} className="rounded-xl p-3 flex flex-col justify-between"
-                style={{ background: "rgba(21,18,13,1)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <d.icon className={`h-3.5 w-3.5 ${d.iconColor}`} />
-                    <span className="text-[12px] font-bold text-foreground">{d.title}</span>
+          {hotQ.isLoading ? (
+            <div className="grid grid-cols-2 gap-2.5">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
+          ) : hotQ.isError ? (
+            <SectionError onRetry={() => hotQ.refetch()} />
+          ) : intelligence.length === 0 ? (
+            <SectionEmpty icon={Zap} title={t("copyTrading.noIntelligence", "暂无市场情报")} desc={t("copyTrading.noIntelligenceDesc", "热门市场数据将在此显示")} />
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              {intelligence.map((d, i) => (
+                <div key={i} className="rounded-xl p-3 flex flex-col justify-between"
+                  style={{ background: "rgba(21,18,13,1)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <d.icon className={`h-3.5 w-3.5 ${d.iconColor}`} />
+                      <span className="text-[12px] font-bold text-foreground line-clamp-1">{d.title}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-tight mb-3 line-clamp-2">{d.desc}</p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground leading-tight mb-3 line-clamp-2">{d.desc}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-muted-foreground">{t("copyTrading.signalScore", "Score")}</span>
+                      <span className="font-bold text-amber-500">{d.score}%</span>
+                    </div>
+                    <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.5)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${d.score}%`, background: "linear-gradient(90deg, #f59e0b, #d97706)" }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-muted-foreground">{t("copyTrading.signalScore", "Score")}</span>
-                    <span className="font-bold text-amber-500">{d.score}%</span>
-                  </div>
-                  <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.5)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${d.score}%`, background: "linear-gradient(90deg, #f59e0b, #d97706)" }} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ── Section 3: Weekly Leaderboard ── */}
@@ -236,11 +273,15 @@ export default function CopyTradingSignalsPage() {
             </span>
           </div>
 
-          {hotQ.isLoading ? (
+          {leaderboardQ.isLoading ? (
             <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
+          ) : leaderboardQ.isError ? (
+            <SectionError onRetry={() => leaderboardQ.refetch()} />
+          ) : leaderboard.length === 0 ? (
+            <SectionEmpty icon={Trophy} title={t("copyTrading.noLeaderboard", "暂无排行")} desc={t("copyTrading.noLeaderboardDesc", "顶级交易员排行将在此显示")} />
           ) : (
             <div className="space-y-2">
-              {LEADERBOARD.map((l, i) => (
+              {leaderboard.map((l, i) => (
                 <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg border ${
                   l.rank === 1 ? "border-amber-500/20" : "border-white/[0.04]"
                 }`}
@@ -266,7 +307,9 @@ export default function CopyTradingSignalsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-[13px] font-bold text-emerald-400 shrink-0">{l.pnl}</div>
+                  <div className={`text-[13px] font-bold shrink-0 ${l.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {l.pnl >= 0 ? "+" : ""}{l.pnl.toFixed(1)}%
+                  </div>
                 </div>
               ))}
             </div>

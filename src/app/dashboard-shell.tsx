@@ -18,10 +18,7 @@ const Market          = lazy(() => import("@app/pages/market"));
 const CopyTrading     = lazy(() => import("@app/pages/copy-trading"));
 const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
 const CopyTradingSignals   = lazy(() => import("@app/pages/copy-trading-signals"));
-const CopyTradingPositions = lazy(() => import("@app/pages/copy-trading-positions"));
-const CopyTradingEarnings  = lazy(() => import("@app/pages/copy-trading-earnings"));
 const CopyTradingHistory   = lazy(() => import("@app/pages/copy-trading-history"));
-const CopyTradingFunds     = lazy(() => import("@app/pages/copy-trading-funds"));
 const Profile         = lazy(() => import("@app/pages/profile"));
 const ProfileReferral = lazy(() => import("@app/pages/profile-referral"));
 const ProfileNodes    = lazy(() => import("@app/pages/profile-nodes"));
@@ -248,10 +245,11 @@ function DashboardRoutes() {
         <Route path="/copy-trading" component={CopyTrading} />
         <Route path="/copy-trading/auto" component={CopyTradingAuto} />
         <Route path="/copy-trading/signals" component={CopyTradingSignals} />
-        <Route path="/copy-trading/positions" component={CopyTradingPositions} />
-        <Route path="/copy-trading/earnings" component={CopyTradingEarnings} />
         <Route path="/copy-trading/history" component={CopyTradingHistory} />
-        <Route path="/copy-trading/funds" component={CopyTradingFunds} />
+        {/* Positions/Earnings/Funds were consolidated into Overview, Strategy and History. */}
+        <Route path="/copy-trading/positions">{() => <Redirect to="/copy-trading" />}</Route>
+        <Route path="/copy-trading/funds">{() => <Redirect to="/copy-trading" />}</Route>
+        <Route path="/copy-trading/earnings">{() => <Redirect to="/copy-trading/history" />}</Route>
         <Route path="/profile" component={Profile} />
         <Route path="/profile/nodes" component={ProfileNodes} />
         <Route path="/profile/referral" component={ProfileReferral} />
