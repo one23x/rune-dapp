@@ -5,3 +5,4 @@
 - [iOS glass interaction utils](glass-interaction-utils.md) — global .glass-panel sheen/depth + opt-in .glass-interactive/.tap-press/.glass-sheen in index.css; NO global MotionConfig, so gate Framer Motion with useReducedMotion per-component.
 - [Reskin data bindings](reskin-data-bindings.md) — after a delegated reskin/port, re-verify live bindings; subagents silently bake mockup placeholder literals over real data.
 - [Dual i18n systems](i18n-dual-systems.md) — react-i18next (`app/locales/*.json`) for /app vs language-context (`contexts/i18n/*.ts`, `mr.*`) for mainnet; JSON reserialize is byte-identical so scripted key pruning is diff-clean.
+- [PayEmbed dialog overflow](payembed-dialog-overflow.md) — thirdweb PayEmbed overflows max-w-sm dialogs; wrap in w-full + inner overflow-x-auto (both HL & pUSD deposit popups).

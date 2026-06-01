@@ -422,22 +422,24 @@ function DepositBridge() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl">
+        <div className="overflow-hidden rounded-xl w-full">
           <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setConfirmed(false)}>
             ← {t("common.back", "改数量")}
           </button>
-          <PayEmbed
-            client={thirdwebClient}
-            payOptions={{
-              mode: "direct_payment",
-              paymentInfo: {
-                chain: polygon,
-                sellerAddress: account.address as `0x${string}`,
-                token: { address: PUSD_POLYGON },
-                amount: String(amt),
-              },
-            }}
-          />
+          <div className="w-full overflow-x-auto">
+            <PayEmbed
+              client={thirdwebClient}
+              payOptions={{
+                mode: "direct_payment",
+                paymentInfo: {
+                  chain: polygon,
+                  sellerAddress: account.address as `0x${string}`,
+                  token: { address: PUSD_POLYGON },
+                  amount: String(amt),
+                },
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
