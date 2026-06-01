@@ -3,7 +3,6 @@ import { Route, Switch, useLocation } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { AppLayout } from "@/components/layout";
-import { RuneOnboarding } from "@/components/rune/rune-onboarding";
 
 // Marketing pages are lazy-loaded so each route ships its own chunk instead
 // of bloating the single entry bundle (recharts-heavy pages especially).
@@ -15,10 +14,7 @@ const Rune          = lazy(() => import("@/pages/rune"));
 const B18           = lazy(() => import("@/pages/b18"));
 const Hyperliquid   = lazy(() => import("@/pages/hyperliquid"));
 const LegendAtm     = lazy(() => import("@/pages/legend-atm"));
-const Recruit       = lazy(() => import("@/pages/recruit"));
 const Resources     = lazy(() => import("@/pages/resources"));
-const PublicDashboard = lazy(() => import("@/pages/dashboard"));
-const Tutorial      = lazy(() => import("@/pages/tutorial"));
 const NotFound      = lazy(() => import("@/pages/not-found"));
 
 // Lazy-load the dashboard shell — it wraps its inner routes in
@@ -39,13 +35,6 @@ export default function AppRouter() {
   const inApp = location === "/app" || location.startsWith("/app/");
   return (
     <>
-      {/* Global onboarding glue — bind-referrer gate + buy-node modal listener.
-          Must live at the top-level router (not inside dashboard-shell's
-          base="/app" router) so RuneOnboarding's absolute-path navigation and
-          the emitOpenPurchase signal work across both marketing and /app.
-          Restores the purchase flow after the old src/app/App.tsx mount was
-          removed. */}
-      <RuneOnboarding />
       {inApp ? (
         <Suspense fallback={<Loading />}>
           <AppContainer />
@@ -72,9 +61,6 @@ export default function AppRouter() {
         <Route path="/projects/:id"             component={ProjectDetail} />
         <Route path="/tools"      component={Tools} />
         <Route path="/resources"  component={Resources} />
-        <Route path="/recruit"    component={Recruit} />
-        <Route path="/dashboard"  component={PublicDashboard} />
-        <Route path="/tutorial"   component={Tutorial} />
             <Route component={NotFound} />
           </Switch>
             </motion.div>

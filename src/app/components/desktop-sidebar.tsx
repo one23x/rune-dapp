@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { Home, BarChart3, Brain, User, TrendingUp, Server, GitBranch, ArrowLeftRight, History, Bell, Settings, ChevronLeft, Vault } from "lucide-react";
+import { Home, BarChart3, Brain, User, TrendingUp, GitBranch, ArrowLeftRight, History, Bell, Settings, ChevronLeft, Vault } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 
@@ -26,8 +26,6 @@ const mainNavItems = [
 
 const profileNavItems = [
   { path: "/profile", labelKey: "profile.overviewTab", icon: User, exact: true },
-  { path: "/profile/nodes", labelKey: "profile.nodeDetailsTitle", icon: Server },
-  { path: "/profile/nodes/earnings", labelKey: "profile.nodeEarningsDetail", icon: TrendingUp },
   { path: "/profile/vault", labelKey: "profile.myVaultPositions", icon: Vault },
   { path: "/profile/referral", labelKey: "profile.referralTeam", icon: GitBranch },
   { path: "/profile/swap", labelKey: "profile.swap", icon: ArrowLeftRight },

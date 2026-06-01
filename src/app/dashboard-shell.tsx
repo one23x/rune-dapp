@@ -21,7 +21,6 @@ const CopyTradingSignals   = lazy(() => import("@app/pages/copy-trading-signals"
 const CopyTradingHistory   = lazy(() => import("@app/pages/copy-trading-history"));
 const Profile         = lazy(() => import("@app/pages/profile"));
 const ProfileReferral = lazy(() => import("@app/pages/profile-referral"));
-const ProfileNodes    = lazy(() => import("@app/pages/profile-nodes"));
 const ProfileCommission = lazy(() => import("@app/pages/profile-commission"));
 const ProfileVault    = lazy(() => import("@app/pages/profile-vault"));
 const ProfileSettings = lazy(() => import("@app/pages/profile-settings"));
@@ -128,9 +127,8 @@ function ShellHeader() {
       <div className="container flex h-[72px] items-center justify-between mx-auto pl-2 pr-2 md:pr-6 gap-4 md:gap-8">
         {/* Plain <a> (not wouter <Link>) so clicking the logo escapes
             the dashboard's `base="/app"` router and lands on the public
-            mainnet site root (rune-ai.io/), where the recruit + node
-            purchase flow lives. wouter Link with href="/" would resolve
-            to "/app" and trap users inside the dashboard shell. */}
+            mainnet site root (rune-ai.io/). wouter Link with href="/" would
+            resolve to "/app" and trap users inside the dashboard shell. */}
         <a href="/" className="flex items-center gap-2 group min-w-0 shrink md:shrink-0 cursor-pointer">
           <motion.div
             whileHover={{ scale: 1.05 }}
@@ -251,7 +249,6 @@ function DashboardRoutes() {
         <Route path="/copy-trading/funds">{() => <Redirect to="/copy-trading" />}</Route>
         <Route path="/copy-trading/earnings">{() => <Redirect to="/copy-trading/history" />}</Route>
         <Route path="/profile" component={Profile} />
-        <Route path="/profile/nodes" component={ProfileNodes} />
         <Route path="/profile/referral" component={ProfileReferral} />
         <Route path="/profile/commission" component={ProfileCommission} />
         <Route path="/profile/vault" component={ProfileVault} />

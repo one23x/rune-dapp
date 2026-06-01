@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Grid, Users, X, Menu, BookOpen, LayoutDashboard } from "lucide-react";
+import { Activity, Grid, X, Menu, BookOpen, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/contexts/language-context";
 import { WalletConnectButton } from "@/components/rune/wallet-connect-button";
 import { useActiveAccount } from "thirdweb/react";
-import { useUserPurchase } from "@/hooks/rune/use-node-presell";
-import { emitOpenPurchase } from "@/lib/rune/purchase-signal";
 import { useTutorialStore } from "@/lib/tutorial-store";
 
 interface LayoutProps {
@@ -29,7 +27,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/projects",                     label: "PROJECTS",   key: "projects",   icon: Grid },
   { href: "/tools",                        label: "SIMULATORS", key: "simulators", icon: Activity },
-  { href: "/recruit",                      label: "RECRUIT",    key: "recruit",    icon: Users },
   { href: "https://www.rune-protocol.com", label: "PREDICTIONS", key: "library",    icon: BookOpen, external: true },
 ];
 
@@ -183,7 +180,6 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { t, language } = useLanguage();
   const activeAccount = useActiveAccount();
-  const { hasPurchased } = useUserPurchase(activeAccount?.address);
   const connectSpotlight = useTutorialStore((s) => s.connectSpotlight);
 
   const isEn = language === "en";
@@ -194,15 +190,9 @@ function Navbar() {
     ? [...NAV_ITEMS, { href: "/app/profile", label: "DASHBOARD", key: "dashboard", icon: LayoutDashboard }]
     : NAV_ITEMS;
 
-  /** Dashboard is now SOFT-gated (2026-04-29 revert): bound-but-unpurchased
-   *  users can see their binding + referral link inside dashboard, with a
-   *  persistent CTA to buy a node. Nav clicks are no longer intercepted —
-   *  the user reaches the page and the restricted view explains what's
-   *  locked behind a purchase. */
   function handleNavClick(_e: React.MouseEvent, _key: string) {
     // intentional no-op; kept as a hook in case we re-introduce gating later.
   }
-  void hasPurchased;
 
   return (
     <>

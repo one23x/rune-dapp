@@ -3,8 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageEnter, PageEnterStagger, PageEnterItem } from "@app/components/page-enter";
 import { useActiveAccount } from "thirdweb/react";
 import {
-  Copy, Check, ChevronRight, Bell, Settings, History, GitBranch, Server, Share2,
-  ArrowLeftRight, User, Vault, Lock, Flame, TrendingUp, Coins, Wallet, Gift,
+  Copy, Check, ChevronRight, Bell, Settings, History, GitBranch, Share2,
+  ArrowLeftRight, User, Vault, Lock, Flame, TrendingUp, Coins, Wallet,
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
 import { copyText } from "@app/lib/copy";
@@ -12,9 +12,6 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { usePersonalStats } from "@/hooks/rune/use-team";
 import { buildReferralUrl } from "@/hooks/rune/use-referral-param";
-import { useUserPurchase } from "@/hooks/rune/use-node-presell";
-import { NoNodeReminder } from "@/components/rune/no-node-reminder";
-import { useNodeMembershipsRune } from "@app/lib/data-rune";
 import {
   useEngineUser, usePusdBalance, useOrders, useCopySubs, useHlAccount, useHlSubs,
 } from "@app/lib/engine-hooks";
@@ -26,33 +23,11 @@ import { Activity, Layers } from "lucide-react";
 // it again here would just duplicate. Re-add only if the prominent CTA
 // is removed.
 const MENU_ITEMS = [
-  { labelKey: "profile.myNodesLabel",      icon: Server,         path: "/profile/nodes",        descKey: "profile.nodeManagementDesc" },
   { labelKey: "profile.myVaultPositions",  icon: Vault,          path: "/profile/vault",        descKey: "profile.myVaultPositionsDesc" },
   { labelKey: "profile.swap",              icon: ArrowLeftRight, path: "/profile/swap",         descKey: "profile.swapDesc" },
   { labelKey: "profile.notifications",     icon: Bell,           path: "/profile/notifications", descKey: "profile.notificationsDesc" },
   { labelKey: "profile.settings",          icon: Settings,       path: "/profile/settings",     descKey: "profile.settingsDesc" },
 ];
-
-// Mirrors `src/lib/thirdweb/contracts.ts NODE_META`. RUNE nodes have NO
-// daily yield — the only earnings are direct-referral commission paid
-// on-chain when a downline buys a node (rate set per tier on-chain).
-const NODE_ID_TO_TIER: Record<number, string> = {
-  101: "FOUNDER",
-  201: "SUPER",
-  301: "ADVANCED",
-  401: "MID",
-  501: "INITIAL",
-};
-const TIER_COLOR: Record<string, string> = {
-  FOUNDER:  "hsl(266 60% 70%)",
-  SUPER:    "hsl(38 95% 60%)",
-  ADVANCED: "hsl(160 64% 55%)",
-  MID:      "hsl(217 76% 64%)",
-  INITIAL:  "hsl(215 28% 75%)",
-};
-const TIER_PRICE: Record<string, number> = {
-  FOUNDER: 50000, SUPER: 10000, ADVANCED: 5000, MID: 2500, INITIAL: 1000,
-};
 
 import { fmtUsdtCompact } from "@/lib/format";
 
@@ -197,53 +172,15 @@ export default function ProfilePage() {
   const walletAddr = account?.address || "";
   const isConnected = !!walletAddr;
 
-  const { data: stats, isLoading: statsLoading } = usePersonalStats(isConnected ? walletAddr : undefined);
-  const { data: memberships = [], isLoading: nodesLoading } = useNodeMembershipsRune();
-  const { hasPurchased: chainHasPurchased, isLoading: purchaseLoading } = useUserPurchase(walletAddr);
-
-  // One-shot "no node yet" reminder — pops once when a bound user lands on
-  // /app/profile without owning a node. Wait for both signals (chain +
-  // GraphQL stats) before deciding so we don't flash open then closed.
-  const [reminderOpen, setReminderOpen] = useState(false);
-  const [reminderDismissed, setReminderDismissed] = useState(false);
-  const dbHasPurchased = !!stats?.hasPurchased;
-  const ownsNode = chainHasPurchased || dbHasPurchased || memberships.length > 0;
-  useEffect(() => {
-    if (!isConnected) return;
-    if (statsLoading || purchaseLoading) return;
-    if (reminderDismissed) return;
-    if (!ownsNode) setReminderOpen(true);
-  }, [isConnected, statsLoading, purchaseLoading, ownsNode, reminderDismissed]);
-  // Reset dismissed flag when wallet changes.
-  useEffect(() => { setReminderDismissed(false); }, [walletAddr]);
+  const { data: stats } = usePersonalStats(isConnected ? walletAddr : undefined);
 
   // Commission rewards are stored on-chain as 18-decimal USDT (`uint256`).
   const directCommissionUsdt = useMemo(
     () => stats ? Number(stats.directCommission) / 1e18 : 0,
     [stats],
   );
-  const teamCommissionUsdt = useMemo(
-    () => stats ? Number(stats.teamCommission) / 1e18 : 0,
-    [stats],
-  );
 
-  // Node ownership — read from BOTH sources and union them, because the
-  // GraphQL `usePersonalStats.ownedNodeId` (used by OverviewTab) and the
-  // Supabase `useNodeMembershipsRune` (queried directly here) can drift if
-  // the indexer trails the on-chain event by a few blocks. Whichever
-  // source sees a tier first wins; this matches whatever the user already
-  // sees on /app/profile/nodes.
-  const ownTierFromStats   = stats?.ownedNodeId && NODE_ID_TO_TIER[stats.ownedNodeId] ? NODE_ID_TO_TIER[stats.ownedNodeId] : null;
-  const ownTierFromMembers = memberships.length > 0 ? memberships[0].nodeType : null;
-  const ownTierLabel = ownTierFromStats ?? ownTierFromMembers;
-  const ownTierColor = ownTierLabel ? TIER_COLOR[ownTierLabel] : "hsl(215 28% 65%)";
-
-  const investedUsdt = ownTierLabel ? (TIER_PRICE[ownTierLabel] ?? 0) : 0;
-  const nodeCount    = ownTierLabel ? 1 : 0; // RUNE = one node per wallet.
-
-  // RUNE nodes don't pay daily yield — earnings come exclusively from the
-  // direct-referral commission paid on-chain when a downline buys a node.
-  // 总收益 = directCommissionUsdt (real, USDT, on-chain).
+  // Direct-referral commission is the only on-chain earnings today (USDT).
   const totalEarnings = directCommissionUsdt;
 
   // Match mainnet's referral URL format — `useReferralParam` reads
@@ -333,30 +270,6 @@ export default function ProfilePage() {
                 <div className="font-mono text-[10px] text-white/40 truncate">{walletAddr}</div>
               </>
             )}
-            {/* Node tier badge */}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/30 text-amber-300">
-                <Server size={10} />
-                <span className="text-[10px] font-bold tracking-wider uppercase">
-                  {t("profile.nodeTier", "Node")}
-                </span>
-                {!isConnected ? (
-                  <span className="text-[10px] font-bold text-white/40">--</span>
-                ) : ownTierLabel ? (
-                  <span
-                    className="text-[10px] font-bold tracking-wide"
-                    style={{ color: ownTierColor }}
-                    data-testid="text-node-tier"
-                  >
-                    {ownTierLabel}
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-white/50">
-                    {t("profile.noNode", "Not held")}
-                  </span>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </header>
@@ -412,55 +325,6 @@ export default function ProfilePage() {
                 <div className="text-lg font-bold text-orange-400 mb-1">0 FIRE</div>
                 <div className="text-[9px] text-white/40">{t("profile.directRate", "Direct")} 5% · {t("profile.teamRate", "Team")} 4-29%</div>
                 <div className="text-[9px] text-white/40">USD-valued FIRE</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Node Performance section ── */}
-        <div className="glass-panel p-5 relative overflow-hidden">
-          <div className="pointer-events-none absolute -right-10 -bottom-10 w-32 h-32 bg-amber-500/20 blur-3xl rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Server size={16} className="text-amber-400" />
-                <h3 className="text-white/90 text-sm font-medium">{t("profile.nodePerformance", "Node Performance")}</h3>
-              </div>
-              {ownTierLabel && (
-                <span
-                  className="text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full border"
-                  style={{ color: ownTierColor, borderColor: ownTierColor + "44", background: ownTierColor + "14" }}
-                >
-                  {ownTierLabel}
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Node referral reward USDT — real on-chain directCommission */}
-              <div className="bg-black/20 border border-white/10 rounded-xl p-3 relative overflow-hidden hover:border-emerald-500/30 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs text-white/70 flex items-center gap-1">
-                    <Gift size={11} className="text-emerald-400" />
-                    {t("profile.nodeReferralReward", "Node Referral")}
-                  </span>
-                  <span className="text-[8px] bg-emerald-500/20 border border-emerald-500/30 px-1 py-0.5 rounded text-emerald-300">on-chain</span>
-                </div>
-                <div className="text-lg font-bold text-emerald-400 mb-1 tabular-nums">
-                  <AnimUsdt value={directCommissionUsdt} />
-                </div>
-                <div className="text-[9px] text-white/40">USDT · {t("profile.nodeReferralSub", "5-15% per tier")}</div>
-              </div>
-              {/* Node airdrop RUNE — pre-launch placeholder */}
-              <div className="bg-black/20 border border-white/10 rounded-xl p-3 relative overflow-hidden hover:border-amber-500/30 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs text-white/70 flex items-center gap-1">
-                    <Coins size={11} className="text-amber-400" />
-                    {t("profile.nodeAirdrop", "Node Airdrop")}
-                  </span>
-                  <span className="text-[8px] bg-white/10 px-1 py-0.5 rounded text-white/50">{t("profile.preLaunch", "Pre-launch")}</span>
-                </div>
-                <div className="text-lg font-bold text-amber-300 mb-1 tabular-nums">0 RUNE</div>
-                <div className="text-[9px] text-white/40">{t("profile.nodeAirdropSub", "4-stage unlock by pool TVL")}</div>
               </div>
             </div>
           </div>
@@ -592,10 +456,6 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
-    <NoNodeReminder
-      open={reminderOpen}
-      onClose={() => { setReminderOpen(false); setReminderDismissed(true); }}
-    />
     </PageEnter>
   );
 }

@@ -6,28 +6,19 @@
  * their order flow, and recommends curated strategy packs.
  *
  * The "Enter" CTA opens https://www.rune-protocol.com/ in a new tab for
- * everyone. Non-node holders also see an inline reminder linking them to
- * the in-place purchase modal (PurchaseNodeModal lives in App.tsx and
- * listens on the emitOpenPurchase signal regardless of active surface).
+ * everyone.
  */
 import { useTranslation } from "react-i18next";
-import { Brain, Sparkles, ArrowRight, Crown, Radio } from "lucide-react";
-import { useActiveAccount } from "thirdweb/react";
-import { useUserPurchase } from "@/hooks/rune/use-node-presell";
-import { emitOpenPurchase } from "@/lib/rune/purchase-signal";
+import { Brain, Sparkles, ArrowRight, Radio } from "lucide-react";
 
 const RUNE_PROTOCOL_URL = "https://www.rune-protocol.com/";
 
 export function SmartPredictionHero() {
   const { t } = useTranslation();
-  const account = useActiveAccount();
-  const { hasPurchased, isLoading } = useUserPurchase(account?.address);
 
   const handleEnter = () => {
     window.open(RUNE_PROTOCOL_URL, "_blank", "noopener,noreferrer");
   };
-
-  const showBuyNodeHint = !isLoading && !hasPurchased;
 
   const features = [
     {
@@ -76,7 +67,7 @@ export function SmartPredictionHero() {
 
         {/* ── Content ─────────────────────────────────────────────── */}
         <div className="relative z-10 space-y-5 md:space-y-6">
-          {/* Top row: live badge + node-only badge */}
+          {/* Top row: live badge */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur border border-amber-500/30">
               <span className="relative flex h-1.5 w-1.5">
@@ -85,12 +76,6 @@ export function SmartPredictionHero() {
               </span>
               <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-300">
                 {t("strategy.smartPrediction.livePill", "LIVE")}
-              </span>
-            </div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-600/15 border border-amber-500/40">
-              <Crown className="h-3 w-3 text-amber-400" />
-              <span className="text-[10px] font-bold tracking-wider uppercase text-amber-200">
-                {t("strategy.smartPrediction.nodeOnlyBadge", "Node Holders")}
               </span>
             </div>
           </div>
@@ -151,14 +136,12 @@ export function SmartPredictionHero() {
             })}
           </div>
 
-          {/* CTA row. Entry is open to everyone now — non-holders see an
-              inline reminder linking to the in-place purchase modal. */}
+          {/* CTA row. Entry is open to everyone. */}
           <div className="pt-1 flex flex-col gap-2.5">
             <button
               type="button"
               onClick={handleEnter}
-              disabled={isLoading}
-              className="group relative inline-flex w-full sm:w-auto h-11 md:h-12 items-center justify-center gap-2 rounded-lg px-5 md:px-8 text-[13px] md:text-sm font-bold text-black shadow-[0_0_24px_rgba(245,158,11,0.35)] transition-all hover:shadow-[0_0_32px_rgba(245,158,11,0.6)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-wait"
+              className="group relative inline-flex w-full sm:w-auto h-11 md:h-12 items-center justify-center gap-2 rounded-lg px-5 md:px-8 text-[13px] md:text-sm font-bold text-black shadow-[0_0_24px_rgba(245,158,11,0.35)] transition-all hover:shadow-[0_0_32px_rgba(245,158,11,0.6)] hover:-translate-y-0.5 active:translate-y-0"
               style={{
                 background: "linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%)",
               }}
@@ -167,21 +150,6 @@ export function SmartPredictionHero() {
               <span>{t("strategy.smartPrediction.enterBtn", "Enter Smart Prediction")}</span>
               <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
-
-            {showBuyNodeHint && (
-              <button
-                type="button"
-                onClick={() => emitOpenPurchase()}
-                className="inline-flex items-center gap-1.5 self-start text-[11.5px] md:text-xs font-semibold text-amber-300/90 hover:text-amber-200 underline-offset-4 hover:underline"
-                data-testid="button-smart-prediction-buy-node-hint"
-              >
-                <Crown className="h-3.5 w-3.5" />
-                {t(
-                  "strategy.smartPrediction.buyNodeHint",
-                  "尚未持有节点？购买节点解锁更多权益",
-                )}
-              </button>
-            )}
           </div>
         </div>
       </section>
