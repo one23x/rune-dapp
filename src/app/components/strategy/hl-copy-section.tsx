@@ -18,15 +18,16 @@
  * (see useHlCopy) until the engine create route ships.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "framer-motion";
-import { useActiveAccount } from "thirdweb/react";
+import { Link } from "wouter";
+import { useActiveAccount, PayEmbed } from "thirdweb/react";
 import {
   Users, Activity, Layers, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
-  Settings, Check,
+  Settings, ChevronRight, Sparkles,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,8 @@ import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { queryClient } from "@app/lib/queryClient";
 import { useToast } from "@app/hooks/use-toast";
+import { thirdwebClient } from "@/lib/thirdweb/client";
+import { arbitrum } from "@/lib/thirdweb/chains";
 import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs,
 } from "@app/lib/engine-hooks";
@@ -51,6 +54,10 @@ import {
 } from "@app/components/hl/shared";
 import { useOnboardFlow } from "@app/components/copy-trading/shared";
 
+// Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
+// HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
+const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
+
 // ── HL 充值 / 提现(响应式)──────────────────────────────────────────────────
 //
 // 充值:展示用户的引擎托管 EOA(= HL 签名者/账户),用户从 Arbitrum 把 USDC 充进去;
@@ -58,29 +65,95 @@ import { useOnboardFlow } from "@app/components/copy-trading/shared";
 //       由 HlAccountStrip 的「开通账户」先把它创建出来(解决"充值地址生成不出来")。
 // 提现:hyperliquid.withdraw → 引擎签 withdraw3 经官方桥把 USDC 提到指定 Arbitrum 地址。
 // 弹窗用 w-[calc(100vw-2rem)] max-w-sm + footer 在 <sm 纵向堆叠,适配手机端。
+// 跨链 / 买币直充(thirdweb PayEmbed)—— Arbitrum USDC 直接到托管 EOA(=seller)。
+// 资金只会进引擎托管地址(HL 下单账户),与 copy-trading 的 DepositBridge 同构,
+// 仅链/资产不同(Arbitrum USDC)。先输金额→下一步→PayEmbed,弹窗内可滚动且自适应宽度。
+function HlDepositBridge({ seller }: { seller: string }) {
+  const { t } = useTranslation();
+  const account = useActiveAccount();
+  const [amount, setAmount] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const amt = Number(amount);
+  if (!account || !seller) return null;
+  return (
+    <div className="border-t border-border/40 pt-3 space-y-2">
+      <label className="text-[12px] text-muted-foreground block">
+        {t("hl.bridgeFundLabel", "用卡 / 跨链买 USDC 直充(Arbitrum)")}
+      </label>
+      {!confirmed || !(amt > 0) ? (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="USDC"
+            className="text-xs"
+            data-testid="input-hl-bridge-amount"
+          />
+          <Button size="sm" disabled={!(amt > 0)} onClick={() => setConfirmed(true)}>
+            {t("common.next", "下一步")}
+          </Button>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl w-full">
+          <button className="mb-1 text-[11px] text-amber-300 hover:underline" onClick={() => setConfirmed(false)}>
+            ← {t("common.back", "改数量")}
+          </button>
+          <div className="w-full overflow-x-auto">
+            <PayEmbed
+              client={thirdwebClient}
+              payOptions={{
+                mode: "direct_payment",
+                paymentInfo: {
+                  chain: arbitrum,
+                  sellerAddress: seller as `0x${string}`,
+                  token: { address: USDC_ARBITRUM },
+                  amount: String(amt),
+                },
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HlFunding({
   userId, network, depositAddress, withdrawable,
 }: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const account = useActiveAccount();
   const [depOpen, setDepOpen] = useState(false);
   const [wdOpen, setWdOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [dest, setDest] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && (withdrawable <= 0 || amt <= withdrawable);
   const destValid = /^0x[a-fA-F0-9]{40}$/.test(dest.trim());
+
+  // Prefill the destination with the connected wallet when the dialog opens —
+  // the common case is withdrawing back to your own wallet (still editable).
+  useEffect(() => {
+    if (wdOpen && !dest && account?.address) setDest(account.address);
+  }, [wdOpen, account?.address, dest]);
 
   const withdraw = useMutation({
     mutationFn: async () => hyperliquid.withdraw(userId, { amountUsd: amt, destination: dest.trim(), network }),
     onSuccess: () => {
       toast({ title: t("hl.withdrawSuccess", "提现已提交"), description: t("hl.withdrawSuccessDesc", "USDC 将经官方桥到达目标 Arbitrum 地址(约几分钟,含 ~$1 桥费)。") });
       queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
-      setAmount(""); setDest(""); setWdOpen(false);
+      reset(); setWdOpen(false);
     },
     onError: (e: unknown) => toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" }),
   });
+
+  function reset() { setAmount(""); setDest(""); setConfirming(false); }
+  function handleWdOpenChange(v: boolean) { if (!v) reset(); setWdOpen(v); }
 
   async function copyAddr() {
     if (!depositAddress) return;
@@ -99,74 +172,134 @@ function HlFunding({
         </Button>
       </div>
 
-      {/* 充值:展示托管 EOA 地址 */}
+      {/* 充值 —— 镜像 copy-trading 入金弹窗设计(渐变圆形图标头 + 地址行 + 资产徽章 + PayEmbed) */}
       <Dialog open={depOpen} onOpenChange={setDepOpen}>
-        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
+        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold flex items-center gap-2">
-              <ArrowDownToLine className="h-4 w-4 text-emerald-300" />{t("hl.depositTitle", "充值到 HL 交易账户")}
-            </DialogTitle>
-            <DialogDescription className="text-[12px] leading-relaxed">
-              {network === "testnet"
-                ? t("hl.depositDescTestnet", "测试网:用 Hyperliquid 测试网水龙头/桥把测试 USDC 充到下面这个托管地址。")
-                : t("hl.depositDescMainnet", "主网:从 Arbitrum 把 USDC 充到下面这个托管地址,引擎用它在 HL 下单。")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-[12px] text-muted-foreground mb-1 block">{t("hl.depositAddress", "充值地址(托管 EOA)")}</label>
-              <div className="flex items-center gap-2">
-                <Input value={depositAddress || t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")} readOnly className="bg-background/50 text-[12px] font-mono" data-testid="input-hl-deposit-address" />
-                <Button size="icon" variant="ghost" className="shrink-0" onClick={copyAddr} disabled={!depositAddress}>
-                  <Copy className="h-4 w-4" />
-                </Button>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
+                <ArrowDownToLine className="h-4 w-4 text-black" />
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-bold">{t("hl.depositTitle", "充值到 HL 交易账户")}</DialogTitle>
+                <DialogDescription className="text-[12px]">
+                  {network === "testnet"
+                    ? t("hl.depositDescTestnet", "测试网:用 Hyperliquid 测试网水龙头/桥把测试 USDC 充到下面这个托管地址。")
+                    : t("hl.depositDescMainnet", "主网:从 Arbitrum 把 USDC 充到下面这个托管地址,引擎用它在 HL 下单。")}
+                </DialogDescription>
               </div>
             </div>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-[12px] text-muted-foreground">{t("hl.depositAddressLabel", "充值地址(托管 EOA)")}</label>
+              {depositAddress ? (
+                <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">ARBITRUM</div>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1" data-testid="text-hl-deposit-address">{depositAddress}</code>
+                    <button onClick={copyAddr} className="shrink-0 text-muted-foreground hover:text-primary transition-colors" data-testid="button-hl-copy-address">
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-[12px] text-muted-foreground mb-1.5 block">{t("hl.supportedAssets", "支持资产")}</label>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="outline" className="text-[11px] no-default-hover-elevate no-default-active-elevate">USDC</Badge>
+              </div>
+            </div>
+
             <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-              {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在策略包一键跟单。提现请用本页「提现」。")}
+              {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
             </p>
+
+            {network === "mainnet" && depositAddress && <HlDepositBridge seller={depositAddress} />}
           </div>
+
           <DialogFooter>
-            <Button variant="gold" className="w-full" onClick={() => setDepOpen(false)}>{t("common.done", "完成")}</Button>
+            <Button variant="outline" size="sm" onClick={() => setDepOpen(false)}>{t("common.close", "关闭")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 提现:withdraw3 → Arbitrum */}
-      <Dialog open={wdOpen} onOpenChange={(v) => { if (!v) { setAmount(""); setDest(""); } setWdOpen(v); }}>
-        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
+      {/* 提现 —— 镜像 copy-trading 两步确认(填写 → 复核 → 提交);目标地址默认连接钱包。 */}
+      <Dialog open={wdOpen} onOpenChange={handleWdOpenChange}>
+        <DialogContent className="bg-card border-border w-[calc(100vw-2rem)] max-w-sm rounded-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold flex items-center gap-2">
-              <ArrowUpFromLine className="h-4 w-4 text-amber-300" />{t("hl.withdrawTitle", "从 HL 提现")}
-            </DialogTitle>
-            <DialogDescription className="text-[12px] leading-relaxed">
-              {t("hl.withdrawDesc", "经 Hyperliquid 官方桥把 USDC 提到指定 Arbitrum 地址(含 ~$1 桥费,占用保证金的部分需先平仓)。")}
-            </DialogDescription>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
+                <ArrowUpFromLine className="h-4 w-4 text-black" />
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-bold">{t("hl.withdrawTitle", "从 HL 提现")}</DialogTitle>
+                <DialogDescription className="text-[12px]">
+                  {t("hl.withdrawDesc", "经 Hyperliquid 官方桥把 USDC 提到指定 Arbitrum 地址(含 ~$1 桥费,占用保证金的部分需先平仓)。")}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
+
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
-                <label className="text-[12px] text-muted-foreground">{t("hl.withdrawAmount", "提现金额(USDC)")}</label>
+                <label className="text-[12px] text-muted-foreground">{t("hl.withdrawAmountLabel", "提现金额(USDC)")}</label>
                 <span className="text-[11px] text-foreground/50">{t("hl.withdrawable", "可提")}: {fmtUsd(withdrawable)}</span>
               </div>
-              <Input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" inputMode="decimal" className="bg-background/50 text-sm" data-testid="input-hl-withdraw-amount" />
+              <Input value={amount} onChange={(e) => { setAmount(e.target.value.replace(/[^0-9.]/g, "")); setConfirming(false); }} placeholder="0.00" inputMode="decimal" className="bg-background/50 text-sm" data-testid="input-hl-withdraw-amount" />
+              {amount !== "" && !amountValid && (
+                <p className="mt-1 text-[11px] text-red-400">{t("hl.withdrawInvalidAmount", "金额无效或超出可提余额")}</p>
+              )}
             </div>
             <div>
-              <label className="text-[12px] text-muted-foreground mb-1 block">{t("hl.withdrawDest", "目标地址(Arbitrum 0x...)")}</label>
-              <Input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="0x..." className="bg-background/50 text-[12px] font-mono" data-testid="input-hl-withdraw-dest" />
+              <label className="text-[12px] text-muted-foreground mb-1 block">{t("hl.withdrawDestLabel", "目标地址(Arbitrum 0x...)")}</label>
+              <Input value={dest} onChange={(e) => { setDest(e.target.value.trim()); setConfirming(false); }} placeholder="0x..." className="bg-background/50 text-[12px] font-mono" data-testid="input-hl-withdraw-dest" />
+              {dest !== "" && !destValid && (
+                <p className="mt-1 text-[11px] text-red-400">{t("hl.withdrawInvalidDest", "请输入有效的 Arbitrum 地址")}</p>
+              )}
             </div>
+
+            {confirming && amountValid && destValid && (
+              <div className="rounded-lg p-3 space-y-1.5" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}>
+                <div className="flex items-center gap-1.5 text-[12px] text-amber-300 font-semibold">
+                  <AlertTriangle className="h-3.5 w-3.5" /> {t("hl.withdrawReviewTitle", "请确认提现信息")}
+                </div>
+                <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">{t("hl.withdrawAmountLabel", "提现金额(USDC)")}</span><span className="font-bold tabular-nums">{fmtUsd(amt)}</span></div>
+                <div className="text-[11px] font-mono text-foreground/70 break-all">{dest}</div>
+              </div>
+            )}
           </div>
+
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setWdOpen(false)}>{t("common.cancel", "取消")}</Button>
-            <Button
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
-              disabled={!amountValid || !destValid || withdraw.isPending}
-              onClick={() => withdraw.mutate()}
-              data-testid="button-hl-withdraw-confirm"
-            >
-              {withdraw.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ArrowUpFromLine className="h-4 w-4 mr-1.5" />}
-              {t("hl.withdrawConfirm", "确认提现")}
-            </Button>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setWdOpen(false)}>{t("common.cancel", "取消")}</Button>
+            {!confirming ? (
+              <Button
+                size="sm"
+                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+                disabled={!amountValid || !destValid}
+                onClick={() => setConfirming(true)}
+                data-testid="button-hl-withdraw-next"
+              >
+                {t("hl.withdrawConfirm", "下一步")}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+                disabled={!amountValid || !destValid || withdraw.isPending}
+                onClick={() => withdraw.mutate()}
+                data-testid="button-hl-withdraw-confirm"
+              >
+                {withdraw.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ArrowUpFromLine className="h-4 w-4 mr-1.5" />}
+                {withdraw.isPending ? t("hl.withdrawSubmitting", "提交中…") : t("hl.withdrawSubmit", "确认提现")}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -456,7 +589,7 @@ function Pill({
   );
 }
 
-function ConfigPanel({
+export function ConfigPanel({
   cfg, setCfg, reduce,
 }: { cfg: HlFollowConfig; setCfg: React.Dispatch<React.SetStateAction<HlFollowConfig>>; reduce: boolean }) {
   const { t } = useTranslation();
@@ -542,104 +675,158 @@ function ConfigPanel({
   );
 }
 
-// ── 选择策略 — multi-select leader card (real HlLeader fields) ────────────────
-
-function StrategyCard({
-  leader, selected, subscribed, copying, onToggle, reduce,
+// ── Hero — "进入智能合约交易" (mirrors the trade page hero, LIVE stats) ─────────
+//
+// Visual twin of the trade page's perp hero, but every number is real:
+// 账户净值 / 未实现盈亏 / 跟单中 come from useHlAccount + the live sub count.
+function HlHero({
+  wallet, loading, accountValue, unrealizedPnl, followCount, reduce,
 }: {
-  leader: HlLeader; selected: boolean; subscribed: boolean; copying: boolean;
-  onToggle: (l: HlLeader) => void; reduce: boolean;
+  wallet?: string; loading: boolean; accountValue: number; unrealizedPnl: number; followCount: number; reduce: boolean;
 }) {
   const { t } = useTranslation();
-  const meta = TIER_META[tierOf(leader)];
-  const Icon = meta.icon;
-  const interactive = !subscribed;
+  const pnlPos = unrealizedPnl >= 0;
+  const stat = (label: string, node: React.ReactNode) => (
+    <div className="min-w-0">
+      <p className="text-[10px] text-foreground/55 uppercase tracking-wider mb-1 truncate">{label}</p>
+      {node}
+    </div>
+  );
   return (
     <motion.div
-      {...(reduce || !interactive ? {} : { whileTap: { scale: 0.985 } })}
-      onClick={() => interactive && onToggle(leader)}
-      className={cn(
-        "glass-panel p-4 transition-all",
-        interactive && "cursor-pointer",
-        subscribed
-          ? "border-emerald-500/30 shadow-[0_0_14px_rgba(52,211,153,0.12)]"
-          : selected
-            ? "border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] bg-[rgba(36,28,14,0.6)]"
-            : "hover:border-white/20",
-      )}
+      {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { type: "spring", stiffness: 220, damping: 26 } })}
+      className="glass-panel-strong relative p-5 overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
-          >
-            <Icon className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold text-foreground truncate">{leader.label || shortAddr(leader.address)}</span>
-              {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
-            </div>
-            <div className="text-[10px] text-foreground/50 mt-1 flex items-center gap-2">
-              <Badge className="text-[8px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{t(meta.labelKey)}</Badge>
-              <code className="font-mono truncate">{shortAddr(leader.address)}</code>
-            </div>
-          </div>
-        </div>
-        {subscribed ? (
-          <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-[11px] font-medium">
-            {copying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}{t("hl.copying", "跟单中")}
-          </span>
-        ) : (
-          <div className={cn(
-            "shrink-0 w-5 h-5 rounded-full flex items-center justify-center border transition-colors",
-            selected ? "bg-amber-500 border-amber-500 text-black" : "border-white/20 text-transparent",
-          )}>
-            <Check className="w-3 h-3" strokeWidth={3} />
-          </div>
-        )}
-      </div>
+      <div className="shimmer-sweep" />
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Real leader metrics */}
-      <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-white/10">
-        <div className="bg-black/20 rounded-lg p-2 border border-white/5">
-          <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.score", "评分")}</p>
-          <p className="text-xs font-bold text-foreground tabular-nums">{fmtScore(leader.score)}</p>
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg">
+                <Activity className="text-amber-400 h-5 w-5" />
+              </div>
+              <span className="absolute -top-1 -right-1 w-3 h-3">
+                {!reduce && <span className="absolute inset-0 bg-emerald-400 rounded-full" style={{ animation: "pulse-ring 2s cubic-bezier(0.4,0,0.6,1) infinite" }} />}
+                <span className="absolute inset-0 bg-emerald-400 rounded-full border border-black/50" />
+              </span>
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-display text-[19px] font-bold tracking-tight text-foreground drop-shadow-sm leading-tight">
+                {t("hl.heroTitle", "进入智能合约交易")}
+              </h2>
+              <p className="text-[12px] text-foreground/55 leading-snug mt-0.5">{t("hl.heroSubtitle", "实时复制顶级合约交易员的链上策略,资金自托管。")}</p>
+            </div>
+          </div>
+          <span className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-medium text-emerald-300">
+            <span className={cn("w-1.5 h-1.5 bg-emerald-400 rounded-full", !reduce && "animate-pulse")} />
+            {t("hl.engineLive", "实时引擎")}
+          </span>
         </div>
-        <div className="bg-black/20 rounded-lg p-2 border border-white/5">
-          <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.medHold", "中位持仓")}</p>
-          <p className="text-xs font-bold text-foreground tabular-nums">{fmtHold(leader.medianHoldingS)}</p>
+
+        <div className="grid grid-cols-3 gap-2 mt-4 rounded-xl bg-black/25 border border-white/10 p-3">
+          {stat(
+            t("hl.accountValue", "账户净值"),
+            loading
+              ? <Skeleton className="h-5 w-16 rounded" />
+              : <p className="text-sm font-bold text-foreground tabular-nums truncate num-gold">{wallet ? fmtUsd(accountValue) : "—"}</p>,
+          )}
+          {stat(
+            t("hl.unrealized", "未实现盈亏"),
+            loading
+              ? <Skeleton className="h-5 w-16 rounded" />
+              : <p className={cn("text-sm font-bold tabular-nums truncate", pnlPos ? "text-emerald-400" : "text-red-400")}>{wallet ? `${pnlPos ? "+" : ""}${fmtUsd(unrealizedPnl)}` : "—"}</p>,
+          )}
+          {stat(
+            t("hl.copying", "跟单中"),
+            <p className="text-sm font-bold text-foreground tabular-nums">{followCount}</p>,
+          )}
         </div>
-        <div className="bg-black/20 rounded-lg p-2 border border-white/5">
-          <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.style", "风格")}</p>
-          <p className="text-xs font-bold text-foreground">{leader.isHft ? t("hl.styleHft", "高频") : t("hl.styleSwing", "波段")}</p>
-        </div>
+
+        <p className="mt-3 text-[10px] text-foreground/40 flex items-center gap-1.5">
+          <ShieldCheck className="h-3 w-3 text-emerald-400/70 shrink-0" />
+          {t("hl.heroTrust", "资金托管 · Arbitrum USDC · Hyperliquid 引擎")}
+        </p>
       </div>
     </motion.div>
   );
 }
 
-function StrategySelect({
-  leaders, loading, selected, subscribedLeaders, pendingFor, onToggle, reduce,
+// ── 热门金库 — leader card that navigates to a full detail page ───────────────
+
+function VaultCard({ leader, network, subscribed }: { leader: HlLeader; network: HlNetwork; subscribed: boolean }) {
+  const { t } = useTranslation();
+  const meta = TIER_META[tierOf(leader)];
+  const Icon = meta.icon;
+  return (
+    <Link href={`/strategy/vault/${network}/${leader.address}`} data-testid={`link-vault-${leader.address}`}>
+      <div className="glass-panel p-4 transition-all cursor-pointer hover:border-white/20 active:scale-[0.99]">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
+            >
+              <Icon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-foreground truncate">{leader.label || shortAddr(leader.address)}</span>
+                {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
+              </div>
+              <div className="text-[10px] text-foreground/50 mt-1 flex items-center gap-2">
+                <Badge className="text-[8px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{t(meta.labelKey)}</Badge>
+                <code className="font-mono truncate">{shortAddr(leader.address)}</code>
+              </div>
+            </div>
+          </div>
+          {subscribed ? (
+            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-[11px] font-medium">
+              <CheckCircle2 className="w-3 h-3" />{t("hl.copying", "跟单中")}
+            </span>
+          ) : (
+            <span className="shrink-0 flex items-center gap-0.5 text-[11px] text-amber-300/90 font-medium">
+              {t("hl.viewDetail", "查看详情")}<ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          )}
+        </div>
+
+        {/* Real leader metrics */}
+        <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-white/10">
+          <div className="bg-black/20 rounded-lg p-2 border border-white/5">
+            <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.score", "评分")}</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{fmtScore(leader.score)}</p>
+          </div>
+          <div className="bg-black/20 rounded-lg p-2 border border-white/5">
+            <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.medHold", "中位持仓")}</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{fmtHold(leader.medianHoldingS)}</p>
+          </div>
+          <div className="bg-black/20 rounded-lg p-2 border border-white/5">
+            <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.style", "风格")}</p>
+            <p className="text-xs font-bold text-foreground">{leader.isHft ? t("hl.styleHft", "高频") : t("hl.styleSwing", "波段")}</p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function VaultsList({
+  leaders, loading, network, subscribedLeaders,
 }: {
-  leaders: HlLeader[];
-  loading: boolean;
-  selected: Set<string>;
-  subscribedLeaders: Set<string>;
-  pendingFor?: string;
-  onToggle: (l: HlLeader) => void;
-  reduce: boolean;
+  leaders: HlLeader[]; loading: boolean; network: HlNetwork; subscribedLeaders: Set<string>;
 }) {
   const { t } = useTranslation();
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4 text-amber-400" />
-          <h3 className="text-sm font-medium text-foreground/90">{t("hl.selectStrategy", "选择策略")}</h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+          <h3 className="text-sm font-medium text-foreground/90 truncate">{t("hl.hotVaults", "热门金库")}</h3>
         </div>
-        <span className="text-[10px] text-foreground/50 bg-white/10 px-2 py-0.5 rounded border border-white/10">{t("hl.multiSelect", "可多选")}</span>
+        <span className="text-[10px] text-foreground/50 truncate ml-2">{t("hl.hotVaultsDesc", "点击金库查看详情并一键跟单")}</span>
       </div>
 
       {loading ? (
@@ -648,20 +835,9 @@ function StrategySelect({
         <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
       ) : (
         <div className="space-y-3">
-          {leaders.map((l) => {
-            const key = l.address.toLowerCase();
-            return (
-              <StrategyCard
-                key={l.address}
-                leader={l}
-                selected={selected.has(key)}
-                subscribed={subscribedLeaders.has(key)}
-                copying={pendingFor?.toLowerCase() === key}
-                onToggle={onToggle}
-                reduce={reduce}
-              />
-            );
-          })}
+          {leaders.map((l) => (
+            <VaultCard key={l.address} leader={l} network={network} subscribed={subscribedLeaders.has(l.address.toLowerCase())} />
+          ))}
         </div>
       )}
     </div>
@@ -670,7 +846,7 @@ function StrategySelect({
 
 // ── 数据源 tab — live leader signal feed ─────────────────────────────────────
 
-function SignalRow({ s }: { s: HlSignal }) {
+export function SignalRow({ s }: { s: HlSignal }) {
   const { t } = useTranslation();
   const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
   const long = s.side === "LONG";

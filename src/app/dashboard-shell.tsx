@@ -14,6 +14,7 @@ const Dashboard       = lazy(() => import("@app/pages/dashboard"));
 const Trade           = lazy(() => import("@app/pages/trade"));
 const Vault           = lazy(() => import("@app/pages/vault"));
 const StrategyPage    = lazy(() => import("@app/pages/strategy"));
+const StrategyVault   = lazy(() => import("@app/pages/strategy-vault"));
 const Market          = lazy(() => import("@app/pages/market"));
 const CopyTrading     = lazy(() => import("@app/pages/copy-trading"));
 const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
@@ -236,6 +237,7 @@ function DashboardRoutes() {
         <Route path="/trade" component={Trade} />
         <Route path="/vault" component={Vault} />
         <Route path="/strategy" component={StrategyPage} />
+        <Route path="/strategy/vault/:network/:address">{(p) => <StrategyVault network={p.network} address={p.address} />}</Route>
         {/* HL copy-trading was merged into /strategy; keep /hl as a redirect
             so old links / bookmarks land on the strategy page. */}
         <Route path="/hl">{() => <Redirect to="/strategy" />}</Route>
