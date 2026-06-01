@@ -63,6 +63,25 @@
 | F15 | **策略包优化**(呈现/参数/定价/可信度,console+dapp 一致) | strategy + console | official_strategies / console packs | — |
 | F16 | **设计系统 + 手机布局优化**(全 dapp 响应式/视觉一致) | 全部 | — | — |
 | F17 | **AI 智能跟单(把"选交易员"升级成 AI 决策)** | strategy/copy-trading | 见下 | signal_trades/ai_inferences |
+| F18 | **策略包 → project 会员 一键跟单(console→dapp→自动开平)** | console + dapp | 见下 | console_pack_selections/hl_copy_subscriptions |
+
+### F18 · 策略包分发 + 会员一键跟单(闭环)
+
+**目标链**:project 客户在 console 选/开启策略包(可分**档位/tier**、可复制微调参数、记用量)→ 他们的 dapp 前端只展示已开启的包(按档位)给会员选 → 会员**一键跟单** → 映射成 copy 订阅 → **executor(+F17 AI)自动开仓 + 自动平仓**。
+
+**已具备(复用,不用重造)**:
+- console:`console_pack_selections`(选/参数,按 api key)、`console_custom_packs`(复制+微调)、用量→定价 ✅。
+- 订阅创建:`subscribeCreate` POST `/v1/users/:id/hl/subscriptions` 已 live ✅。
+- **自动开平**:copy-executor 本就镜像 **开仓 + 平仓**(平仓恒镜像)→ "一键后自动跟单平仓"本质已成,会员的"一键"只需**创建订阅**。
+
+**要新建(桥 + 会员视图)**:
+1. **档位 tier**:console 每个已开启包加 tier 标签(入门/进阶/专业,或按 min-balance/费率档),给会员分级选。
+2. **包 → copy 目标绑定**(唯一数据模型决策):HL 包绑 `leaderAddress`(或一组)+ 参数(ratio/杠杆/TP-SL/AI 模式);project 客户在 console 建/调包时绑定。
+3. **project 维度公开目录端点** `GET /v1/projects/:projectId/packs`(或经 project key):返回**该 project 已开启(selected=true)**的包 + 档位 + 会员向参数(**剥定价**)+ copy 目标。
+4. **dapp 会员策略包视图**:按档位列出本 project 的包;每卡 → **一键跟单**按钮 → 用包的 leader+参数+AI 模式调 `subscribeCreate`。
+5. **镜像**:packs+selections 进客户 Supabase(扩 position-sync 覆盖)。
+
+**先做哪步**:① console 加 tier + 包绑 leaderAddress → ② `/v1/projects/:id/packs` 端点(项目作用域、剥价)→ ③ dapp 会员包视图 + 一键跟单(映射 pack→subscribeCreate)→ ④ 用量回填(executor 已写 signal_trades/hl_positions)→ ⑤ 镜像。会员暂停/取消 = 已建的 manage-follow。
 
 ### F17 · AI 智能跟单(核心产品修正)
 
