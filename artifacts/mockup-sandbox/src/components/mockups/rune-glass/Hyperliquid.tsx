@@ -404,21 +404,10 @@ export function Hyperliquid() {
                         </div>
                       </div>
 
-                      {/* Footer: commission + CTA */}
+                      {/* Footer: data only — management fee + chain label, no CTA */}
                       <div className="relative z-10 flex items-center justify-between gap-3 pt-3 border-t border-white/5">
                         <span className="text-[10px] text-white/45">管理费 <span className="text-white/70 font-mono">{v.commission}%</span></span>
-                        {v.hot ? (
-                          <button className="flex items-center gap-1.5 gold-button font-bold text-xs px-4 py-2 rounded-lg">
-                            <Zap size={13} className="fill-black/20" />
-                            跟单
-                            <ChevronRight size={13} />
-                          </button>
-                        ) : (
-                          <button className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-xs px-4 py-2 rounded-lg hover:bg-amber-500/20 transition-colors">
-                            跟单
-                            <ChevronRight size={13} />
-                          </button>
-                        )}
+                        <span className="text-[10px] text-white/40 font-mono tracking-wide">Hyperliquid L1 · 永续</span>
                       </div>
                     </motion.div>
                   );
