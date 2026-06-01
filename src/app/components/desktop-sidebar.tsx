@@ -66,7 +66,7 @@ export function DesktopSidebar() {
               return (
                 <Link key={item.path} href={item.path} aria-label={t(item.labelKey)} aria-current={isActive ? "page" : undefined}>
                   <div
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer ${
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer hover:translate-x-0.5 active:scale-[0.98] ${
                       isActive
                       ? "text-primary bg-primary/10 shadow-[0_0_12px_rgba(212,168,50,0.08)]"
                         : "text-foreground/45 hover:text-foreground/75 hover:bg-white/[0.03]"
@@ -88,7 +88,7 @@ export function DesktopSidebar() {
             return (
               <Link key={item.path} href={item.path} aria-label={t(item.labelKey)} aria-current={isActive ? "page" : undefined}>
                 <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer hover:translate-x-0.5 active:scale-[0.98] ${
                     isActive
                       ? "text-primary bg-primary/10 shadow-[0_0_12px_rgba(212,168,50,0.08)]"
                       : "text-foreground/50 hover:text-foreground/80 hover:bg-white/[0.03]"

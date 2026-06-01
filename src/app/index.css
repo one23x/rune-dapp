@@ -1294,20 +1294,34 @@
 }
 
 .glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(125%);
-  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 244, 214, 0.07) 0%, rgba(255, 244, 214, 0.012) 16%, transparent 38%),
+    var(--glass-bg);
+  backdrop-filter: blur(22px) saturate(140%) brightness(1.04);
+  -webkit-backdrop-filter: blur(22px) saturate(140%) brightness(1.04);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-inner-shadow);
   border-radius: 1.5rem;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .glass-panel-strong {
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 244, 214, 0.10) 0%, rgba(255, 244, 214, 0.02) 16%, transparent 40%),
+    var(--glass-bg-strong);
+  backdrop-filter: blur(26px) saturate(150%) brightness(1.05);
+  -webkit-backdrop-filter: blur(26px) saturate(150%) brightness(1.05);
   border: 1px solid var(--glass-border-strong);
   box-shadow: var(--glass-shadow), var(--glass-inner-shadow);
   border-radius: 1.5rem;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Dark glass button — raised bevel: bright top edge, inset bottom shadow */
@@ -1385,4 +1399,76 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   iOS liquid-glass interaction layer — opt-in tactile utilities.
+   `.glass-interactive` lifts a panel on hover and presses it on tap with a
+   spring-like easing; `.tap-press` adds a quick scale-down to any tappable
+   element; `.glass-sheen` glides a soft specular gloss across a panel.
+─────────────────────────────────────────────────────────────────────── */
+.glass-interactive {
+  cursor: pointer;
+  will-change: transform;
+}
+.glass-interactive:hover {
+  transform: translateY(-3px);
+  border-color: var(--glass-border-strong);
+  box-shadow:
+    0 20px 52px rgba(0, 0, 0, 0.80),
+    0 2px 4px rgba(0, 0, 0, 0.60),
+    var(--glass-inner-shadow),
+    0 0 0 1px rgba(246, 209, 138, 0.16);
+}
+.glass-interactive:active {
+  transform: translateY(-1px) scale(0.985);
+  transition-duration: 0.12s;
+}
+
+.tap-press {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.tap-press:active {
+  transform: scale(0.95);
+}
+
+/* Soft diagonal specular gloss that glides across a panel. Place as an
+   absolutely-positioned child inside a `relative overflow-hidden` panel. */
+.glass-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 244, 214, 0.10) 47%,
+    rgba(255, 255, 255, 0.16) 50%,
+    rgba(255, 244, 214, 0.10) 53%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  background-position: 180% 0;
+  animation: glassSheen 7s cubic-bezier(0.5, 0, 0.2, 1) infinite;
+}
+@keyframes glassSheen {
+  0% { background-position: 180% 0; }
+  55%, 100% { background-position: -80% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-interactive,
+  .tap-press {
+    transition: none;
+  }
+  .glass-interactive:hover,
+  .glass-interactive:active {
+    transform: none;
+  }
+  .glass-sheen {
+    animation: none;
+  }
 }
