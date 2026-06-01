@@ -143,19 +143,45 @@ export function isEndpointMissing(err: unknown): boolean {
   return /\b(404|405|not.?found|method.?not.?allowed|no_route|route)\b/i.test(s);
 }
 
+/** Per-follow risk configuration captured by the follow-config dialog. */
+export interface HlFollowConfig {
+  /** Fraction of the leader's notional mirrored per trade (0–1). */
+  notionalRatio: number;
+  /** Hard cap on leverage applied to mirrored positions. */
+  maxLeverage: number;
+  /** Auto take-profit on the mirrored position (%, null = off). */
+  takeProfitPct?: number | null;
+  /** Auto stop-loss on the mirrored position (%, null = off). */
+  stopLossPct?: number | null;
+}
+
+export const HL_DEFAULT_FOLLOW: HlFollowConfig = {
+  notionalRatio: 0.1,
+  maxLeverage: 3,
+  takeProfitPct: null,
+  stopLossPct: null,
+};
+
+interface CopyVars {
+  leader: HlLeader;
+  config: HlFollowConfig;
+}
+
 export function useHlCopy(userId: string | undefined, network: HlNetwork) {
   const { t } = useTranslation();
   const { toast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: async (leader: HlLeader) => {
+    mutationFn: async ({ leader, config }: CopyVars) => {
       if (!userId) throw new Error("no_user");
       return hyperliquid.subscribeCreate(userId, {
         leaderAddress: leader.address,
         network,
-        // Sensible defaults; the engine create route will validate/clamp.
-        notionalRatio: 0.1,
-        maxLeverage: 3,
+        // User-configured risk params; the engine create route validates/clamps.
+        notionalRatio: config.notionalRatio,
+        maxLeverage: config.maxLeverage,
+        takeProfitPct: config.takeProfitPct ?? undefined,
+        stopLossPct: config.stopLossPct ?? undefined,
       });
     },
     onSuccess: () => {
@@ -183,8 +209,8 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
   });
 
   return {
-    copy: (leader: HlLeader) => mutation.mutate(leader),
-    pendingFor: mutation.isPending ? (mutation.variables as HlLeader | undefined)?.address : undefined,
+    copy: (leader: HlLeader, config: HlFollowConfig) => mutation.mutate({ leader, config }),
+    pendingFor: mutation.isPending ? (mutation.variables as CopyVars | undefined)?.leader?.address : undefined,
   };
 }
 

@@ -1,350 +1,300 @@
 import React, { useState } from 'react';
 import { 
-  Lock, Zap, TrendingUp, ChevronRight, Check, ShoppingCart, Crown, Shield, Sparkles, 
-  ToggleLeft, ToggleRight, ArrowRight, Settings, ChevronDown 
+  Check, 
+  ChevronRight, 
+  Settings, 
+  TrendingUp,
+  Activity,
+  Zap,
+  CheckCircle2,
+  Users,
+  Wallet
 } from 'lucide-react';
 
 export function CopyTradingStrategy() {
-  const [autoCopy, setAutoCopy] = useState(true);
-  const [aiFilter, setAiFilter] = useState(true);
+  const [allocation, setAllocation] = useState('10%');
+  const [leverage, setLeverage] = useState('5x');
+  const [takeProfit, setTakeProfit] = useState('50%');
+  const [stopLoss, setStopLoss] = useState('20%');
+  
+  const [selectedTraders, setSelectedTraders] = useState<number[]>([]);
+
+  const traders = [
+    {
+      id: 1,
+      name: "CryptoLeader Alpha",
+      initials: "CA",
+      color: "bg-blue-500/20 text-blue-400",
+      roi: "+342.5%",
+      winRate: "68%",
+      drawdown: "-12.4%",
+      followers: "1,240",
+      aum: "$2.4M"
+    },
+    {
+      id: 2,
+      name: "NewsArb Pro",
+      initials: "NP",
+      color: "bg-emerald-500/20 text-emerald-400",
+      roi: "+287.1%",
+      winRate: "74%",
+      drawdown: "-8.2%",
+      followers: "892",
+      aum: "$1.8M"
+    },
+    {
+      id: 3,
+      name: "Momentum Trader",
+      initials: "MT",
+      color: "bg-rose-500/20 text-rose-400",
+      roi: "+156.8%",
+      winRate: "61%",
+      drawdown: "-18.5%",
+      followers: "3,450",
+      aum: "$5.2M"
+    },
+    {
+      id: 4,
+      name: "DeFi Maximalist",
+      initials: "DM",
+      color: "bg-amber-500/20 text-amber-400",
+      roi: "+210.4%",
+      winRate: "58%",
+      drawdown: "-15.1%",
+      followers: "2,100",
+      aum: "$3.1M"
+    }
+  ];
+
+  const toggleTrader = (id: number) => {
+    setSelectedTraders(prev => 
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-[#0d0b08] text-zinc-300 font-sans overflow-x-hidden pb-10">
-      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-8">
+    <div className="min-h-screen bg-[#0d0b08] text-zinc-300 font-sans overflow-x-hidden selection:bg-[#f59e0b]/30">
+      <div className="max-w-[390px] mx-auto bg-[#0d0b08] min-h-screen relative shadow-2xl border-x border-white/5 pb-24">
         
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Strategy & Tiers</h1>
-          <p className="text-sm text-zinc-500 mt-1">Manage your membership, limits, and AI decisions.</p>
-        </div>
+        {/* Header Section */}
+        <header className="px-4 pt-5 pb-4 relative overflow-hidden bg-gradient-to-b from-[#f59e0b]/8 to-transparent border-b border-white/5">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#f59e0b]/40 to-transparent"></div>
+          <div className="absolute -top-12 right-0 w-40 h-40 bg-[#f59e0b]/8 rounded-full blur-3xl pointer-events-none"></div>
 
-        {/* 1. Current Status Card */}
-        <section>
-          <div className="relative rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-black to-black p-6 overflow-hidden">
-            <div className="absolute top-0 right-0 p-32 bg-amber-500/5 blur-[100px] rounded-full pointer-events-none"></div>
-            
-            <div className="relative z-10">
-              <div className="flex flex-wrap items-center gap-3 mb-6">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full text-xs font-medium">
-                  <Crown className="w-3.5 h-3.5" />
-                  Pro 会员
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-xs font-medium">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  L2 策略包激活中
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-lg font-semibold text-white tracking-tight leading-tight">跟单策略</h1>
+              <p className="text-[11px] text-zinc-500 mt-0.5">配置跟单参数并选择策略</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
+              </div>
+              <span className="text-[11px] font-medium text-[#10b981]">Engine Live</span>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">账户净值</p>
+              <p className="text-sm font-semibold text-white">$12,450</p>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">未实现盈亏</p>
+              <p className="text-sm font-semibold text-[#10b981]">+$450</p>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5">
+              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">跟单中</p>
+              <p className="text-sm font-semibold text-white">2</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Configuration Section */}
+        <div className="p-4 space-y-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Settings className="w-4 h-4 text-zinc-400" />
+            <h2 className="text-sm font-semibold text-white">参数配置</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Allocation */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-zinc-400">跟单比例 (仓位占比)</span>
+                <span className="text-xs font-mono text-[#f59e0b]">{allocation}</span>
+              </div>
+              <div className="flex gap-2">
+                {['5%', '10%', '25%', '50%'].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setAllocation(val)}
+                    className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-all ${
+                      allocation === val 
+                        ? 'bg-[#f59e0b]/10 border-[#f59e0b]/30 text-[#f59e0b]' 
+                        : 'bg-[#15120d] border-white/5 text-zinc-400 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Leverage */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-zinc-400">杠杆倍数</span>
+                <span className="text-xs font-mono text-[#f59e0b]">{leverage}</span>
+              </div>
+              <div className="flex gap-2">
+                {['2x', '3x', '5x', '10x'].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setLeverage(val)}
+                    className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-all ${
+                      leverage === val 
+                        ? 'bg-[#f59e0b]/10 border-[#f59e0b]/30 text-[#f59e0b]' 
+                        : 'bg-[#15120d] border-white/5 text-zinc-400 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* TP / SL */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <span className="text-xs text-zinc-400">止盈 %</span>
+                <div className="flex gap-1 bg-[#15120d] border border-white/5 rounded-lg p-1">
+                  {['20%', '50%', '100%'].map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setTakeProfit(val)}
+                      className={`flex-1 py-1.5 text-[10px] font-medium rounded transition-all ${
+                        takeProfit === val ? 'bg-[#2a261c] text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end">
-                    <span className="text-sm text-zinc-400">今日跟单</span>
-                    <span className="text-sm font-medium text-white">8 / <span className="text-zinc-500">15 次</span></span>
-                  </div>
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-zinc-400 w-[53%] rounded-full"></div>
-                  </div>
+              <div className="space-y-2">
+                <span className="text-xs text-zinc-400">止损 %</span>
+                <div className="flex gap-1 bg-[#15120d] border border-white/5 rounded-lg p-1">
+                  {['10%', '20%', '50%'].map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setStopLoss(val)}
+                      className={`flex-1 py-1.5 text-[10px] font-medium rounded transition-all ${
+                        stopLoss === val ? 'bg-[#2a261c] text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end">
-                    <span className="text-sm text-zinc-400">AI 决策剩余</span>
-                    <span className="text-sm font-medium text-amber-400">23 / <span className="text-amber-700">50 次</span></span>
-                  </div>
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 w-[46%] rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 pt-4 border-t border-white/5">
-                <button className="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center transition-colors">
-                  升级会员 <ArrowRight className="w-3 h-3 ml-1" />
-                </button>
-                <button className="text-xs font-medium text-amber-400 hover:text-amber-300 flex items-center transition-colors">
-                  购买决策包 <ArrowRight className="w-3 h-3 ml-1" />
-                </button>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* 2. 策略包选择 */}
-        <section className="space-y-4">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-lg font-semibold text-white">策略包</h2>
-            <span className="text-xs text-zinc-500">选择并激活</span>
+        <div className="w-full h-px bg-white/5 my-2"></div>
+
+        {/* Strategy Selection Section */}
+        <div className="p-4 space-y-4">
+          <div className="flex justify-between items-center mb-1">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-zinc-400" />
+              <h2 className="text-sm font-semibold text-white">选择策略</h2>
+            </div>
+            <span className="text-[10px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded">可多选</span>
           </div>
 
           <div className="space-y-3">
-            {/* L1 */}
-            <div className="flex items-center p-4 rounded-xl border border-white/5 bg-white/5 opacity-70 transition-all">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 font-bold mr-4">
-                L1
-              </div>
-              <div className="flex-1">
-                <div className="text-lg font-medium text-white">$100<span className="text-xs text-zinc-500 ml-1">/日</span></div>
-                <div className="text-xs text-zinc-500">$2,000 /月</div>
-              </div>
-              <div className="text-xs text-zinc-500">已解锁</div>
-            </div>
+            {traders.map(trader => {
+              const isSelected = selectedTraders.includes(trader.id);
+              return (
+                <div 
+                  key={trader.id}
+                  onClick={() => toggleTrader(trader.id)}
+                  className={`bg-[#15120d] rounded-xl p-4 cursor-pointer transition-all border ${
+                    isSelected 
+                      ? 'border-[#f59e0b] shadow-[0_0_15px_rgba(245,158,11,0.1)]' 
+                      : 'border-white/5 hover:border-white/10'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${trader.color}`}>
+                        {trader.initials}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium text-white">{trader.name}</span>
+                          <CheckCircle2 className="w-3 h-3 text-[#10b981]" />
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 flex gap-2">
+                          <span className="flex items-center gap-0.5"><Users className="w-3 h-3" /> {trader.followers}</span>
+                          <span className="flex items-center gap-0.5"><Wallet className="w-3 h-3" /> AUM: {trader.aum}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors ${
+                      isSelected ? 'bg-[#f59e0b] border-[#f59e0b] text-black' : 'border-white/10 text-transparent'
+                    }`}>
+                      <Check className="w-3 h-3" strokeWidth={3} />
+                    </div>
+                  </div>
 
-            {/* L2 Active */}
-            <div className="flex items-center p-4 rounded-xl border border-amber-500/40 bg-amber-500/5 transition-all shadow-[0_0_20px_rgba(245,158,11,0.05)]">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 font-bold mr-4">
-                L2
-              </div>
-              <div className="flex-1">
-                <div className="text-lg font-medium text-amber-500">$200<span className="text-xs text-amber-500/50 ml-1">/日</span></div>
-                <div className="text-xs text-amber-500/70">$5,000 /月</div>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-xs">
-                <Check className="w-3 h-3" /> 激活中
-              </div>
-            </div>
-
-            {/* L3 Locked */}
-            <div className="flex items-center p-4 rounded-xl border border-white/5 bg-black/40 transition-all">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 font-bold mr-4 opacity-50">
-                L3
-              </div>
-              <div className="flex-1 opacity-50">
-                <div className="text-lg font-medium text-white">$500<span className="text-xs text-zinc-500 ml-1">/日</span></div>
-                <div className="text-xs text-zinc-500">$10,000 /月</div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex items-center text-xs text-zinc-500">
-                  <Lock className="w-3 h-3 mr-1" /> 需要 Elite
+                  <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">
+                    <div>
+                      <p className="text-[9px] text-zinc-500 uppercase">ROI (30d)</p>
+                      <p className="text-xs font-bold text-[#10b981]">{trader.roi}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-500 uppercase">胜率</p>
+                      <p className="text-xs font-bold text-white">{trader.winRate}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-500 uppercase">最大回撤</p>
+                      <p className="text-xs font-bold text-[#ef4444]">{trader.drawdown}</p>
+                    </div>
+                  </div>
                 </div>
-                <button className="text-[10px] px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20 transition-colors">
-                  用积分临时升级 ↗
-                </button>
-              </div>
-            </div>
-
-            {/* L4 Locked */}
-            <div className="flex items-center p-4 rounded-xl border border-white/5 bg-black/40 transition-all">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-500 font-bold mr-4 opacity-50">
-                L4
-              </div>
-              <div className="flex-1 opacity-50">
-                <div className="text-lg font-medium text-white">$1,000<span className="text-xs text-zinc-500 ml-1">/日</span></div>
-                <div className="text-xs text-zinc-500">$100,000 /月</div>
-              </div>
-              <div className="flex items-center text-xs text-zinc-500">
-                <Lock className="w-3 h-3 mr-1" /> 需要 机构
-              </div>
-            </div>
-
-            {/* L5 Locked */}
-            <div className="flex items-center p-4 rounded-xl border border-white/5 bg-black/40 transition-all">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 font-bold mr-4 opacity-50">
-                L5
-              </div>
-              <div className="flex-1 opacity-50">
-                <div className="text-lg font-medium text-white">$2,000<span className="text-xs text-zinc-500 ml-1">/日</span></div>
-                <div className="text-xs text-zinc-500">$200,000 /月</div>
-              </div>
-              <div className="flex items-center text-xs text-zinc-500">
-                <Lock className="w-3 h-3 mr-1" /> 需要 机构
-              </div>
-            </div>
+              );
+            })}
           </div>
-        </section>
+        </div>
 
-        {/* 3. AI 决策包 */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-white flex items-center">
-              AI 决策包 <Zap className="w-4 h-4 ml-1.5 text-amber-400" />
-            </h2>
-            <span className="text-xs text-zinc-500">提升跟单可信度</span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-zinc-900/50 border border-white/5 text-sm text-zinc-400 leading-relaxed">
-            <p className="mb-3">AI 决策引擎会分析每条跟单信号，自动跳过低可信度订单，让你的跟单更稳定。决策次数越多，过滤越精准。</p>
-            <div className="font-mono text-xs flex flex-wrap items-center gap-2 text-zinc-500 bg-black/50 p-2 rounded-lg border border-white/5">
-              <span className="text-zinc-300">[信号源 12条]</span> 
-              <ArrowRight className="w-3 h-3" /> 
-              <span className="text-red-400">[AI过滤 ✕3跳过]</span> 
-              <ArrowRight className="w-3 h-3" /> 
-              <span className="text-green-400">[执行 9条]</span> 
-              <ArrowRight className="w-3 h-3" /> 
-              <span className="text-amber-400">可信度 ↑87%</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center py-6 border-b border-white/5">
-            <div className="relative w-32 h-32 mb-4">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle 
-                  cx="50" cy="50" r="45" 
-                  fill="none" 
-                  stroke="rgba(255,255,255,0.05)" 
-                  strokeWidth="8"
-                />
-                <circle 
-                  cx="50" cy="50" r="45" 
-                  fill="none" 
-                  stroke="#f59e0b" 
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray="283"
-                  strokeDashoffset={283 - (283 * 23) / 50}
-                  className="drop-shadow-[0_0_6px_rgba(245,158,11,0.6)]"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-white tracking-tighter">23<span className="text-sm text-zinc-500 font-normal">/50</span></span>
-              </div>
-            </div>
-            <div className="text-sm font-medium text-zinc-300 mb-1">本月决策剩余</div>
-            <div className="text-xs text-amber-500/70 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-              已过滤 4 条低质量信号 · 节省 $180
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-medium text-white">购买决策包</h3>
-              <span className="text-xs text-zinc-400 font-mono">我的积分: <span className="text-amber-400">680 pts</span></span>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-4 rounded-xl border border-white/5 bg-white/5 flex flex-col hover:border-white/10 transition-colors">
-                <div className="text-zinc-400 text-xs mb-1">基础包</div>
-                <div className="text-xl font-bold text-white mb-4">+50 <span className="text-xs text-zinc-500 font-normal">次</span></div>
-                <div className="mt-auto flex items-center justify-between">
-                  <span className="text-xs font-mono text-zinc-300">200 积分</span>
-                  <button className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-lg transition-colors">购买</button>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/5 flex flex-col relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
-                  🔥 推荐
-                </div>
-                <div className="text-amber-500/70 text-xs mb-1">标准包</div>
-                <div className="text-xl font-bold text-amber-400 mb-4">+150 <span className="text-xs text-amber-500/50 font-normal">次</span></div>
-                <div className="mt-auto flex items-center justify-between">
-                  <span className="text-xs font-mono text-amber-400">500 积分</span>
-                  <button className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-medium text-xs rounded-lg transition-colors shadow-[0_0_15px_rgba(245,158,11,0.3)]">购买</button>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-white/5 bg-white/5 flex flex-col relative overflow-hidden hover:border-white/10 transition-colors">
-                <div className="absolute top-0 right-0 bg-zinc-700 text-zinc-300 text-[10px] font-medium px-2 py-0.5 rounded-bl-lg flex items-center">
-                  <Zap className="w-3 h-3 mr-0.5" /> 最优惠
-                </div>
-                <div className="text-zinc-400 text-xs mb-1">高级包</div>
-                <div className="text-xl font-bold text-white mb-4">+500 <span className="text-xs text-zinc-500 font-normal">次</span></div>
-                <div className="mt-auto flex items-center justify-between">
-                  <span className="text-xs font-mono text-zinc-300">1,500 积分</span>
-                  <button className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-lg transition-colors">购买</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. 跟单配置 */}
-        <section className="space-y-4 pt-4 border-t border-white/5">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-white flex items-center">
-              <Settings className="w-4 h-4 mr-2 text-zinc-400" />
-              跟单配置
-            </h2>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-sm font-medium text-white">自动跟单模式</div>
-              <button onClick={() => setAutoCopy(!autoCopy)} className="focus:outline-none">
-                {autoCopy ? <ToggleRight className="w-8 h-8 text-amber-500" /> : <ToggleLeft className="w-8 h-8 text-zinc-600" />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-sm font-medium text-white">AI 过滤开启</div>
-              <button onClick={() => setAiFilter(!aiFilter)} className="focus:outline-none">
-                {aiFilter ? <ToggleRight className="w-8 h-8 text-amber-500" /> : <ToggleLeft className="w-8 h-8 text-zinc-600" />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-sm font-medium text-white">最低可信度阈值</div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-black rounded-lg border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
-                <span className="text-sm font-medium text-amber-400">70%</span>
-                <ChevronDown className="w-3 h-3 text-zinc-500" />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-sm font-medium text-white">当前跟单交易员</div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-zinc-400">3 位</span>
-                <button className="text-xs text-amber-500 hover:text-amber-400 flex items-center transition-colors">
-                  管理 ↗
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. 会员等级对比 */}
-        <section className="pt-4 border-t border-white/5">
-          <div className="mb-4">
-            <button className="w-full flex items-center justify-between p-4 rounded-xl bg-zinc-900 border border-white/5 text-sm text-zinc-400 hover:text-zinc-300 transition-colors">
-              <span>查看完整会员权益对比</span>
-              <ChevronDown className="w-4 h-4" />
+        {/* Sticky Bottom Action */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-8 bg-gradient-to-t from-[#0d0b08] via-[#0d0b08] to-transparent pointer-events-none">
+          <div className="max-w-[390px] mx-auto pointer-events-auto">
+            <button 
+              disabled={selectedTraders.length === 0}
+              className={`w-full relative overflow-hidden rounded-xl font-bold text-sm py-4 flex items-center justify-center gap-2 transition-all ${
+                selectedTraders.length > 0 
+                  ? 'bg-[#f59e0b] text-black shadow-[0_0_20px_rgba(245,158,11,0.35)] active:scale-[0.98]' 
+                  : 'bg-white/10 text-zinc-500 cursor-not-allowed'
+              }`}
+            >
+              {selectedTraders.length > 0 && <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>}
+              <Zap size={16} strokeWidth={2.5} />
+              <span>
+                {selectedTraders.length > 0 ? `开启跟单 · 已选 ${selectedTraders.length}` : '请选择至少一个策略'}
+              </span>
             </button>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="py-3 px-4 font-normal text-zinc-500 border-b border-white/5 w-1/5"></th>
-                  <th className="py-3 px-4 font-medium text-zinc-400 border-b border-white/5 w-1/5 text-center">Free</th>
-                  <th className="py-3 px-4 font-medium text-amber-500 border-b border-amber-500/30 bg-amber-500/5 rounded-t-lg w-1/5 text-center">Pro</th>
-                  <th className="py-3 px-4 font-medium text-zinc-400 border-b border-white/5 w-1/5 text-center">Elite</th>
-                  <th className="py-3 px-4 font-medium text-zinc-400 border-b border-white/5 w-1/5 text-center">机构</th>
-                </tr>
-              </thead>
-              <tbody className="text-zinc-300">
-                <tr>
-                  <td className="py-3 px-4 border-b border-white/5 text-zinc-400">日跟单次</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center">3</td>
-                  <td className="py-3 px-4 border-b border-amber-500/10 bg-amber-500/5 text-amber-400 text-center font-medium">15</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center">50</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center">无限</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 border-b border-white/5 text-zinc-400">AI决策</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center">5</td>
-                  <td className="py-3 px-4 border-b border-amber-500/10 bg-amber-500/5 text-amber-400 text-center font-medium">50</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center">200</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center">无限</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 border-b border-white/5 text-zinc-400">策略包</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center text-zinc-500">L1</td>
-                  <td className="py-3 px-4 border-b border-amber-500/10 bg-amber-500/5 text-amber-400 text-center font-medium">L2</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center text-indigo-400">L3</td>
-                  <td className="py-3 px-4 border-b border-white/5 text-center text-red-400">L5</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-zinc-400">月上限</td>
-                  <td className="py-3 px-4 text-center text-zinc-500">$2K</td>
-                  <td className="py-3 px-4 bg-amber-500/5 text-amber-400 text-center font-medium rounded-b-lg border-b border-amber-500/30">$5K</td>
-                  <td className="py-3 px-4 text-center">$10K</td>
-                  <td className="py-3 px-4 text-center">$200K</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+        </div>
 
       </div>
     </div>
   );
 }
+
+export default CopyTradingStrategy;

@@ -510,7 +510,7 @@ export default function StrategyPage() {
               <span className="ml-1 text-[9px] opacity-70 uppercase tracking-wider">Soon</span>
             </Button>
             <Button
-              className="text-xs bg-gradient-to-r from-cyan-600 to-blue-500 border-cyan-500/50 text-white"
+              className="text-xs bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-semibold"
               data-testid="button-inv-bind-api"
               onClick={() => {
                 if (!walletAddr) {
@@ -524,7 +524,7 @@ export default function StrategyPage() {
               {t("strategy.bindApi")}
             </Button>
             <Button
-              className="text-xs bg-gradient-to-r from-blue-600 to-indigo-500 border-blue-500/50 text-white"
+              className="text-xs bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-semibold"
               data-testid="button-inv-bind-telegram"
               onClick={() => setBindTelegramOpen(true)}
             >
@@ -719,8 +719,8 @@ export default function StrategyPage() {
         <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center" style={{ boxShadow: "0 0 12px rgba(6,182,212,0.3)" }}>
-                <Key className="h-4 w-4 text-white" />
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center" style={{ boxShadow: "0 0 12px rgba(245,158,11,0.35)" }}>
+                <Key className="h-4 w-4 text-black" />
               </div>
               <div>
                 <DialogTitle className="text-base font-bold" data-testid="text-bind-api-dialog-title">{t("strategy.bindApiTitle", { exchange: investmentExchange })}</DialogTitle>
@@ -812,7 +812,7 @@ export default function StrategyPage() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setBindApiOpen(false)} data-testid="button-cancel-bind-api">{t("common.cancel")}</Button>
             <Button
-              className="bg-gradient-to-r from-cyan-600 to-blue-500 border-cyan-500/50 text-white"
+              className="bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-semibold"
               onClick={() => {
                 if (!walletAddr) {
                   toast({ title: t("common.connectWallet"), description: t("strategy.connectWalletDesc"), variant: "destructive" });
@@ -841,8 +841,8 @@ export default function StrategyPage() {
         <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center" style={{ boxShadow: "0 0 12px rgba(59,130,246,0.3)" }}>
-                <MessageCircle className="h-4 w-4 text-white" />
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center" style={{ boxShadow: "0 0 12px rgba(245,158,11,0.35)" }}>
+                <MessageCircle className="h-4 w-4 text-black" />
               </div>
               <div>
                 <DialogTitle className="text-base font-bold" data-testid="text-bind-telegram-dialog-title">{t("strategy.bindTelegram")}</DialogTitle>
@@ -899,7 +899,7 @@ export default function StrategyPage() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setBindTelegramOpen(false)} data-testid="button-cancel-bind-telegram">{t("common.cancel")}</Button>
             <Button
-              className="bg-gradient-to-r from-blue-600 to-indigo-500 border-blue-500/50 text-white opacity-50 cursor-not-allowed"
+              className="bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-semibold opacity-50 cursor-not-allowed"
               disabled
               title="即将上线 · Coming Soon"
               data-testid="button-confirm-bind-telegram"
