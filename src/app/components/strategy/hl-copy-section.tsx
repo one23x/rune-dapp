@@ -268,7 +268,7 @@ function HlFunding({
 //   wallet, no engine user   → explicit 开通 button (reuses useOnboardFlow)
 //   engine user present      → enabled banner with live state
 function HlAccountStrip({
-  wallet, userLoading, userError, userId, onRetryUser, followCount,
+  wallet, userLoading, userError, userId, onRetryUser, followCount, funding,
 }: {
   wallet?: string;
   userLoading: boolean;
@@ -276,6 +276,8 @@ function HlAccountStrip({
   userId?: string;
   onRetryUser: () => void;
   followCount: number;
+  /** 充值 / 提现 面板,内嵌在「已开通」钱包卡里(仅已开户时) */
+  funding?: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const { steps, run, isPending } = useOnboardFlow(wallet);
@@ -407,9 +409,9 @@ function HlAccountStrip({
     );
   }
 
-  // Engine user present → account enabled banner with quick state.
+  // Engine user present → account enabled banner + 钱包面板(充值/提现).
   return (
-    <div className="glass-panel p-3.5">
+    <div className="glass-panel p-3.5 space-y-3">
       <div className="flex items-center gap-3">
         <div
           className="shrink-0 flex items-center justify-center rounded-xl h-10 w-10"
@@ -431,6 +433,7 @@ function HlAccountStrip({
           </div>
         </div>
       </div>
+      {funding && <div className="pt-3 border-t border-white/[0.06]">{funding}</div>}
     </div>
   );
 }
@@ -1125,7 +1128,7 @@ export function HlCopySection() {
         </div>
       </Link>
 
-      {/* 钱包面板 — 开户 / 充值 / 提现 (engine-user onboarding + custodial EOA) */}
+      {/* 钱包面板 — 开户 + 充值 / 提现 全部在这一张卡里 (engine-user onboarding + custodial EOA) */}
       <HlAccountStrip
         wallet={wallet}
         userLoading={!!wallet && userQ.isLoading}
@@ -1133,16 +1136,15 @@ export function HlCopySection() {
         userId={userId}
         onRetryUser={() => userQ.refetch()}
         followCount={subscribedLeaders.size}
+        funding={userId ? (
+          <HlFunding
+            userId={userId}
+            network={network}
+            depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
+            withdrawable={acct?.withdrawable ?? 0}
+          />
+        ) : undefined}
       />
-
-      {userId && (
-        <HlFunding
-          userId={userId}
-          network={network}
-          depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
-          withdrawable={acct?.withdrawable ?? 0}
-        />
-      )}
 
       {/* 热门金库 — 点击金库进入各自的详情页 */}
       <VaultsList
