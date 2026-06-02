@@ -201,7 +201,31 @@ export interface HlAccount {
   margin: number;
   unrealizedPnl: number;
   realizedPnl: number;
+  /** 当日盈亏 — today's realized closedPnl since UTC day-start (optional; backend buildAccount). */
+  todayPnl?: number;
   positions: HlPosition[];
+}
+
+/** One HL copy subscription row (+ mirrored positions) from GET /v1/users/:id/hl/subscriptions. */
+export interface HlSubscription {
+  id: string;
+  leaderAddress: string;
+  followerAddress: string;
+  network: HlNetwork;
+  ratio: number;
+  notionalCapUsd: number;
+  dailyCapUsd: number;
+  maxLeverage: number;
+  takeProfitPct: number | null;
+  stopLossPct: number | null;
+  allowedCoins: string[];
+  status: string;
+  createdAt: string;
+  /** per-customer 每日开仓笔数上限(null = 不限)。 */
+  dailyTradeCap: number | null;
+  /** 当日已开仓笔数(UTC 日切重置)。 */
+  todayTradeCount: number;
+  positions: Array<{ coin: string; sizeBase: number; avgEntryPx: number | null; updatedAt: string }>;
 }
 
 export const hyperliquid = {
@@ -236,7 +260,7 @@ export const hyperliquid = {
 
   /** A user's HL copy subscriptions + mirrored positions. */
   subscriptions: (userId: string) =>
-    get<{ userId: string; subscriptions: any[] }>(`v1/users/${userId}/hl/subscriptions`),
+    get<{ userId: string; subscriptions: HlSubscription[] }>(`v1/users/${userId}/hl/subscriptions`),
 
   /** One-click copy: CREATE an HL copy subscription (live: hl-read.ts POST :398). */
   subscribeCreate: (userId: string, body: unknown) =>

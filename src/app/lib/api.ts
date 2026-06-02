@@ -28,6 +28,7 @@ export async function apiPost(path: string, body: any) {
 //    function (replaces the old api-server `/api/proxy` route — we no longer
 //    run one). Edge function does the CORS-bypassing outbound fetch.
 import { invokeFn } from "@app/lib/supabase-client";
+import { ENGINE_BASE } from "@app/lib/engine";
 async function proxyFetch(url: string): Promise<any> {
   return invokeFn<any>("api-proxy", { url });
 }
@@ -303,8 +304,60 @@ export async function getAiFearGreed() {
   return apiFetch("/api/ai-fear-greed");
 }
 
-export async function getNewsPredictions() {
-  return apiFetch("/api/news-predictions");
+/**
+ * Real crypto-news predictions for the Trade page, sourced from the live engine
+ * route `GET /v1/sentiment/news` via the same-origin `/engine` proxy (which
+ * injects the project API key server-side — see functions/engine/[[path]].ts,
+ * `v1` is allowlisted). That route returns recent `market_sentiment` rows where
+ * source='news-cryptopanic' (headline/url/source/asset/sentiment/publishedAt).
+ *
+ * We map each row into the Trade page's `NewsPred` card shape. If the feed is
+ * gated off (CRYPTOPANIC_ENABLED=false) or hasn't ingested yet, the engine
+ * honestly returns an empty array → we return [] and the caller falls back to
+ * clearly-badged sample data rather than rendering fabricated headlines.
+ */
+export async function getNewsPredictions(): Promise<any[]> {
+  try {
+    const url = `${ENGINE_BASE.replace(/\/+$/, "")}/v1/sentiment/news?limit=30`;
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    });
+    if (!res.ok) return [];
+    const json = await res.json().catch(() => null);
+    const rows: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+    return rows
+      .map((r) => normalizeNewsRow(r))
+      .filter((n): n is NonNullable<typeof n> => n !== null);
+  } catch {
+    return [];
+  }
+}
+
+// Map one `/v1/sentiment/news` row → the Trade page `NewsPred` card shape.
+// Returns null when there's no real headline (so we never render an empty card).
+function normalizeNewsRow(r: any): any | null {
+  const headline = pickStr(r?.headline, r?.title);
+  if (!headline) return null;
+  const sentRaw = String(r?.sentiment ?? r?.classification ?? "").toUpperCase();
+  const prediction: "BULLISH" | "BEARISH" | "NEUTRAL" =
+    sentRaw.includes("BULL") ? "BULLISH" : sentRaw.includes("BEAR") ? "BEARISH" : "NEUTRAL";
+  const impRaw = String(r?.impact ?? "").toUpperCase();
+  const impact: "HIGH" | "MEDIUM" | "LOW" =
+    impRaw === "HIGH" ? "HIGH" : impRaw === "LOW" ? "LOW" : "MEDIUM";
+  const conf = pickNum(r?.confidence);
+  const realUrl = pickStr(r?.url);
+  return {
+    id: String(r?.id ?? `news-${headline.slice(0, 24)}`),
+    headline,
+    asset: pickStr(r?.asset, r?.symbol, r?.scope) ?? "CRYPTO",
+    prediction,
+    confidence: conf == null ? 50 : conf <= 1 ? Math.round(conf * 100) : Math.round(conf),
+    reasoning: pickStr(r?.reasoning, r?.summary) ?? "",
+    impact,
+    source: pickStr(r?.source, r?.publisher, r?.domain) ?? "",
+    url: realUrl && /^https?:\/\//i.test(realUrl) ? realUrl : "#",
+    publishedAt: pickStr(r?.publishedAt, r?.published_at, r?.ts) ?? new Date().toISOString(),
+  };
 }
 
 // ── Referral & Rank ───────────────────────────────────────────────────────────

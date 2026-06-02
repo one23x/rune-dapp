@@ -1026,8 +1026,9 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
       <TabsContent value="open" className="space-y-2 mt-0">
         {acct && (
           <div className="glass-panel p-3">
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-2 gap-2 text-center">
               <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.accountValue", "账户净值")}</div><div className="text-[13px] font-bold num-gold tabular-nums">{fmtUsd(acct.accountValue)}</div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.todayPnl", "当日盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", (acct.todayPnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400")}>{(acct.todayPnl ?? 0) >= 0 ? "+" : ""}{fmtUsd(acct.todayPnl ?? 0)}</div></div>
               <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.unrealized", "未实现盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", acct.unrealizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.unrealizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.unrealizedPnl)}</div></div>
               <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.realized", "已实现盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", acct.realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.realizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.realizedPnl)}</div></div>
             </div>
@@ -1088,6 +1089,17 @@ function ActiveSubs({ userId }: { userId?: string }) {
               <code className="font-mono text-foreground/80 truncate">{shortAddr(s.leaderAddress)}</code>
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[10px] text-muted-foreground/70">{(Number(s.ratio) * 100).toFixed(0)}% · {s.maxLeverage}x</span>
+                {s.dailyTradeCap != null && (
+                  <span
+                    title={t("hl.dailyTradeCapHint", "当日已开仓笔数 / 每日开仓上限(UTC 日切重置)")}
+                    className={cn(
+                      "text-[10px] tabular-nums",
+                      Number(s.todayTradeCount ?? 0) >= Number(s.dailyTradeCap) ? "text-rose-300" : "text-muted-foreground/70",
+                    )}
+                  >
+                    {t("hl.dailyTrades", "当日交易")} {Number(s.todayTradeCount ?? 0)}/{Number(s.dailyTradeCap)}
+                  </span>
+                )}
                 <Badge className={cn("text-[9px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate", paused ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300")}>{s.status}</Badge>
                 {confirming ? (
                   <>
