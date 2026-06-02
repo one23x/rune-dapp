@@ -292,7 +292,7 @@ function HlFunding({
             {!confirming ? (
               <Button
                 size="sm"
-                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+                className="gold-button w-full sm:w-auto font-extrabold disabled:opacity-50"
                 disabled={!amountValid || !destValid}
                 onClick={() => setConfirming(true)}
                 data-testid="button-hl-withdraw-next"
@@ -302,7 +302,7 @@ function HlFunding({
             ) : (
               <Button
                 size="sm"
-                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+                className="gold-button w-full sm:w-auto font-extrabold disabled:opacity-50"
                 disabled={!amountValid || !destValid || withdraw.isPending}
                 onClick={() => withdraw.mutate()}
                 data-testid="button-hl-withdraw-confirm"
@@ -603,10 +603,7 @@ function HlAccountStrip({
         <button
           onClick={isAgent ? agent.run : run}
           disabled={busy}
-          className={cn(
-            "w-full flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-[12px] font-bold transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed",
-            "bg-gradient-to-r from-amber-500 to-yellow-600 text-black border border-amber-500/50",
-          )}
+          className="gold-button w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-extrabold disabled:opacity-50"
           data-testid="button-hl-open-account"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isAgent ? <KeyRound className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
