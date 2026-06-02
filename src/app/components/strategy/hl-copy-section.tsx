@@ -469,9 +469,6 @@ function HlAccountStrip({
       {engineEoaAddress ? (
         <div className="space-y-1.5">
           <AddressLine address={engineEoaAddress} label={t("hl.tradingAccountLabel", "交易账户地址(托管 EOA)")} />
-          <p className="px-1 text-[10px] leading-snug text-muted-foreground/70">
-            {t("hl.custodialEoaNote", "引擎以此托管 EOA 在 Hyperliquid 上代为签名下单;充值请打到此地址。")}
-          </p>
           {/* 连接钱包 — 次要信息,与交易账户区分开 */}
           {wallet && (
             <div className="flex items-center gap-1.5 px-1 pt-0.5 text-[10px] text-muted-foreground/60">
