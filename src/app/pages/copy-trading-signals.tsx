@@ -4,11 +4,11 @@
  * leaderboard. All data comes from the live engine — no mock/seed fallbacks.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Activity, CheckCircle2, Check, TrendingUp, BarChart2, Shield, Zap, Trophy,
+  Activity, CheckCircle2, TrendingUp, BarChart2, Shield, Zap, Trophy,
 } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,7 +67,6 @@ function scoreFromRaw(raw: any): number {
 export default function CopyTradingSignalsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [followed, setFollowed] = useState<Record<string, boolean>>({});
 
   const leadersQ = useLeaderSignals();
   const hotQ = useHotMarkets();
@@ -162,17 +161,11 @@ export default function CopyTradingSignalsPage() {
     });
   }, [leaderboardQ.data]);
 
-  const toggleFollow = (name: string) => {
-    setFollowed(prev => {
-      const next = { ...prev, [name]: !prev[name] };
-      if (!prev[name]) {
-        toast({ title: t("copyTrading.copyStarted", "跟单已开启"), description: name });
-      } else {
-        toast({ title: t("copyTrading.copyStopped", "跟单已停止"), description: name });
-      }
-      return next;
-    });
-  };
+  // NOTE: leader SIGNALS are market-consensus (no single 0x wallet to follow),
+  // so the per-signal-card 跟单 button used to be cosmetic (local-state + toast,
+  // no network). It was removed to avoid implying a copy-trade that never fired.
+  // Real follow remains on the leaderboard rows below (they carry a 0x wallet →
+  // copySubscriptions.create, via `followWallet`).
 
   const lastUpdate = useMemo(() => {
     const now = new Date();
@@ -242,20 +235,9 @@ export default function CopyTradingSignalsPage() {
                       style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.05)" }}>
                       #{s.category}
                     </span>
-                    {followed[s.name] ? (
-                      <button onClick={() => toggleFollow(s.name)}
-                        className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 px-2.5 py-1 rounded-lg"
-                        style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
-                        <Check className="h-3 w-3" />
-                        {t("copyTrading.following", "已复制")}
-                      </button>
-                    ) : (
-                      <button onClick={() => toggleFollow(s.name)}
-                        className="text-[11px] font-bold text-black px-3 py-1 rounded-lg transition-colors hover:opacity-90"
-                        style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}>
-                        {t("copyTrading.follow", "跟单")}
-                      </button>
-                    )}
+                    {/* Per-signal follow removed: a market-consensus signal has no
+                        single wallet to copy. Real copy-trade lives on the
+                        leaderboard rows below (followWallet → copySubscriptions). */}
                   </div>
                 </div>
               ))}

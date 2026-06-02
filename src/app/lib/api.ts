@@ -214,6 +214,89 @@ export async function getAiForecastSingle(asset: string, timeframe: string, mode
   return invokeFn<any>("ai-forecast-multi", { asset, timeframe, model, lang: lang || "en" });
 }
 
+// Default basket of assets surfaced as AI prediction cards on the Trade page.
+const AI_FORECAST_ASSETS = ["BTC", "ETH", "SOL", "BNB", "DOGE", "XRP"] as const;
+
+/**
+ * Real AI predictions for the Trade page, sourced from the live Supabase
+ * `ai-forecast-multi` edge function (which runs the OpenAI/AI-Gateway model
+ * fan-out + technical-indicator pipeline) — NOT the dead `/api/ai-predictions`
+ * route. We fan out over a small asset basket and normalize each consensus
+ * result into the `AiPrediction` card shape. The edge fn's exact field names
+ * vary by model, so the mapper is defensive: it accepts several aliases and
+ * returns `null` for any asset whose response can't be mapped, so the caller
+ * can transparently fall back to clearly-badged sample data rather than render
+ * a fabricated card.
+ */
+export async function getAiPredictionsReal(timeframe = "4H", lang?: string): Promise<any[]> {
+  const results = await Promise.allSettled(
+    AI_FORECAST_ASSETS.map((asset) => getAiForecastMulti(asset, timeframe, lang)),
+  );
+  const out: any[] = [];
+  results.forEach((r, i) => {
+    if (r.status !== "fulfilled" || !r.value) return;
+    const mapped = normalizeForecastToPrediction(AI_FORECAST_ASSETS[i], timeframe, r.value);
+    if (mapped) out.push(mapped);
+  });
+  return out;
+}
+
+function pickNum(...vals: any[]): number | null {
+  for (const v of vals) {
+    if (v === undefined || v === null || v === "") continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function pickStr(...vals: any[]): string | null {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+// Normalize a single `ai-forecast-multi` response (whatever its shape) into an
+// `AiPrediction`. Returns null when the essentials (a direction) are missing.
+function normalizeForecastToPrediction(asset: string, timeframe: string, raw: any): any | null {
+  // The consensus may live at the top level or under common wrapper keys.
+  const c = raw?.consensus ?? raw?.forecast ?? raw?.result ?? raw?.data ?? raw;
+  if (!c || typeof c !== "object") return null;
+
+  const dirRaw = String(
+    c.prediction ?? c.direction ?? c.signal ?? c.side ?? c.sentiment ?? "",
+  ).toUpperCase();
+  let prediction: "BULLISH" | "BEARISH" | "NEUTRAL";
+  if (dirRaw.includes("BULL") || dirRaw === "LONG" || dirRaw === "UP" || dirRaw === "BUY") prediction = "BULLISH";
+  else if (dirRaw.includes("BEAR") || dirRaw === "SHORT" || dirRaw === "DOWN" || dirRaw === "SELL") prediction = "BEARISH";
+  else if (dirRaw.includes("NEUTRAL") || dirRaw === "HOLD") prediction = "NEUTRAL";
+  else return null; // no usable direction → don't fabricate
+
+  const confRaw = pickNum(c.confidence, c.conf, c.score, c.probability);
+  const confidence = confRaw == null ? null : (confRaw <= 1 ? Math.round(confRaw * 100) : Math.round(confRaw));
+  const current = pickNum(c.currentPrice, c.current_price, c.price, c.spot);
+  const target = pickNum(c.targetPrice, c.target_price, c.target);
+  const fgi = pickNum(c.fearGreedIndex, c.fear_greed_index, c.fgi);
+  const fgiLabel = pickStr(c.fearGreedLabel, c.fear_greed_label) ?? (fgi != null ? getFgiLabel(fgi) : null);
+  const reasoning = pickStr(c.reasoning, c.rationale, c.analysis, c.summary, c.message);
+
+  return {
+    id: `ai-real-${asset}`,
+    asset,
+    prediction,
+    confidence: confidence == null ? null : String(confidence),
+    targetPrice: target == null ? null : String(target),
+    currentPrice: current == null ? null : String(current),
+    fearGreedIndex: fgi,
+    fearGreedLabel: fgiLabel,
+    reasoning,
+    timeframe: pickStr(c.timeframe) ?? timeframe,
+    expiresAt: null,
+    createdAt: pickStr(c.createdAt, c.created_at) ?? new Date().toISOString(),
+  };
+}
+
 export const AI_MODEL_LABELS = ["GPT-4o", "DeepSeek", "Llama 3.1", "Gemini", "Grok"] as const;
 
 export async function getAiFearGreed() {
@@ -365,11 +448,27 @@ export async function fetchPolymarkets() {
         } catch { prices = []; }
         const yesRaw = parseFloat(prices[0] || m.bestAsk || "0.5");
         const noRaw = parseFloat(prices[1] || m.bestBid || "0.5");
+        // CLOB outcome token IDs — REQUIRED to place a real CLOB order. Gamma
+        // returns this as a JSON-string array `[yesTokenId, noTokenId]`, ordered
+        // to match `outcomes: ["Yes","No"]`. Thread it through so the Trade page
+        // can submit a real Polymarket bet (engine placeOrder needs tokenId).
+        let clobTokenIds: string[] = [];
+        try {
+          clobTokenIds = typeof m.clobTokenIds === "string"
+            ? JSON.parse(m.clobTokenIds)
+            : (Array.isArray(m.clobTokenIds) ? m.clobTokenIds : []);
+        } catch { clobTokenIds = []; }
         return {
           id: m.id || m.conditionId,
+          conditionId: m.conditionId,
           question: m.question,
           yesPrice: isNaN(yesRaw) ? 0.5 : yesRaw,
           noPrice: isNaN(noRaw) ? 0.5 : noRaw,
+          yesTokenId: clobTokenIds[0],
+          noTokenId: clobTokenIds[1],
+          tickSize: parseFloat(m.orderPriceMinTickSize || "0") || undefined,
+          minOrderSize: parseFloat(m.orderMinSize || "0") || undefined,
+          acceptingOrders: m.acceptingOrders !== false && m.enableOrderBook !== false,
           volume: parseFloat(m.volume24hr || m.volume || "0") || 0,
           liquidity: parseFloat(m.liquidity || "0") || 0,
           endDate: m.endDate || m.expirationDate,

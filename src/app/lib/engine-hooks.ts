@@ -18,6 +18,7 @@ import {
   signals,
   hyperliquid,
   type HlNetwork,
+  type PolymarketOrderInput,
 } from "@app/lib/engine";
 
 /**
@@ -154,6 +155,34 @@ export function usePolymarketOrderMutations(userId: string | undefined) {
     isRedeeming: redeem.isPending,
     cancellingId: cancel.isPending ? (cancel.variables as { orderId: string } | undefined)?.orderId : undefined,
   };
+}
+
+/**
+ * Place a REAL Polymarket CLOB order for a user.
+ *
+ * Hits the live engine route (engine.ts → trading.polymarket.placeOrder →
+ * POST `trade/polymarket/users/:userId/orders`), which signs & submits to the
+ * Polymarket CLOB using the user's engine-held EOA + CLOB API key. The body
+ * needs the outcome `tokenId` (the ERC-1155 CLOB token for the chosen Yes/No
+ * leg — sourced from the market's `clobTokenIds`), `side` (BUY to enter a
+ * position), `price` (0–1 probability), and `size` (number of shares).
+ *
+ * On success we invalidate open-orders + pUSD-balance so the dashboard
+ * reflects the new state immediately. Idle (never fires) until a userId exists.
+ */
+export function usePolymarketPlaceOrder(userId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (order: PolymarketOrderInput) => {
+      if (!userId) throw new Error("not_connected");
+      return trading.polymarket.placeOrder(userId, order);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
+      qc.invalidateQueries({ queryKey: ["engine", "orders", userId] });
+      qc.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
+    },
+  });
 }
 
 // ─── Hyperliquid copy-trading (network-keyed) ────────────────────────────────
