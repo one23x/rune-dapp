@@ -228,10 +228,61 @@ export interface HlSubscription {
   positions: Array<{ coin: string; sizeBase: number; avgEntryPx: number | null; updatedAt: string }>;
 }
 
+/**
+ * Non-custodial **agent-mode** user-signed payload (P1 backend).
+ * `typedData` is a viem/EIP-712 object the CONNECTED wallet signs in-browser via
+ * `account.signTypedData(typedData)`; `action` + `nonce` are echoed back verbatim
+ * to the matching POST relay (must be byte-identical to what was signed).
+ */
+export interface HlAgentSignPayload {
+  typedData: Record<string, unknown>;
+  action: Record<string, unknown>;
+  nonce: number;
+}
+
+/** Body posted back to the approve-agent / approve-builder relay routes. */
+export interface HlAgentApproveBody {
+  signature: string;
+  action: Record<string, unknown>;
+  nonce: number;
+  network?: HlNetwork;
+}
+
 export const hyperliquid = {
   /** withdraw3 → Arbitrum address. */
   withdraw: (userId: string, body: unknown) =>
     post(`trade/hyperliquid/users/${userId}/withdraw`, body),
+
+  // ── 非托管 agent 模式 (P1 routes) — provision + user-signed approvals ────────
+  /** Provision a per-user engine **agent** key bound to the user's master wallet.
+   *  → { ok, agentAddress }. Sets hlMode='agent' server-side. */
+  agentProvision: (userId: string, body: { masterAddress: string }) =>
+    post<{ ok: boolean; agentAddress: string }>(
+      `trade/hyperliquid/users/${userId}/hl/agent/provision`,
+      body,
+    ),
+  /** GET the approveAgent payload to sign with the connected (master) wallet. */
+  agentApproveAgentPayload: (userId: string, network: HlNetwork) =>
+    get<HlAgentSignPayload>(
+      `trade/hyperliquid/users/${userId}/hl/agent/approve-agent-payload${qs({ network })}`,
+    ),
+  /** Relay the user-signed approveAgent signature → records approval. */
+  agentApproveAgent: (userId: string, body: HlAgentApproveBody) =>
+    post<{ ok: boolean; resp: unknown }>(
+      `trade/hyperliquid/users/${userId}/hl/agent/approve-agent`,
+      body,
+    ),
+  /** GET the approveBuilderFee payload (builder/maxFeeRate from server config). */
+  agentApproveBuilderPayload: (userId: string, network: HlNetwork) =>
+    get<HlAgentSignPayload>(
+      `trade/hyperliquid/users/${userId}/hl/agent/approve-builder-payload${qs({ network })}`,
+    ),
+  /** Relay the user-signed approveBuilderFee signature → records approval. */
+  agentApproveBuilder: (userId: string, body: HlAgentApproveBody) =>
+    post<{ ok: boolean; resp: unknown }>(
+      `trade/hyperliquid/users/${userId}/hl/agent/approve-builder`,
+      body,
+    ),
 
   /** Manual close — reduce-only IOC market-close of an open position (live:
    *  trade-hyperliquid.ts POST :115). Body: { coin, sizeBase?, network? }. */

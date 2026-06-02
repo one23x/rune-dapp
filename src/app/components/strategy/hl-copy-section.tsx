@@ -28,6 +28,7 @@ import {
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
   Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X, ExternalLink,
+  KeyRound, Server,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,7 @@ import { arbitrum } from "@/lib/thirdweb/chains";
 import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations, useHlClose,
 } from "@app/lib/engine-hooks";
-import { hyperliquid } from "@app/lib/engine";
+import { hyperliquid, users } from "@app/lib/engine";
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
 import { AiDecisionCards } from "./ai-decision-cards";
 import {
@@ -112,8 +113,11 @@ function AddressLine({ address, label }: { address: string; label?: string }) {
 // 资金只会进引擎托管地址(HL 下单账户),与 copy-trading 的 DepositBridge 同构,
 // 仅链/资产不同(Arbitrum USDC)。先输金额→下一步→PayEmbed,弹窗内可滚动且自适应宽度。
 function HlFunding({
-  userId, network, depositAddress, withdrawable,
-}: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number }) {
+  userId, network, depositAddress, withdrawable, agentMode = false,
+}: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number;
+  /** 非托管 agent 模式:充值目标 = 用户自己的钱包(=HL 主账户),并隐藏站内提现
+   *  (agent key 不能提现;用户直接从自己的 HL 账户提)。 */
+  agentMode?: boolean }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const account = useActiveAccount();
@@ -122,6 +126,9 @@ function HlFunding({
   const [amount, setAmount] = useState("");
   const [dest, setDest] = useState("");
   const [confirming, setConfirming] = useState(false);
+
+  // agent 模式下 HL 账户 = 用户自己的连接钱包(master),充值就充进它;custodial 充进托管 EOA。
+  const depositTarget = agentMode ? (account?.address ?? "") : depositAddress;
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && (withdrawable <= 0 || amt <= withdrawable);
@@ -147,21 +154,29 @@ function HlFunding({
   function handleWdOpenChange(v: boolean) { if (!v) reset(); setWdOpen(v); }
 
   async function copyAddr() {
-    if (!depositAddress) return;
-    const ok = await copyText(depositAddress);
+    if (!depositTarget) return;
+    const ok = await copyText(depositTarget);
     toast(ok ? { title: t("common.copied", "已复制") } : { title: t("common.copyFailed", "复制失败"), variant: "destructive" });
   }
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
+      {/* agent 模式隐藏站内提现(agent key 不能提现);只显示充值,占满整行。 */}
+      <div className={cn("grid gap-2", agentMode ? "grid-cols-1" : "grid-cols-2")}>
         <Button variant="outline" className="h-9 text-[13px] border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10" onClick={() => setDepOpen(true)} data-testid="button-hl-deposit">
           <ArrowDownToLine className="h-4 w-4 mr-1.5" />{t("hl.deposit", "充值")}
         </Button>
-        <Button variant="outline" className="h-9 text-[13px] border-amber-500/30 text-amber-300 hover:bg-amber-500/10" onClick={() => setWdOpen(true)} data-testid="button-hl-withdraw">
-          <ArrowUpFromLine className="h-4 w-4 mr-1.5" />{t("hl.withdraw", "提现")}
-        </Button>
+        {!agentMode && (
+          <Button variant="outline" className="h-9 text-[13px] border-amber-500/30 text-amber-300 hover:bg-amber-500/10" onClick={() => setWdOpen(true)} data-testid="button-hl-withdraw">
+            <ArrowUpFromLine className="h-4 w-4 mr-1.5" />{t("hl.withdraw", "提现")}
+          </Button>
+        )}
       </div>
+      {agentMode && (
+        <p className="mt-1.5 text-[10px] leading-snug text-foreground/45">
+          {t("hl.agentWithdrawNote", "非托管模式:资金在你自己的 HL 账户,提现请直接在 Hyperliquid 上操作。")}
+        </p>
+      )}
 
       {/* 充值 —— 与 copy-trading 共享 DepositBuyPanel(冲动买单)+ 转账地址次路径 */}
       <Dialog open={depOpen} onOpenChange={setDepOpen}>
@@ -174,31 +189,35 @@ function HlFunding({
               <div className="min-w-0">
                 <DialogTitle className="text-[15px] font-bold leading-tight">{t("hl.depositTitle", "充值到 HL 交易账户")}</DialogTitle>
                 <DialogDescription className="text-[12px] leading-tight">
-                  {network === "testnet"
-                    ? t("hl.depositDescTestnet", "测试网:用 Hyperliquid 测试网水龙头/桥把测试 USDC 充到下面这个托管地址。")
-                    : t("hl.depositDescMainnet", "主网:从 Arbitrum 把 USDC 充到下面这个托管地址,引擎用它在 HL 下单。")}
+                  {agentMode
+                    ? t("hl.depositDescAgent", "非托管:从 Arbitrum 把 USDC 充到你自己的钱包地址(=你的 HL 账户),引擎用 agent 密钥替你下单。")
+                    : network === "testnet"
+                      ? t("hl.depositDescTestnet", "测试网:用 Hyperliquid 测试网水龙头/桥把测试 USDC 充到下面这个托管地址。")
+                      : t("hl.depositDescMainnet", "主网:从 Arbitrum 把 USDC 充到下面这个托管地址,引擎用它在 HL 下单。")}
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
           <div className="space-y-3 mt-1">
-            {/* 主路径:用卡 / 跨链一键买入 USDC 直充托管 EOA(仅主网且已有地址) */}
-            {network === "mainnet" && depositAddress && (
-              <DepositBuyPanel chain={arbitrum} token={USDC_ARBITRUM} seller={depositAddress} assetLabel="USDC" />
+            {/* 主路径:用卡 / 跨链一键买入 USDC 直充(custodial→托管 EOA;agent→自己钱包)(仅主网且有地址) */}
+            {network === "mainnet" && depositTarget && (
+              <DepositBuyPanel chain={arbitrum} token={USDC_ARBITRUM} seller={depositTarget} assetLabel="USDC" />
             )}
 
             {/* 次路径:转账到地址 */}
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
               <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
                 <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                {network === "testnet" ? t("hl.depositAddressLabel", "充值地址(托管 EOA)") : t("deposit.manualTransfer", "或转账到地址")}
+                {agentMode
+                  ? t("hl.depositAddressLabelAgent", "充值地址(你的钱包 / HL 账户)")
+                  : network === "testnet" ? t("hl.depositAddressLabel", "充值地址(托管 EOA)") : t("deposit.manualTransfer", "或转账到地址")}
               </div>
-              {depositAddress ? (
+              {depositTarget ? (
                 <div className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
                   <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">ARBITRUM · USDC</div>
                   <div className="flex items-center gap-2">
-                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-deposit-address">{depositAddress}</code>
+                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-deposit-address">{depositTarget}</code>
                     <button onClick={copyAddr} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors" data-testid="button-hl-copy-address">
                       <Copy className="h-4 w-4" />
                     </button>
@@ -208,7 +227,9 @@ function HlFunding({
                 <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
               )}
               <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-                {t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
+                {agentMode
+                  ? t("hl.depositNoteAgent", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请直接在 Hyperliquid 上操作。")
+                  : t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
               </p>
             </div>
           </div>
@@ -293,6 +314,88 @@ function HlFunding({
   );
 }
 
+// ── 非托管 agent 模式开户 flow(P2)─────────────────────────────────────────────
+//
+// 与托管 useOnboardFlow 完全分离、不改动它。Agent 流程(用户钱包持有资金、可自行提现,
+// 引擎只持有一把**只能下单不能提现**的 agent key):
+//   1. users.onboard(wallet) 建引擎用户行(拿 userId);
+//   2. agentProvision({ masterAddress: wallet }) → 后端建 agent 钱包、置 hlMode='agent';
+//   3. GET approve-agent-payload → 用**连接钱包** account.signTypedData(typedData)
+//      → POST approve-agent { signature, action, nonce, network };
+//   4. GET approve-builder-payload → 同样签 → POST approve-builder
+//      (builder 费授权:推荐但可选,拒签/失败不阻断整体开通)。
+type AgentStepState = "idle" | "running" | "done" | "skipped" | "error";
+
+export function useAgentOnboardFlow(network: HlNetwork) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const account = useActiveAccount();
+  // steps: 0=建账户/agent  1=授权下单(approveAgent)  2=授权手续费(approveBuilder,可选)
+  const [steps, setSteps] = useState<[AgentStepState, AgentStepState, AgentStepState]>(["idle", "idle", "idle"]);
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const wallet = account?.address;
+      if (!account || !wallet) throw new Error("No wallet");
+
+      // 1) 建引擎用户行(若已存在,engine onboard 幂等返回)+ provision agent key。
+      setSteps(["running", "idle", "idle"]);
+      setError(null);
+      const user = await users.onboard(wallet);
+      const userId = String((user as { userId?: string; id?: string })?.userId ?? user?.id ?? "");
+      if (!userId) throw new Error("onboard returned no userId");
+      await hyperliquid.agentProvision(userId, { masterAddress: wallet });
+
+      // 2) approveAgent —— 用连接钱包签 typedData,回传 relay 上链(必需)。
+      setSteps(["done", "running", "idle"]);
+      const agentPayload = await hyperliquid.agentApproveAgentPayload(userId, network);
+      const agentSig = await account.signTypedData(agentPayload.typedData as any);
+      await hyperliquid.agentApproveAgent(userId, {
+        signature: agentSig,
+        action: agentPayload.action,
+        nonce: agentPayload.nonce,
+        network,
+      });
+
+      // 3) approveBuilderFee —— 推荐但可选;拒签 / 失败只标记 skipped,不阻断开通。
+      setSteps(["done", "done", "running"]);
+      try {
+        const bPayload = await hyperliquid.agentApproveBuilderPayload(userId, network);
+        const bSig = await account.signTypedData(bPayload.typedData as any);
+        await hyperliquid.agentApproveBuilder(userId, {
+          signature: bSig,
+          action: bPayload.action,
+          nonce: bPayload.nonce,
+          network,
+        });
+        setSteps(["done", "done", "done"]);
+      } catch (e) {
+        // builder-fee 是 recommended-but-optional —— 不让它挡住整体开通。
+        setSteps(["done", "done", "skipped"]);
+        toast({
+          title: t("hl.agentBuilderSkipped", "已跳过手续费授权"),
+          description: t("hl.agentBuilderSkippedDesc", "可稍后再授权;不影响跟单下单。"),
+        });
+      }
+      return userId;
+    },
+    onSuccess: () => {
+      toast({ title: t("hl.agentOnboardSuccess", "非托管账户已开通"), description: t("hl.agentOnboardSuccessDesc", "引擎已获授权替你下单(不能提现);资金留在你自己的钱包。") });
+      queryClient.invalidateQueries({ queryKey: ["engine", "user", account?.address?.toLowerCase()] });
+    },
+    onError: (e: any) => {
+      const msg = String(e?.message ?? e);
+      setError(msg);
+      // 保留已完成的步骤标记,把当前进行中的标成 error 以便用户看到卡在哪一步。
+      setSteps((prev) => prev.map((s) => (s === "running" ? "error" : s)) as [AgentStepState, AgentStepState, AgentStepState]);
+      toast({ title: t("common.error", "出错了"), description: msg, variant: "destructive" });
+    },
+  });
+
+  return { steps, error, run: () => mutation.mutate(), isPending: mutation.isPending };
+}
+
 // ── 开户 / enable strip — HL account onboarding state ────────────────────────
 //
 // Reflects the *real* engine-user state instead of assuming "已开通" the moment
@@ -303,7 +406,7 @@ function HlFunding({
 //   wallet, no engine user   → explicit 开通 button (reuses useOnboardFlow)
 //   engine user present      → enabled banner with live state
 function HlAccountStrip({
-  wallet, userLoading, userError, userId, engineEoaAddress, onRetryUser, followCount, funding,
+  wallet, userLoading, userError, userId, engineEoaAddress, onRetryUser, followCount, funding, network, agentMode = false,
 }: {
   wallet?: string;
   userLoading: boolean;
@@ -315,9 +418,16 @@ function HlAccountStrip({
   followCount: number;
   /** 充值 / 提现 面板,内嵌在「已开通」钱包卡里(仅已开户时) */
   funding?: React.ReactNode;
+  /** 当前网络 —— agent 模式开通时签名 payload 需要(custodial 不使用)。 */
+  network: HlNetwork;
+  /** 已开户用户是否为非托管 agent 模式(影响「已开通」横幅的地址标签 / 徽章)。 */
+  agentMode?: boolean;
 }) {
   const { t } = useTranslation();
   const { steps, run, isPending } = useOnboardFlow(wallet);
+  // 托管(custodial,默认,行为不变)/ 自托管(agent)。仅影响 !userId 开通分支。
+  const [mode, setMode] = useState<"custodial" | "agent">("custodial");
+  const agent = useAgentOnboardFlow(network);
 
   // Not connected → 开户 CTA (connect wallet to enable HL copy-trading).
   if (!wallet) {
@@ -388,11 +498,20 @@ function HlAccountStrip({
 
   // Wallet connected but no engine user yet → explicit 开通 action.
   if (!userId) {
+    // 托管:3 步(创建签名账户 → 链上授权 → 启用交易)。CUSTODIAL 行为不变。
     const stepLabels = [
       t("hl.openStep1", "创建引擎签名账户"),
       t("hl.openStep2", "确认链上授权"),
       t("hl.openStep3", "启用交易"),
     ];
+    // 自托管(agent):3 步(建 agent key → 授权下单 → 授权手续费[可选])。
+    const agentStepLabels = [
+      t("hl.agentStep1", "创建 agent 下单密钥"),
+      t("hl.agentStep2", "钱包签名:授权下单(不能提现)"),
+      t("hl.agentStep3", "钱包签名:授权手续费(可选)"),
+    ];
+    const isAgent = mode === "agent";
+    const busy = isAgent ? agent.isPending : isPending;
     return (
       <div className="glass-panel p-4 space-y-3">
         <div className="flex items-center gap-3">
@@ -410,37 +529,86 @@ function HlAccountStrip({
             <div className="font-display text-[14px] font-bold text-foreground">
               {t("hl.openTitle")}
             </div>
-            <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">{t("hl.openCtaDesc", "一次性开通交易账户即可一键跟单,约需 10 秒。")}</p>
+            <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">
+              {isAgent
+                ? t("hl.agentOpenCtaDesc", "授权引擎用一把只能下单不能提现的密钥替你跟单;资金始终留在你自己的钱包。")
+                : t("hl.openCtaDesc", "一次性开通交易账户即可一键跟单,约需 10 秒。")}
+            </p>
           </div>
         </div>
 
+        {/* 托管 / 自托管(agent)模式选择 —— 默认托管,切换后才走 agent 流程。 */}
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { id: "custodial" as const, icon: Server, label: t("hl.modeCustodial", "托管"), desc: t("hl.modeCustodialDesc", "引擎代管资金") },
+            { id: "agent" as const, icon: KeyRound, label: t("hl.modeAgent", "自托管"), desc: t("hl.modeAgentDesc", "资金留你钱包") },
+          ]).map((m) => {
+            const Icon = m.icon;
+            const active = mode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                disabled={busy}
+                onClick={() => setMode(m.id)}
+                className={cn(
+                  "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition active:scale-[0.99] disabled:opacity-60",
+                  active ? "border-amber-400/50 bg-amber-500/[0.08]" : "border-white/[0.08] bg-white/[0.02] hover:border-white/20",
+                )}
+                data-testid={`button-hl-mode-${m.id}`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Icon className={cn("h-3.5 w-3.5", active ? "text-amber-300" : "text-foreground/55")} />
+                  <span className={cn("text-[12px] font-bold", active ? "text-amber-200" : "text-foreground/80")}>{m.label}</span>
+                  {active && <CheckCircle2 className="h-3 w-3 text-amber-300" />}
+                </span>
+                <span className="text-[10px] text-foreground/45 leading-tight">{m.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Per-step progress so the user sees what's happening + how long it takes. */}
-        {isPending && (
+        {busy && (
           <div className="space-y-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] px-3 py-2.5">
-            {stepLabels.map((label, i) => {
-              const s = steps[i];
+            {(isAgent ? agentStepLabels : stepLabels).map((label, i) => {
+              const s = isAgent ? agent.steps[i] : steps[i];
               return (
                 <div key={i} className="flex items-center gap-2">
                   {s === "done" ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    : s === "skipped" ? <Circle className="h-3.5 w-3.5 text-foreground/35 shrink-0" />
+                    : s === "error" ? <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
                     : s === "running" ? <Loader2 className="h-3.5 w-3.5 text-amber-300 animate-spin shrink-0" />
                     : <Circle className="h-3.5 w-3.5 text-foreground/25 shrink-0" />}
-                  <span className={cn("text-[11px]", s === "idle" ? "text-foreground/40" : "text-foreground/80")}>{label}</span>
+                  <span className={cn("text-[11px]", s === "idle" ? "text-foreground/40" : s === "skipped" ? "text-foreground/45" : "text-foreground/80")}>
+                    {label}{s === "skipped" ? ` · ${t("hl.agentStepSkipped", "已跳过")}` : ""}
+                  </span>
                 </div>
               );
             })}
           </div>
         )}
 
+        {/* agent 流程报错 → 行内提示(不阻断重试)。 */}
+        {isAgent && agent.error && !busy && (
+          <p className="text-[11px] text-red-400 leading-snug">{agent.error}</p>
+        )}
+
         <button
-          onClick={run}
-          disabled={isPending}
+          onClick={isAgent ? agent.run : run}
+          disabled={busy}
           className={cn(
             "w-full flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-[12px] font-bold transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed",
             "bg-gradient-to-r from-amber-500 to-yellow-600 text-black border border-amber-500/50",
           )}
+          data-testid="button-hl-open-account"
         >
-          {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-          {isPending ? t("hl.opening", "开通中…") : t("hl.openCta", "开通交易账户")}
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isAgent ? <KeyRound className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
+          {busy
+            ? t("hl.opening", "开通中…")
+            : isAgent
+              ? t("hl.agentOpenCta", "开通自托管账户")
+              : t("hl.openCta", "开通交易账户")}
         </button>
       </div>
     );
@@ -457,24 +625,33 @@ function HlAccountStrip({
           <ShieldCheck className="h-5 w-5 text-emerald-300" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[13px] font-bold text-foreground/90">{t("hl.accountEnabled")}</span>
             <Badge className="text-[9px] px-1.5 py-0 border-0 bg-emerald-500/15 text-emerald-300 no-default-hover-elevate no-default-active-elevate">
               <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />{t("hl.enabledBadge")}
             </Badge>
+            {/* 非托管模式徽章 —— 明确告知资金在自己钱包。 */}
+            {agentMode && (
+              <Badge className="text-[9px] px-1.5 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate">
+                <KeyRound className="h-2.5 w-2.5 mr-0.5" />{t("hl.agentBadge", "非托管 · 你的钱包")}
+              </Badge>
+            )}
           </div>
           <div className="mt-0.5 text-[11px] text-muted-foreground/80">
             {t("hl.followsCount", "{{count}} 个进行中的跟单", { count: followCount })}
           </div>
         </div>
       </div>
-      {/* HL 交易账户地址 = 引擎托管 EOA(HL 签名者 / 充值地址)—— 完整显示 + 可复制。
-          这与连接钱包不同:下单/充值都发生在这个托管 EOA 上。 */}
+      {/* HL 交易账户地址:custodial = 引擎托管 EOA(下单/充值都在它上面);
+          agent = 用户主账户(自己钱包,资金/下单都在它上面,引擎仅持只读不能提现的 agent key)。 */}
       {engineEoaAddress ? (
         <div className="space-y-1.5">
-          <AddressLine address={engineEoaAddress} label={t("hl.tradingAccountLabel", "交易账户地址(托管 EOA)")} />
-          {/* 连接钱包 — 次要信息,与交易账户区分开 */}
-          {wallet && (
+          <AddressLine
+            address={engineEoaAddress}
+            label={agentMode ? t("hl.tradingAccountLabelAgent", "交易账户地址(你的钱包)") : t("hl.tradingAccountLabel", "交易账户地址(托管 EOA)")}
+          />
+          {/* 连接钱包 — 次要信息,与交易账户区分开。agent 模式下交易账户即连接钱包,无需重复。 */}
+          {wallet && !agentMode && (
             <div className="flex items-center gap-1.5 px-1 pt-0.5 text-[10px] text-muted-foreground/60">
               <Wallet className="h-3 w-3 shrink-0" />
               <span className="shrink-0">{t("hl.connectedWalletLabel", "连接钱包")}</span>
@@ -1020,11 +1197,13 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const account = useActiveAccount();
   const wallet = account?.address;
   const { toast } = useToast();
-  // HL 账户 = 引擎托管 EOA(下单/持仓/余额都在这个地址),不是连接钱包。
+  // HL 账户:custodial = 引擎托管 EOA;agent = 用户主账户(自己钱包)。下单/持仓/余额都在该地址。
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-  const engineEoa = (userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
-  const acctQ = useHlAccount(engineEoa, network);
+  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
+  const engineEoa = hlUser?.engineEoaAddress;
+  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
+  const acctQ = useHlAccount(hlAddress, network);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
@@ -1218,9 +1397,14 @@ export function HlCopySection() {
 
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-  const engineEoa = (userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
+  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
+  const engineEoa = hlUser?.engineEoaAddress;
+  // 非托管 agent 模式:HL 账户 = 用户主账户(master/自己钱包),持仓/净值读 master;
+  // custodial:读托管 EOA。engineEoaAddress 在 agent 模式承载的是 agent key(不持仓)。
+  const agentMode = hlUser?.hlMode === "agent";
+  const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
 
-  const acctQ = useHlAccount(engineEoa, network);
+  const acctQ = useHlAccount(hlAddress, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
 
@@ -1254,20 +1438,24 @@ export function HlCopySection() {
         </div>
       </Link>
 
-      {/* 钱包面板 — 开户 + 充值 / 提现 全部在这一张卡里 (engine-user onboarding + custodial EOA) */}
+      {/* 钱包面板 — 开户 + 充值 / 提现 全部在这一张卡里 (engine-user onboarding + custodial EOA / agent) */}
       <HlAccountStrip
         wallet={wallet}
         userLoading={!!wallet && userQ.isLoading}
         userError={!!wallet && userQ.isError}
         userId={userId}
-        engineEoaAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
+        network={network}
+        agentMode={agentMode}
+        /* agent 模式下交易账户地址 = master(自己钱包);custodial = 托管 EOA。 */
+        engineEoaAddress={(agentMode ? hlAddress : engineEoa) ?? ""}
         onRetryUser={() => userQ.refetch()}
         followCount={subscribedLeaders.size}
         funding={userId ? (
           <HlFunding
             userId={userId}
             network={network}
-            depositAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
+            agentMode={agentMode}
+            depositAddress={engineEoa ?? ""}
             withdrawable={acct?.withdrawable ?? 0}
           />
         ) : undefined}
@@ -1443,8 +1631,12 @@ export function HlHubPage() {
 
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-  const engineEoa = (userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
-  const acctQ = useHlAccount(engineEoa, network);
+  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
+  const engineEoa = hlUser?.engineEoaAddress;
+  // 非托管 agent 模式:净值/持仓读 master(自己钱包);custodial 读托管 EOA。
+  const agentMode = hlUser?.hlMode === "agent";
+  const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
+  const acctQ = useHlAccount(hlAddress, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
   const { copyMany } = useHlCopy(userId, network);
@@ -1464,7 +1656,7 @@ export function HlHubPage() {
   const engineHealth = engineHealthFrom(acctQ, leadersQ);
   // 账户净值 < HL_MIN → 跟单会以 insufficient_funds 静默失败,改为引导充值。
   // 仅在账户已成功读取后判定,避免加载/未连接时误报余额不足。
-  const underfunded = !!wallet && !!engineEoa && acctQ.isSuccess && (acct?.accountValue ?? 0) < HL_MIN;
+  const underfunded = !!wallet && !!hlAddress && acctQ.isSuccess && (acct?.accountValue ?? 0) < HL_MIN;
 
   // 选一个策略包 → 一键跟单(copyMany 批量订阅该 pack 的 top-N leader)。每张卡独立 busy。
   const [busyPack, setBusyPack] = useState<string | null>(null);
