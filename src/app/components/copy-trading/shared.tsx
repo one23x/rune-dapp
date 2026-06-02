@@ -459,14 +459,15 @@ export function DepositBuyPanel({
             />
             <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{assetLabel}</span>
           </div>
-          <Button
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-600 text-black text-[15px] font-extrabold hover:opacity-95 disabled:opacity-40 active:scale-[0.99]"
+          <button
+            type="button"
+            className="gold-button w-full h-12 rounded-xl inline-flex items-center justify-center gap-1.5 text-[15px] font-extrabold disabled:opacity-40 disabled:saturate-50"
             disabled={!(amt > 0)}
             onClick={() => setConfirmed(true)}
           >
-            <Zap className="h-4 w-4 mr-1.5" />
+            <Zap className="h-4 w-4" />
             {amt > 0 ? `${t("deposit.buyNow", "立即买入")} $${amt}` : t("deposit.enterAmount", "输入或选择金额")}
-          </Button>
+          </button>
         </>
       ) : (
         <div className="w-full">

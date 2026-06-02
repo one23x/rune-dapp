@@ -66,27 +66,34 @@ function hlExplorerAddress(addr: string, network: HlNetwork): string {
   return `${base}/explorer/address/${addr}`;
 }
 
-// 完整钱包地址行 — 不截断,可一键复制(移动端 break-all 自动换行)。
+// 完整钱包地址行 — 不截断;整行可点复制,复制后图标变 ✓ + gold-pop 反馈。
 function AddressLine({ address, label }: { address: string; label?: string }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
   async function copy() {
     const ok = await copyText(address);
-    toast(ok ? { title: t("common.copied", "已复制") } : { title: t("common.copyFailed", "复制失败"), variant: "destructive" });
+    if (ok) { setCopied(true); window.setTimeout(() => setCopied(false), 1400); }
+    else toast({ title: t("common.copyFailed", "复制失败"), variant: "destructive" });
   }
   return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] px-2.5 py-1.5">
-      {label && <span className="text-[10px] uppercase tracking-wide text-muted-foreground/55 shrink-0">{label}</span>}
-      <code className="font-mono text-[10.5px] leading-relaxed text-foreground/75 break-all flex-1 min-w-0">{address}</code>
-      <button
-        onClick={copy}
-        aria-label={t("common.copy", "复制")}
-        title={t("common.copy", "复制")}
-        className="shrink-0 h-7 w-7 grid place-items-center rounded-md text-muted-foreground/70 hover:text-primary hover:bg-white/5 transition"
+    <button
+      type="button"
+      onClick={copy}
+      aria-label={t("common.copy", "复制")}
+      className="group w-full flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/[0.07] px-3 py-2 text-left transition active:scale-[0.995] hover:border-amber-400/30"
+    >
+      {label && <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wider text-amber-300/70">{label}</span>}
+      <code className="flex-1 min-w-0 font-mono text-[11px] leading-relaxed text-foreground/80 break-all">{address}</code>
+      <span
+        className={cn(
+          "shrink-0 grid h-7 w-7 place-items-center rounded-lg transition",
+          copied ? "text-emerald-400" : "text-muted-foreground/70 group-hover:text-amber-300 group-hover:bg-white/5",
+        )}
       >
-        <Copy className="h-3.5 w-3.5" />
-      </button>
-    </div>
+        {copied ? <CheckCircle2 className="h-4 w-4 animate-copy-pop" /> : <Copy className="h-4 w-4" />}
+      </span>
+    </button>
   );
 }
 
