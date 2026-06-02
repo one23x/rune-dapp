@@ -122,6 +122,9 @@
     "goToAnalysis": "Go to Market Analysis"
   },
   "trade": {
+    "heroSampleBadge": "Illustrative",
+    "heroSampleStats": "Sample figures — not live performance",
+    "heroTrustLine": "Settled on Polymarket · Polygon network",
     "bigRoad": "Big Road",
     "smallRoad": "Small Road",
     "bull": "Bull",
@@ -1521,6 +1524,8 @@
     "onboardSuccess": "Account opened",
     "onboardSuccessDesc": "Your Polymarket trading account is active. Deposit pUSD to start.",
     "accountActive": "Account active",
+    "accountSyncing": "Syncing",
+    "accountError": "Connection error",
     "accountReady": "Ready to copy-trade",
     "deposit": "Deposit",
     "withdraw": "Withdraw",

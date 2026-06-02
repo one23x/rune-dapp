@@ -58,6 +58,10 @@ import { useOnboardFlow, DepositBuyPanel } from "@app/components/copy-trading/sh
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
 const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
 
+// HL refuses orders below this account value — gate follow CTAs on it so packs
+// don't silently fail with insufficient_funds (UIUX Rec #2).
+const HL_MIN = 10;
+
 // On-chain authenticity: the HL read plane exposes no per-fill txHash, so the
 // honest "verify on chain" link is the address page on Hyperliquid's own
 // explorer — it shows that address's real fills/positions.
@@ -486,11 +490,44 @@ function HlAccountStrip({
   );
 }
 
+// ── Live-engine health pill — bound to real query state (UIUX Rec #6) ─────────
+//
+// green "实时" only when a fetch recently succeeded; amber "连接中" while loading;
+// red "连接失败" on error. Derive once from the acct/leaders query objects the
+// hub already holds, so the pill stops lying about a hardcoded "live" state.
+type EngineHealth = "live" | "connecting" | "error";
+
+function engineHealthFrom(
+  ...queries: { isError?: boolean; isLoading?: boolean; isSuccess?: boolean; dataUpdatedAt?: number }[]
+): EngineHealth {
+  if (queries.some((q) => q.isError)) return "error";
+  if (queries.some((q) => q.isLoading)) return "connecting";
+  if (queries.some((q) => q.isSuccess || (q.dataUpdatedAt ?? 0) > 0)) return "live";
+  return "connecting";
+}
+
+function EnginePill({ health, reduce, size = "md" }: { health: EngineHealth; reduce: boolean; size?: "sm" | "md" }) {
+  const { t } = useTranslation();
+  const tone =
+    health === "error"
+      ? { wrap: "bg-red-500/20 border-red-500/30 text-red-300", dot: "bg-red-400", label: t("hl.engineError", "连接失败"), pulse: false }
+      : health === "connecting"
+        ? { wrap: "bg-amber-500/20 border-amber-500/30 text-amber-300", dot: "bg-amber-400", label: t("hl.engineConnecting", "连接中"), pulse: true }
+        : { wrap: "bg-emerald-500/20 border-emerald-500/30 text-emerald-300", dot: "bg-emerald-400", label: t("hl.engineLive", "实时引擎"), pulse: true };
+  const pad = size === "sm" ? "px-2.5 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]";
+  return (
+    <span className={cn("shrink-0 flex items-center gap-1.5 rounded-full border font-medium", pad, tone.wrap)} data-testid="pill-engine-health">
+      <span className={cn("w-1.5 h-1.5 rounded-full", tone.dot, tone.pulse && !reduce && "animate-pulse")} />
+      {tone.label}
+    </span>
+  );
+}
+
 // ── Header — icon + title + Engine Live pill (mockup hero) ────────────────────
 
 function SectionHeader({
-  network, onNetwork, reduce,
-}: { network: HlNetwork; onNetwork: (n: HlNetwork) => void; reduce: boolean }) {
+  network, onNetwork, reduce, health = "live",
+}: { network: HlNetwork; onNetwork: (n: HlNetwork) => void; reduce: boolean; health?: EngineHealth }) {
   const { t } = useTranslation();
   return (
     <div>
@@ -513,10 +550,7 @@ function SectionHeader({
             <p className="text-[12px] text-foreground/55 leading-snug">{t("hl.configSubtitle", "配置参数 · 选择策略一键跟单")}</p>
           </div>
         </div>
-        <span className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-medium text-emerald-300">
-          <span className={cn("w-1.5 h-1.5 bg-emerald-400 rounded-full", !reduce && "animate-pulse")} />
-          {t("hl.engineLive", "实时引擎")}
-        </span>
+        <EnginePill health={health} reduce={reduce} size="md" />
       </div>
       <div className="mt-3">
         <NetworkToggle value={network} onChange={onNetwork} />
@@ -682,9 +716,9 @@ export function ConfigPanel({
 // Visual twin of the trade page's perp hero, but every number is real:
 // 账户净值 / 未实现盈亏 / 跟单中 come from useHlAccount + the live sub count.
 function HlHero({
-  wallet, loading, accountValue, unrealizedPnl, followCount, reduce,
+  wallet, loading, accountValue, unrealizedPnl, followCount, reduce, health = "live",
 }: {
-  wallet?: string; loading: boolean; accountValue: number; unrealizedPnl: number; followCount: number; reduce: boolean;
+  wallet?: string; loading: boolean; accountValue: number; unrealizedPnl: number; followCount: number; reduce: boolean; health?: EngineHealth;
 }) {
   const { t } = useTranslation();
   const pnlPos = unrealizedPnl >= 0;
@@ -722,10 +756,7 @@ function HlHero({
               <p className="text-[12px] text-foreground/55 leading-snug mt-0.5">{t("hl.heroSubtitle", "实时复制顶级合约交易员的链上策略,资金自托管。")}</p>
             </div>
           </div>
-          <span className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-medium text-emerald-300">
-            <span className={cn("w-1.5 h-1.5 bg-emerald-400 rounded-full", !reduce && "animate-pulse")} />
-            {t("hl.engineLive", "实时引擎")}
-          </span>
+          <EnginePill health={health} reduce={reduce} size="sm" />
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-4 rounded-xl bg-black/25 border border-white/10 p-3">
@@ -1218,6 +1249,7 @@ export function HlCopySection() {
             unrealizedPnl={acct?.unrealizedPnl ?? 0}
             followCount={subscribedLeaders.size}
             reduce={reduce}
+            health={engineHealthFrom(acctQ, leadersQ)}
           />
         </div>
       </Link>
@@ -1280,15 +1312,20 @@ function packConfig(pack: HlPack): HlFollowConfig {
 }
 
 function PackCard({
-  pack, leaders, subscribed, busy, onEnable,
+  pack, leaders, subscribed, busy, onEnable, underfunded = false,
 }: {
   pack: HlPack;
   leaders: HlLeader[];
   subscribed: Set<string>;
   busy: boolean;
   onEnable: (picks: HlLeader[], pack: HlPack) => void;
+  /** 账户净值 < HL_MIN → 跟单按钮变「充值后跟单」并禁用 follow(UIUX Rec #2)。 */
+  underfunded?: boolean;
 }) {
   const { t } = useTranslation();
+  // 一次性风险确认:首次点击进入 confirm 态,再点一次才真正跟单(UIUX Rec #5b)。
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => { if (busy) setConfirm(false); }, [busy]);
   // 按评分取 top-N(aggressive=全部);count 99 → 整张榜。
   const picks = useMemo(
     () => [...leaders].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, pack.count),
@@ -1331,23 +1368,64 @@ function PackCard({
         {param(t("hl.packExit", "跟随平仓"), t("hl.packExitOn", "开"))}
       </div>
 
-      <button
-        type="button"
-        disabled={busy || picks.length === 0}
-        onClick={() => onEnable(picks, pack)}
-        className={cn(
-          "mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] disabled:opacity-50",
-          allOn ? "bg-white/[0.06] text-foreground/80 border border-white/10" : "text-black",
-        )}
-        style={allOn ? undefined : { background: `linear-gradient(135deg, ${pack.color}, ${pack.color}cc)`, boxShadow: `0 0 18px ${pack.color}40` }}
-        data-testid={`button-pack-enable-${pack.key}`}
-      >
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-        {busy ? t("hl.packEnabling", "启用中…")
-          : allOn ? t("hl.packReapply", "重新应用参数")
-          : followedCount > 0 ? t("hl.packTopUp", "补齐剩余 {{n}} 位", { n: picks.length - followedCount })
-          : t("hl.oneClickFollow", "一键跟单")}
-      </button>
+      {/* 余额不足 → 跟单按钮变「充值后跟单」并禁用,引导回钱包面板充值(UIUX Rec #2)。 */}
+      {underfunded ? (
+        <Link href="/strategy" data-testid={`link-pack-fund-${pack.key}`}>
+          <button
+            type="button"
+            className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] bg-white/[0.05] text-amber-200 border border-amber-500/30"
+            data-testid={`button-pack-fund-${pack.key}`}
+          >
+            <Wallet className="h-4 w-4" />
+            {t("hl.packFundToFollow", "充值后跟单")}
+          </button>
+        </Link>
+      ) : (
+        <>
+          {/* 二次确认摘要 + 风险提示(UIUX Rec #5b)。 */}
+          {confirm && !allOn && (
+            <div className="mt-3 rounded-xl p-3 space-y-1.5" style={{ background: `${pack.color}12`, border: `1px solid ${pack.color}33` }}>
+              <div className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color: pack.color }}>
+                <AlertTriangle className="h-3.5 w-3.5" />{t("hl.packConfirmTitle", "确认跟单参数")}
+              </div>
+              <p className="text-[11px] leading-relaxed text-foreground/70">
+                {t("hl.packConfirmSummary", "跟随 {{n}} 个策略 · 镜像比例 {{ratio}}% · 杠杆 {{lev}} · 单笔上限 ${{cap}}", {
+                  n: picks.length,
+                  ratio: pack.ratioPct,
+                  lev: pack.maxLev > 0 ? `≤${pack.maxLev}x` : t("hl.packLevAuto", "随单"),
+                  cap: pack.cap,
+                })}
+              </p>
+              <p className="text-[11px] leading-relaxed text-red-300/90">
+                {t("hl.packRiskLine", "杠杆交易可能亏损全部本金,爆仓后无法追回。")}
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={busy || picks.length === 0}
+            onClick={() => {
+              if (allOn) { onEnable(picks, pack); return; }
+              if (confirm) { onEnable(picks, pack); setConfirm(false); }
+              else setConfirm(true);
+            }}
+            className={cn(
+              "mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] disabled:opacity-50",
+              allOn ? "bg-white/[0.06] text-foreground/80 border border-white/10" : "text-black",
+            )}
+            style={allOn ? undefined : { background: `linear-gradient(135deg, ${pack.color}, ${pack.color}cc)`, boxShadow: `0 0 18px ${pack.color}40` }}
+            data-testid={`button-pack-enable-${pack.key}`}
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            {busy ? t("hl.packEnabling", "启用中…")
+              : allOn ? t("hl.packReapply", "重新应用参数")
+              : confirm ? t("hl.packConfirmFollow", "确认跟单")
+              : followedCount > 0 ? t("hl.packTopUp", "补齐剩余 {{n}} 位", { n: picks.length - followedCount })
+              : t("hl.oneClickFollow", "一键跟单")}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -1382,6 +1460,12 @@ export function HlHubPage() {
   const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
 
+  // 实时引擎健康(UIUX Rec #6)+ 余额门槛(UIUX Rec #2)。
+  const engineHealth = engineHealthFrom(acctQ, leadersQ);
+  // 账户净值 < HL_MIN → 跟单会以 insufficient_funds 静默失败,改为引导充值。
+  // 仅在账户已成功读取后判定,避免加载/未连接时误报余额不足。
+  const underfunded = !!wallet && !!engineEoa && acctQ.isSuccess && (acct?.accountValue ?? 0) < HL_MIN;
+
   // 选一个策略包 → 一键跟单(copyMany 批量订阅该 pack 的 top-N leader)。每张卡独立 busy。
   const [busyPack, setBusyPack] = useState<string | null>(null);
   async function onEnablePack(picks: HlLeader[], pack: HlPack) {
@@ -1405,7 +1489,7 @@ export function HlHubPage() {
       </div>
 
       <div className="px-4 py-5 space-y-5 max-w-2xl mx-auto" style={{ animation: "fadeSlideIn 0.4s ease-out" }}>
-        <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} />
+        <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} health={engineHealth} />
 
         {/* 数据台 */}
         <StatsGrid
@@ -1424,6 +1508,25 @@ export function HlHubPage() {
             <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
             <span className="text-[11px] text-foreground/40">· {t("hl.packHint", "选一个,一键跟单")}</span>
           </div>
+
+          {/* 余额不足 → 醒目横幅,指回钱包面板充值(deposit 在外层 /strategy 页,UIUX Rec #2)。 */}
+          {underfunded && (
+            <Link href="/strategy" data-testid="link-fund-banner">
+              <div className="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-3.5 py-3 transition active:scale-[0.99] hover:border-amber-400/50">
+                <div className="shrink-0 grid h-9 w-9 place-items-center rounded-lg bg-amber-500/15 border border-amber-500/30">
+                  <Wallet className="h-4 w-4 text-amber-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-bold text-amber-200">{t("hl.underfundedTitle", "余额不足,请先在「钱包」充值")}</div>
+                  <p className="mt-0.5 text-[11px] leading-snug text-foreground/55">
+                    {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(acct?.accountValue ?? 0) })}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-amber-300/80" />
+              </div>
+            </Link>
+          )}
+
           {leadersQ.isLoading ? (
             <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}</div>
           ) : leaders.length === 0 ? (
@@ -1438,6 +1541,7 @@ export function HlHubPage() {
                   subscribed={subscribedLeaders}
                   busy={busyPack === p.key}
                   onEnable={onEnablePack}
+                  underfunded={underfunded}
                 />
               ))}
             </div>

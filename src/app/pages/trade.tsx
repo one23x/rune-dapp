@@ -1018,9 +1018,12 @@ export default function Trade() {
                   Smart Trading
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] text-[#10b981] font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-                已激活
+              {/* Honesty: this hero is a marketing/illustrative panel — it does
+                  not reflect a verified funded or active account, so we label it
+                  as a sample rather than asserting a live "已激活" state. */}
+              <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                {t("trade.heroSampleBadge", "示例展示")}
               </div>
             </div>
 
@@ -1035,29 +1038,36 @@ export default function Trade() {
               One-Agents 引擎实时分析顶级交易员策略，自动执行 YES / NO 仓位
             </p>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
-                <div className="flex items-center gap-1 mb-1">
-                  <Users size={10} className="text-zinc-500" />
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wide">跟随者</span>
+            {/* Stats row — illustrative figures only. These are not derived from
+                a real performance feed, so they are clearly captioned as sample
+                values to avoid presenting fabricated metrics as live data. */}
+            <div className="mb-4">
+              <div className="grid grid-cols-3 gap-2 mb-1.5">
+                <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Users size={10} className="text-zinc-500" />
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">跟随者</span>
+                  </div>
+                  <p className="text-sm font-bold text-white/70">2,847</p>
                 </div>
-                <p className="text-sm font-bold text-white">2,847</p>
-              </div>
-              <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
-                <div className="flex items-center gap-1 mb-1">
-                  <BarChart2 size={10} className="text-zinc-500" />
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wide">胜率</span>
+                <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                  <div className="flex items-center gap-1 mb-1">
+                    <BarChart2 size={10} className="text-zinc-500" />
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">胜率</span>
+                  </div>
+                  <p className="text-sm font-bold text-[#10b981]/70">68.4%</p>
                 </div>
-                <p className="text-sm font-bold text-[#10b981]">68.4%</p>
-              </div>
-              <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
-                <div className="flex items-center gap-1 mb-1">
-                  <TrendingUp size={10} className="text-zinc-500" />
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wide">月收益</span>
+                <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                  <div className="flex items-center gap-1 mb-1">
+                    <TrendingUp size={10} className="text-zinc-500" />
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">月收益</span>
+                  </div>
+                  <p className="text-sm font-bold text-[#f59e0b]/70">+24.1%</p>
                 </div>
-                <p className="text-sm font-bold text-[#f59e0b]">+24.1%</p>
               </div>
+              <p className="text-[9px] text-zinc-600 text-center">
+                {t("trade.heroSampleStats", "以上为示例数据,非实时业绩")}
+              </p>
             </div>
 
             {/* CTA button */}
@@ -1074,7 +1084,7 @@ export default function Trade() {
             {/* Trust line */}
             <div className="flex items-center justify-center gap-1.5 mt-3">
               <ShieldCheck size={11} className="text-zinc-500" />
-              <span className="text-[10px] text-zinc-500">资金托管在 Polymarket · Polygon 网络</span>
+              <span className="text-[10px] text-zinc-500">{t("trade.heroTrustLine", "基于 Polymarket · Polygon 网络结算")}</span>
             </div>
           </div>
         </div>

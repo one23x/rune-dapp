@@ -122,6 +122,9 @@
     "goToAnalysis": "前往市场分析"
   },
   "trade": {
+    "heroSampleBadge": "示例展示",
+    "heroSampleStats": "以上为示例数据,非实时业绩",
+    "heroTrustLine": "基于 Polymarket · Polygon 网络结算",
     "bigRoad": "大路",
     "smallRoad": "小路",
     "bull": "看涨",
@@ -1521,6 +1524,8 @@
     "onboardSuccess": "开户成功",
     "onboardSuccessDesc": "你的 Polymarket 交易账户已激活，充值 pUSD 即可开始。",
     "accountActive": "账户已激活",
+    "accountSyncing": "同步中",
+    "accountError": "连接异常",
     "accountReady": "可开始跟单",
     "deposit": "充值",
     "withdraw": "提现",

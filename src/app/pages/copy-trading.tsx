@@ -105,6 +105,22 @@ export default function CopyTradingPage() {
   const signalCount = asArray(signalsQ.data).length + asArray(hotQ.data).length;
   const statsLoading = balanceQ.isLoading || openQ.isLoading || ordersQ.isLoading;
 
+  // Live status pill — reflects the real account-data connection instead of
+  // asserting "active" unconditionally. error → 连接异常 (red); still
+  // loading/fetching → 同步中 (amber); data resolved → 已激活 (green).
+  const dataError = userQ.isError || balanceQ.isError || openQ.isError || ordersQ.isError;
+  const dataSyncing = userQ.isLoading || statsLoading;
+  const status: "error" | "syncing" | "active" =
+    dataError ? "error" : dataSyncing ? "syncing" : "active";
+  const statusColor =
+    status === "error" ? "rose" : status === "syncing" ? "amber" : "emerald";
+  const statusLabel =
+    status === "error"
+      ? t("copyTrading.accountError", "连接异常")
+      : status === "syncing"
+        ? t("copyTrading.accountSyncing", "同步中")
+        : t("copyTrading.accountActive");
+
   // ── Gate 1: no wallet ──────────────────────────────────────────────────────
   if (!wallet && !previewMode) {
     return (
@@ -155,10 +171,18 @@ export default function CopyTradingPage() {
             <span className="text-[11px] text-muted-foreground">Smart Copy-Trading</span>
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                {status !== "error" && (
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    statusColor === "amber" ? "bg-amber-400" : "bg-emerald-400"
+                  }`} />
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  statusColor === "rose" ? "bg-rose-400" : statusColor === "amber" ? "bg-amber-400" : "bg-emerald-400"
+                }`} />
               </span>
-              <span className="text-[11px] font-medium text-emerald-400">{t("copyTrading.accountActive")}</span>
+              <span className={`text-[11px] font-medium ${
+                statusColor === "rose" ? "text-rose-400" : statusColor === "amber" ? "text-amber-400" : "text-emerald-400"
+              }`}>{statusLabel}</span>
             </div>
           </div>
 
