@@ -197,7 +197,9 @@
     "loadMore": "加载更多 (剩余 {{remaining}} 个)",
     "allMarketsShown": "已显示全部 {{count}} 个市场",
     "amountRange": "金额须介于 {{min}} 至 {{max}} USDC",
-    "catAiLab": "预测实验室"
+    "catAiLab": "预测实验室",
+    "modeMarkets": "预测市场",
+    "modeLab": "AI 实验室"
   },
   "vault": {
     "title": "金库",

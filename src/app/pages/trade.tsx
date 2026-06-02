@@ -26,7 +26,7 @@ import type { AiPrediction, PredictionBet } from "@app-shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Category = "all" | "crypto" | "ai" | "news" | "mybets" | "ailab";
+type Category = "all" | "crypto" | "ai" | "news" | "mybets";
 type SortKey = "volume" | "ending" | "newest";
 
 interface PolymarketMarket {
@@ -676,7 +676,6 @@ const CATEGORIES: { id: Category; labelKey: string; icon: React.ElementType }[] 
   { id: "ai", labelKey: "trade.catAiSignals", icon: Brain },
   { id: "news", labelKey: "trade.catNews", icon: Newspaper },
   { id: "mybets", labelKey: "trade.catMyBets", icon: Trophy },
-  { id: "ailab", labelKey: "trade.catAiLab", icon: Sparkles },
 ];
 
 const SORTS: { key: SortKey; labelKey: string }[] = [
@@ -691,6 +690,8 @@ export default function Trade() {
   const walletAddr = account?.address || "";
 
   const [category, setCategory] = useState<Category>("all");
+  // Top-level page mode: 预测市场 (markets) vs AI 实验室 — a distinct entry, not a filter.
+  const [showLab, setShowLab] = useState(false);
   const [sort, setSort] = useState<SortKey>("volume");
   const [search, setSearch] = useState("");
   const [sortOpen, setSortOpen] = useState(false);
@@ -971,10 +972,38 @@ export default function Trade() {
         </div>
       </div>
 
-      {/* ── Search + category filters (below hero) ──── */}
+      {/* ── 模式切换:预测市场 / AI 实验室(独立入口,非筛选)──── */}
       <div className="px-4 lg:px-6 mt-4">
-        {/* Search (hidden in 实验室 view) */}
-        <div className={`relative mb-2.5 ${category === "ailab" ? "hidden" : ""}`}>
+        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
+          {([
+            { id: false, labelKey: "trade.modeMarkets", fallback: "预测市场", icon: BarChart2 },
+            { id: true,  labelKey: "trade.modeLab",     fallback: "AI 实验室", icon: Sparkles },
+          ] as const).map((m) => {
+            const Icon = m.icon;
+            const active = showLab === m.id;
+            return (
+              <button
+                key={String(m.id)}
+                onClick={() => setShowLab(m.id)}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[13px] font-bold tracking-wide transition-all ${
+                  active
+                    ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-white/55 hover:text-white/90 hover:bg-white/5"
+                }`}
+                data-testid={`trade-mode-${m.id ? "lab" : "markets"}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {t(m.labelKey, m.fallback)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Search + category filters (markets mode only) ──── */}
+      <div className={`px-4 lg:px-6 mt-4 ${showLab ? "hidden" : ""}`}>
+        {/* Search */}
+        <div className="relative mb-2.5">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
@@ -1017,15 +1046,15 @@ export default function Trade() {
         </div>
       </div>
 
-      {/* ── 预测实验室 — moved here from the Strategy page (pmlab tab) ─ */}
-      {category === "ailab" && (
+      {/* ── 预测实验室 — distinct AI 实验室 mode (toggle above) ─ */}
+      {showLab && (
         <div className="px-4 lg:px-6 mt-3">
           <PredictionAiLab />
         </div>
       )}
 
       {/* ── Market list ─────────────────────────────── */}
-      <div className={`px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 ${category === "ailab" ? "hidden" : ""}`} onClick={() => sortOpen && setSortOpen(false)}>
+      <div className={`px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 ${showLab ? "hidden" : ""}`} onClick={() => sortOpen && setSortOpen(false)}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-44 w-full rounded-xl" />
