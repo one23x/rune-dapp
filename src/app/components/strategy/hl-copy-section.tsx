@@ -42,7 +42,7 @@ import { queryClient } from "@app/lib/queryClient";
 import { useToast } from "@app/hooks/use-toast";
 import { arbitrum } from "@/lib/thirdweb/chains";
 import {
-  useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations,
+  useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations, useHlClose,
 } from "@app/lib/engine-hooks";
 import { hyperliquid } from "@app/lib/engine";
 import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
@@ -890,8 +890,9 @@ function DataSourceTab({ network }: { network: HlNetwork }) {
 
 // ── 持仓 / 平仓 / 历史 tab ───────────────────────────────────────────────────
 
-function PositionRow({ p, network, address }: { p: HlPosition; network: HlNetwork; address?: string }) {
+function PositionRow({ p, network, address, onClose, closing }: { p: HlPosition; network: HlNetwork; address?: string; onClose?: (coin: string) => void; closing?: boolean }) {
   const { t } = useTranslation();
+  const [confirm, setConfirm] = useState(false);
   const long = p.side === "LONG";
   const lev = p.leverage && p.leverage > 0 ? p.leverage : null;
   // ROE% = uPnL / initial margin (positionValue / leverage) — exchange convention.
@@ -930,6 +931,24 @@ function PositionRow({ p, network, address }: { p: HlPosition; network: HlNetwor
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry")}</div><div className="text-[12px] font-bold tabular-nums">{p.entryPx != null ? p.entryPx.toLocaleString() : "—"}</div></div>
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(p.positionValue)}</div></div>
       </div>
+      {onClose && (
+        <button
+          type="button"
+          disabled={closing}
+          onClick={() => {
+            if (confirm) { onClose(p.coin); setConfirm(false); }
+            else { setConfirm(true); window.setTimeout(() => setConfirm(false), 3000); }
+          }}
+          className={cn(
+            "mt-2.5 w-full h-9 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 transition active:scale-[0.99] disabled:opacity-60",
+            confirm ? "bg-red-500 text-white" : "bg-white/[0.04] text-red-300 border border-red-500/25 hover:bg-red-500/10",
+          )}
+          data-testid={`button-hl-close-${p.coin}`}
+        >
+          {closing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          {closing ? t("hl.closing", "平仓中…") : confirm ? t("hl.closeConfirm", "确认市价平仓?") : t("hl.closePosition", "平仓")}
+        </button>
+      )}
     </div>
   );
 }
@@ -969,9 +988,21 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const { t } = useTranslation();
   const account = useActiveAccount();
   const wallet = account?.address;
+  const { toast } = useToast();
   // HL 账户 = 引擎托管 EOA(下单/持仓/余额都在这个地址),不是连接钱包。
-  const engineEoa = (useEngineUser(wallet).data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
+  const userQ = useEngineUser(wallet);
+  const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
+  const engineEoa = (userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
   const acctQ = useHlAccount(engineEoa, network);
+  const { close, closingCoin } = useHlClose(userId, network);
+  async function onClosePosition(coin: string) {
+    try {
+      await close(coin);
+      toast({ title: t("hl.closeOk", "已平仓"), description: t("hl.closeOkDesc", "已提交市价平仓(reduce-only),稍后刷新持仓。") });
+    } catch (e) {
+      toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" });
+    }
+  }
   // History = recent close fills across leaders on this network (the engine
   // doesn't expose a per-follower fill history on the Bearer plane, so we use
   // the leader signal close-feed as the network activity record).
@@ -1009,7 +1040,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         ) : positions.length === 0 ? (
           <HlEmpty icon={Layers} title={t("hl.noPositions")} desc={t("hl.noPositionsDesc")} />
         ) : (
-          positions.map((p, i) => <PositionRow key={`${p.coin}-${i}`} p={p} network={network} address={acct?.address} />)
+          positions.map((p, i) => <PositionRow key={`${p.coin}-${i}`} p={p} network={network} address={acct?.address} onClose={onClosePosition} closing={closingCoin === p.coin} />)
         )}
       </TabsContent>
 

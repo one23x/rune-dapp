@@ -157,6 +157,22 @@ export function usePolymarketOrderMutations(userId: string | undefined) {
   };
 }
 
+/** Manual close of an HL position — reduce-only IOC market-close via the live
+ *  engine route (engine.ts → hyperliquid.close → POST trade/hyperliquid/.../close).
+ *  Invalidates the HL account query so positions/balance refresh after closing. */
+export function useHlClose(userId: string | undefined, network: HlNetwork) {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (coin: string) => hyperliquid.close(userId!, { coin, network }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["engine", "hl", "account", network] }),
+  });
+  return {
+    close: (coin: string) => m.mutateAsync(coin),
+    isClosing: m.isPending,
+    closingCoin: m.isPending ? (m.variables as string | undefined) : undefined,
+  };
+}
+
 /**
  * Place a REAL Polymarket CLOB order for a user.
  *

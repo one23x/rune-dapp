@@ -209,6 +209,11 @@ export const hyperliquid = {
   withdraw: (userId: string, body: unknown) =>
     post(`trade/hyperliquid/users/${userId}/withdraw`, body),
 
+  /** Manual close — reduce-only IOC market-close of an open position (live:
+   *  trade-hyperliquid.ts POST :115). Body: { coin, sizeBase?, network? }. */
+  close: (userId: string, body: { coin: string; sizeBase?: number; network: HlNetwork }) =>
+    post<{ ok: boolean; network: HlNetwork }>(`trade/hyperliquid/users/${userId}/close`, body),
+
   /** Ranked HL leaders for a network (active, by score desc). */
   leaders: (network: HlNetwork) =>
     get<{ network: HlNetwork; leaders: HlLeader[] }>(`v1/hl/leaders${qs({ network })}`),
