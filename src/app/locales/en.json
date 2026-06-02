@@ -69,18 +69,18 @@
     "retry": "Retry"
   },
   "nav": {
-    "home": "HALL",
+    "home": "HOME",
     "homeZh": "符阁",
-    "trade": "MARKET",
+    "trade": "COPY",
     "tradeZh": "符市",
     "vault": "VAULT",
     "vaultZh": "符库",
     "strategy": "Strategy",
-    "profile": "SELF",
+    "profile": "PROFILE",
     "profileZh": "符身",
     "market": "Market",
     "nodes": "Nodes",
-    "predict": "SIGHT",
+    "predict": "PREDICT",
     "predictZh": "符见",
     "copy": "COPY",
     "copyZh": "跟单"

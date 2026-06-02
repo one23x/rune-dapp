@@ -69,10 +69,10 @@
   },
   "nav": {
     "home": "홈",
-    "trade": "거래",
+    "trade": "카피",
     "vault": "볼트",
     "strategy": "전략",
-    "profile": "마이페이지",
+    "profile": "내 정보",
     "market": "마켓",
     "nodes": "노드",
     "predict": "예측",

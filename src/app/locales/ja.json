@@ -69,10 +69,10 @@
   },
   "nav": {
     "home": "ホーム",
-    "trade": "トレード",
-    "vault": "ボールト",
+    "trade": "コピー",
+    "vault": "金庫",
     "strategy": "戦略",
-    "profile": "マイページ",
+    "profile": "マイ",
     "market": "マーケット",
     "nodes": "ノード",
     "predict": "予測",
