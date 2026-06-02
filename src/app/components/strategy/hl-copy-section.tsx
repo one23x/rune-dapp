@@ -969,7 +969,9 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const { t } = useTranslation();
   const account = useActiveAccount();
   const wallet = account?.address;
-  const acctQ = useHlAccount(wallet, network);
+  // HL 账户 = 引擎托管 EOA(下单/持仓/余额都在这个地址),不是连接钱包。
+  const engineEoa = (useEngineUser(wallet).data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
+  const acctQ = useHlAccount(engineEoa, network);
   // History = recent close fills across leaders on this network (the engine
   // doesn't expose a per-follower fill history on the Bearer plane, so we use
   // the leader signal close-feed as the network activity record).
@@ -1142,8 +1144,9 @@ export function HlCopySection() {
 
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
+  const engineEoa = (userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
 
-  const acctQ = useHlAccount(wallet, network);
+  const acctQ = useHlAccount(engineEoa, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
 
@@ -1319,7 +1322,8 @@ export function HlHubPage() {
 
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-  const acctQ = useHlAccount(wallet, network);
+  const engineEoa = (userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress;
+  const acctQ = useHlAccount(engineEoa, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
   const { copyMany } = useHlCopy(userId, network);
