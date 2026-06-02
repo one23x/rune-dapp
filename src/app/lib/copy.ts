@@ -69,7 +69,14 @@ function tryExecCommand(text: string): boolean {
     ta.style.outline = "0";
     ta.style.opacity = "0";
     ta.style.pointerEvents = "none";
-    document.body.appendChild(ta);
+    // Append INSIDE an open modal/dialog when present. Radix Dialog traps focus
+    // within its content, so a textarea on document.body can't be focused/
+    // selected → execCommand copies nothing (this broke "copy address" inside
+    // the deposit dialog). Hosting the textarea in the dialog keeps it in scope.
+    const dialogHost =
+      (document.querySelector('[role="dialog"][data-state="open"]') as HTMLElement | null) ??
+      (document.querySelector('[role="dialog"]') as HTMLElement | null);
+    (dialogHost ?? document.body).appendChild(ta);
 
     const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
     if (isIOS) {

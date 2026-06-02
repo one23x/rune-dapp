@@ -16,11 +16,17 @@ import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import {
   Wallet, ArrowDown, ArrowUp, Plus, ChevronRight, Sparkles, Zap, Activity,
-  BarChart2, TrendingUp, TrendingDown, Layers,
+  BarChart2, TrendingUp, TrendingDown, Layers, X, Gift, Loader2,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@app/hooks/use-toast";
+import {
   useEngineUser, usePusdBalance, useOpenOrders, useOrders, useLeaderSignals, useHotMarkets,
+  usePolymarketOrderMutations,
 } from "@app/lib/engine-hooks";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { PremiumCard } from "@app/components/premium-card";
@@ -51,6 +57,38 @@ export default function CopyTradingPage() {
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  // Close/cancel + redeem REAL Polymarket positions via the engine. `confirmClose`
+  // holds the order pending a destructive-close confirmation; `confirmRedeem`
+  // gates the account-level redeem of resolved positions back to pUSD.
+  const { toast } = useToast();
+  const orderMut = usePolymarketOrderMutations(userId);
+  const [confirmClose, setConfirmClose] = useState<{ id: string; market: string } | null>(null);
+  const [confirmRedeem, setConfirmRedeem] = useState(false);
+
+  const doClose = async () => {
+    const target = confirmClose;
+    if (!target) return;
+    try {
+      await orderMut.cancelOrder(target.id);
+      toast({ title: t("copyTrading.closeSuccess", "持仓已平仓 / 订单已撤销") });
+    } catch (e: any) {
+      toast({ title: t("common.error", "出错了"), description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setConfirmClose(null);
+    }
+  };
+
+  const doRedeem = async () => {
+    try {
+      await orderMut.redeem();
+      toast({ title: t("copyTrading.redeemSuccess", "已赎回已结算持仓 → pUSD") });
+    } catch (e: any) {
+      toast({ title: t("common.error", "出错了"), description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setConfirmRedeem(false);
+    }
+  };
 
   const balance = pusdAmount(balanceQ.data);
 
@@ -192,9 +230,20 @@ export default function CopyTradingPage() {
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <h3 className="text-sm font-semibold text-foreground">{t("copyTrading.activePositions", "Active Positions")}</h3>
-          <Link href="/copy-trading/history" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-            {t("copyTrading.viewAll", "View All")} <ChevronRight size={12} />
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* Redeem resolved positions → pUSD (account-level engine route). */}
+            <button
+              onClick={() => setConfirmRedeem(true)}
+              disabled={orderMut.isRedeeming || !userId}
+              className="text-xs text-amber-400/90 hover:text-amber-300 flex items-center gap-1 disabled:opacity-50 transition-colors"
+            >
+              {orderMut.isRedeeming ? <Loader2 size={12} className="animate-spin" /> : <Gift size={12} />}
+              {t("copyTrading.redeem", "赎回结算")}
+            </button>
+            <Link href="/copy-trading/history" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              {t("copyTrading.viewAll", "View All")} <ChevronRight size={12} />
+            </Link>
+          </div>
         </div>
 
         {openQ.isLoading ? (
@@ -244,6 +293,20 @@ export default function CopyTradingPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Close / Cancel — destructive, gated behind a confirm dialog.
+                      Cancels the live CLOB order via the engine. */}
+                  <button
+                    onClick={() => setConfirmClose({ id: pos.id, market: pos.market })}
+                    disabled={orderMut.isCancelling}
+                    className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}
+                  >
+                    {orderMut.isCancelling && orderMut.cancellingId === pos.id
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : <X size={13} />}
+                    {t("copyTrading.closePosition", "平仓 / 撤单")}
+                  </button>
                 </div>
               );
             })}
@@ -271,6 +334,55 @@ export default function CopyTradingPage() {
 
       <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} />
       <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} />
+
+      {/* Confirm: close / cancel a single live position. */}
+      <AlertDialog open={!!confirmClose} onOpenChange={(o) => { if (!o) setConfirmClose(null); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("copyTrading.confirmCloseTitle", "确认平仓 / 撤单?")}</AlertDialogTitle>
+            <AlertDialogDescription className="line-clamp-3">
+              {t("copyTrading.confirmCloseDesc", "将撤销该 Polymarket 订单。此操作不可撤销。")}
+              {confirmClose ? ` — ${confirmClose.market}` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel", "取消")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doClose}
+              disabled={orderMut.isCancelling}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {orderMut.isCancelling
+                ? t("copyTrading.closing", "处理中…")
+                : t("copyTrading.confirmCloseAction", "确认平仓")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm: redeem all resolved positions → pUSD. */}
+      <AlertDialog open={confirmRedeem} onOpenChange={setConfirmRedeem}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("copyTrading.confirmRedeemTitle", "赎回已结算持仓?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("copyTrading.confirmRedeemDesc", "将把所有已结算的 Polymarket 持仓赎回为 pUSD 抵押金。")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel", "取消")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doRedeem}
+              disabled={orderMut.isRedeeming}
+              className="bg-amber-500 hover:bg-amber-600 text-black"
+            >
+              {orderMut.isRedeeming
+                ? t("copyTrading.redeeming", "赎回中…")
+                : t("copyTrading.confirmRedeemAction", "确认赎回")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CopyTradingLayout>
   );
 }

@@ -299,12 +299,14 @@ function HlFunding({
 //   wallet, no engine user   → explicit 开通 button (reuses useOnboardFlow)
 //   engine user present      → enabled banner with live state
 function HlAccountStrip({
-  wallet, userLoading, userError, userId, onRetryUser, followCount, funding,
+  wallet, userLoading, userError, userId, engineEoaAddress, onRetryUser, followCount, funding,
 }: {
   wallet?: string;
   userLoading: boolean;
   userError: boolean;
   userId?: string;
+  /** 引擎托管 EOA = HL 交易账户地址(HL 签名者 / 充值地址);未开户时为空。 */
+  engineEoaAddress?: string;
   onRetryUser: () => void;
   followCount: number;
   /** 充值 / 提现 面板,内嵌在「已开通」钱包卡里(仅已开户时) */
@@ -462,8 +464,26 @@ function HlAccountStrip({
           </div>
         </div>
       </div>
-      {/* 钱包地址 — 完整显示 + 可复制 */}
-      <AddressLine address={wallet} label={t("hl.walletLabel", "钱包地址")} />
+      {/* HL 交易账户地址 = 引擎托管 EOA(HL 签名者 / 充值地址)—— 完整显示 + 可复制。
+          这与连接钱包不同:下单/充值都发生在这个托管 EOA 上。 */}
+      {engineEoaAddress ? (
+        <div className="space-y-1.5">
+          <AddressLine address={engineEoaAddress} label={t("hl.tradingAccountLabel", "交易账户地址(托管 EOA)")} />
+          <p className="px-1 text-[10px] leading-snug text-muted-foreground/70">
+            {t("hl.custodialEoaNote", "引擎以此托管 EOA 在 Hyperliquid 上代为签名下单;充值请打到此地址。")}
+          </p>
+          {/* 连接钱包 — 次要信息,与交易账户区分开 */}
+          {wallet && (
+            <div className="flex items-center gap-1.5 px-1 pt-0.5 text-[10px] text-muted-foreground/60">
+              <Wallet className="h-3 w-3 shrink-0" />
+              <span className="shrink-0">{t("hl.connectedWalletLabel", "连接钱包")}</span>
+              <code className="font-mono truncate">{shortAddr(wallet)}</code>
+            </div>
+          )}
+        </div>
+      ) : (
+        <AddressLine address={wallet} label={t("hl.walletLabel", "钱包地址")} />
+      )}
       {funding && <div className="pt-3 border-t border-white/[0.06]">{funding}</div>}
     </div>
   );
@@ -1165,6 +1185,7 @@ export function HlCopySection() {
         userLoading={!!wallet && userQ.isLoading}
         userError={!!wallet && userQ.isError}
         userId={userId}
+        engineEoaAddress={(userQ.data as { engineEoaAddress?: string } | undefined)?.engineEoaAddress ?? ""}
         onRetryUser={() => userQ.refetch()}
         followCount={subscribedLeaders.size}
         funding={userId ? (

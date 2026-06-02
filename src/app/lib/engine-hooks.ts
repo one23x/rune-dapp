@@ -120,6 +120,42 @@ export function usePusdBalance(userId: string | undefined) {
   });
 }
 
+/**
+ * Manage a user's REAL Polymarket positions — cancel an open CLOB order and
+ * redeem resolved positions back to pUSD. Both call live engine routes
+ * (engine.ts → trading.polymarket.cancelOrder / redeem, which hit
+ * `trade/polymarket/users/:userId/...` on the One-Agents Engine). On success
+ * we invalidate the open-orders + pUSD-balance queries so the dashboard
+ * reflects the new state immediately. No-ops (idle) until a userId exists.
+ */
+export function usePolymarketOrderMutations(userId: string | undefined) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
+    qc.invalidateQueries({ queryKey: ["engine", "orders", userId] });
+    qc.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
+  };
+
+  const cancel = useMutation({
+    mutationFn: ({ orderId }: { orderId: string }) =>
+      trading.polymarket.cancelOrder(userId!, orderId),
+    onSuccess: invalidate,
+  });
+
+  const redeem = useMutation({
+    mutationFn: (body?: unknown) => trading.polymarket.redeem(userId!, body),
+    onSuccess: invalidate,
+  });
+
+  return {
+    cancelOrder: (orderId: string) => cancel.mutateAsync({ orderId }),
+    redeem: (body?: unknown) => redeem.mutateAsync(body),
+    isCancelling: cancel.isPending,
+    isRedeeming: redeem.isPending,
+    cancellingId: cancel.isPending ? (cancel.variables as { orderId: string } | undefined)?.orderId : undefined,
+  };
+}
+
 // ─── Hyperliquid copy-trading (network-keyed) ────────────────────────────────
 
 /** Ranked HL leaders for a network. */
