@@ -66,6 +66,30 @@ function hlExplorerAddress(addr: string, network: HlNetwork): string {
   return `${base}/explorer/address/${addr}`;
 }
 
+// 完整钱包地址行 — 不截断,可一键复制(移动端 break-all 自动换行)。
+function AddressLine({ address, label }: { address: string; label?: string }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  async function copy() {
+    const ok = await copyText(address);
+    toast(ok ? { title: t("common.copied", "已复制") } : { title: t("common.copyFailed", "复制失败"), variant: "destructive" });
+  }
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] px-2.5 py-1.5">
+      {label && <span className="text-[10px] uppercase tracking-wide text-muted-foreground/55 shrink-0">{label}</span>}
+      <code className="font-mono text-[10.5px] leading-relaxed text-foreground/75 break-all flex-1 min-w-0">{address}</code>
+      <button
+        onClick={copy}
+        aria-label={t("common.copy", "复制")}
+        title={t("common.copy", "复制")}
+        className="shrink-0 h-7 w-7 grid place-items-center rounded-md text-muted-foreground/70 hover:text-primary hover:bg-white/5 transition"
+      >
+        <Copy className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 // ── HL 充值 / 提现(响应式)──────────────────────────────────────────────────
 //
 // 充值:展示用户的引擎托管 EOA(= HL 签名者/账户),用户从 Arbitrum 把 USDC 充进去;
@@ -426,13 +450,13 @@ function HlAccountStrip({
               <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />{t("hl.enabledBadge")}
             </Badge>
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground/80">
-            <code className="font-mono">{shortAddr(wallet)}</code>
-            <span>·</span>
-            <span>{t("hl.followsCount", "{{count}} 个进行中的跟单", { count: followCount })}</span>
+          <div className="mt-0.5 text-[11px] text-muted-foreground/80">
+            {t("hl.followsCount", "{{count}} 个进行中的跟单", { count: followCount })}
           </div>
         </div>
       </div>
+      {/* 钱包地址 — 完整显示 + 可复制 */}
+      <AddressLine address={wallet} label={t("hl.walletLabel", "钱包地址")} />
       {funding && <div className="pt-3 border-t border-white/[0.06]">{funding}</div>}
     </div>
   );
