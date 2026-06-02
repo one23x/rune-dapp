@@ -59,6 +59,10 @@ import { useOnboardFlow, DepositBuyPanel } from "@app/components/copy-trading/sh
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
 const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
 
+// 非托管 agent 模式开关 —— 默认 OFF,生产只显示托管流程;待测网验证订单归属后
+// 设 VITE_HL_AGENT_MODE_ENABLED=1 才放出「自托管」选项。flag off 时 mode 恒为 custodial。
+const AGENT_MODE_ENABLED = (import.meta.env.VITE_HL_AGENT_MODE_ENABLED as string | undefined) === "1";
+
 // HL refuses orders below this account value — gate follow CTAs on it so packs
 // don't silently fail with insufficient_funds (UIUX Rec #2).
 const HL_MIN = 10;
@@ -537,7 +541,8 @@ function HlAccountStrip({
           </div>
         </div>
 
-        {/* 托管 / 自托管(agent)模式选择 —— 默认托管,切换后才走 agent 流程。 */}
+        {/* 托管 / 自托管(agent)模式选择 —— 默认托管;agent 默认隐藏(VITE_HL_AGENT_MODE_ENABLED),待测网验证后开启。 */}
+        {AGENT_MODE_ENABLED && (
         <div className="grid grid-cols-2 gap-2">
           {([
             { id: "custodial" as const, icon: Server, label: t("hl.modeCustodial", "托管"), desc: t("hl.modeCustodialDesc", "引擎代管资金") },
@@ -567,6 +572,7 @@ function HlAccountStrip({
             );
           })}
         </div>
+        )}
 
         {/* Per-step progress so the user sees what's happening + how long it takes. */}
         {busy && (
