@@ -1663,6 +1663,8 @@ export function HlHubPage() {
 
   // 选一个策略包 → 一键跟单(copyMany 批量订阅该 pack 的 top-N leader)。每张卡独立 busy。
   const [busyPack, setBusyPack] = useState<string | null>(null);
+  // 顶部 tab:跟单(数据台+策略包+跟单中)/ 数据(持仓·信号·历史)。一屏内切换,免去再跳转。
+  const [hubTab, setHubTab] = useState<"follow" | "data">("follow");
   async function onEnablePack(picks: HlLeader[], pack: HlPack) {
     if (busyPack) return;
     setBusyPack(pack.key);
@@ -1686,6 +1688,28 @@ export function HlHubPage() {
       <div className="px-4 py-5 space-y-5 max-w-2xl mx-auto" style={{ animation: "fadeSlideIn 0.4s ease-out" }}>
         <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} health={engineHealth} />
 
+        {/* 顶部 tab:跟单 / 持仓·信号·历史 —— 一屏内切换 */}
+        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
+          {([
+            { id: "follow" as const, label: t("hl.hubTabFollow", "跟单") },
+            { id: "data" as const, label: t("hl.hubTabData", "持仓·信号·历史") },
+          ]).map((tb) => (
+            <button
+              key={tb.id}
+              type="button"
+              onClick={() => setHubTab(tb.id)}
+              className={cn(
+                "flex-1 py-2.5 px-2 rounded-xl text-[12px] font-bold tracking-wide transition-all",
+                hubTab === tb.id ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]" : "text-white/55 hover:text-white/90 hover:bg-white/5",
+              )}
+              data-testid={`hub-tab-${tb.id}`}
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
+
+        {hubTab === "follow" && (<>
         {/* 数据台 */}
         <StatsGrid
           wallet={wallet}
@@ -1748,9 +1772,10 @@ export function HlHubPage() {
 
         {/* F17 — AI 跟单决策卡(开启 AI 决策后显示每个信号的判断+调参) */}
         <AiDecisionCards userId={userId} />
+        </>)}
 
-        {/* 信号 / 持仓列表 / 历史订单列表 */}
-        <SecondaryPanels network={network} />
+        {/* 持仓·信号·历史(SecondaryPanels 内含 持仓/数据 子 tab) */}
+        {hubTab === "data" && <SecondaryPanels network={network} />}
       </div>
     </div>
   );
