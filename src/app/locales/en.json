@@ -1972,7 +1972,44 @@
     "withdrawSubmit": "Confirm withdrawal",
     "withdrawSubmitting": "Submitting…",
     "withdrawSuccess": "Withdrawal submitted",
-    "withdrawSuccessDesc": "USDC will arrive at the destination Arbitrum address via the official bridge (a few minutes, ~$1 fee)."
+    "withdrawSuccessDesc": "USDC will arrive at the destination Arbitrum address via the official bridge (a few minutes, ~$1 fee).",
+    "pack": {
+      "highwin": {
+        "label": "High-Win · Majors",
+        "risk": "High win · Low vol",
+        "desc": "Mirror only the top-2 leaders, BTC/ETH/SOL only; low leverage, small size, exits when they exit."
+      },
+      "leadmirror": {
+        "label": "Top Leader",
+        "risk": "Medium · Focused",
+        "desc": "Mirror only the #1-ranked leader; concentrated, all coins, leverage ≤5x."
+      },
+      "balanced": {
+        "label": "Balanced",
+        "risk": "Medium · Diversified",
+        "desc": "Follow the top 4 leaders to spread risk; medium size, leverage ≤5x, all coins."
+      },
+      "aggressive": {
+        "label": "Aggressive · All",
+        "risk": "High vol · High freq",
+        "desc": "Follow every leader, all coins, larger size & daily cap, leverage as-is."
+      }
+    },
+    "packOn": "Active",
+    "packFollowN": "Follows {{count}}",
+    "packRatio": "Mirror ratio",
+    "packCap": "Per-trade cap",
+    "packDaily": "Daily cap",
+    "packLev": "Leverage",
+    "packLevAuto": "As-is",
+    "packCoins": "Coins",
+    "packAllCoins": "All",
+    "packExit": "Exit-on-close",
+    "packExitOn": "On",
+    "packEnabling": "Enabling…",
+    "packReapply": "Re-apply params",
+    "packTopUp": "Add remaining {{n}}",
+    "packHint": "pick one · one-tap follow"
   },
   "pmLab": {
     "title": "Prediction AI Lab",

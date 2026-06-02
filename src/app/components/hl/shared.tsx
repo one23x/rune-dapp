@@ -150,7 +150,7 @@ export function isInsufficientFunds(err: unknown): boolean {
   return /insufficient_funds|fund your hyperliquid|account value/i.test(String((err as any)?.message ?? err));
 }
 
-/** Per-follow risk configuration captured by the follow-config dialog. */
+/** Per-follow risk configuration — preset by a strategy pack (or a custom dialog). */
 export interface HlFollowConfig {
   /** Fraction of the leader's notional mirrored per trade (0–1). */
   notionalRatio: number;
@@ -160,6 +160,12 @@ export interface HlFollowConfig {
   takeProfitPct?: number | null;
   /** Auto stop-loss on the mirrored position (%, null = off). */
   stopLossPct?: number | null;
+  /** Per-trade notional cap (USD). Omit = engine default. */
+  notionalCapUsd?: number;
+  /** Daily notional cap (USD). Omit = engine default. */
+  dailyCapUsd?: number;
+  /** Coin whitelist (e.g. ["BTC","ETH","SOL"]). Empty = all coins. */
+  allowedCoins?: string[];
 }
 
 export const HL_DEFAULT_FOLLOW: HlFollowConfig = {
@@ -192,11 +198,14 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
       await hyperliquid.subscribeCreate(userId, {
         leaderAddress: leader.address,
         network,
-        // User-configured risk params; the engine create route validates/clamps.
+        // Pack/custom risk params; the engine create route validates/clamps.
         notionalRatio: config.notionalRatio,
         maxLeverage: config.maxLeverage,
         takeProfitPct: config.takeProfitPct ?? undefined,
         stopLossPct: config.stopLossPct ?? undefined,
+        notionalCapUsd: config.notionalCapUsd,
+        dailyCapUsd: config.dailyCapUsd,
+        allowedCoins: config.allowedCoins && config.allowedCoins.length > 0 ? config.allowedCoins : undefined,
       });
       return "ok";
     },

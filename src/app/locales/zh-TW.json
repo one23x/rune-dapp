@@ -1785,6 +1785,43 @@
     "justNow": "刚刚",
     "minAgo": "{{n}}分钟前",
     "hourAgo": "{{n}}小时前",
-    "dayAgo": "{{n}}天前"
+    "dayAgo": "{{n}}天前",
+    "pack": {
+      "highwin": {
+        "label": "高赢率·主流",
+        "risk": "高赢率·低波动",
+        "desc": "只跟评分最高的 2 位龙头,仅 BTC/ETH/SOL;低杠杆小仓位,跟随平仓退出。"
+      },
+      "leadmirror": {
+        "label": "龙头镜像",
+        "risk": "中风险·集中",
+        "desc": "只镜像评分第一的 leader,集中仓位、全币种,杠杆≤5x。"
+      },
+      "balanced": {
+        "label": "均衡分散",
+        "risk": "中风险·分散",
+        "desc": "跟前 4 位 leader 分散风险,中等仓位,杠杆≤5x,全币种。"
+      },
+      "aggressive": {
+        "label": "激进·全市场",
+        "risk": "高波动·高频",
+        "desc": "跟全部 leader、全币种,较大仓位与日上限,杠杆随单。"
+      }
+    },
+    "packOn": "已启用",
+    "packFollowN": "跟 {{count}} 位",
+    "packRatio": "镜像比例",
+    "packCap": "单笔上限",
+    "packDaily": "日上限",
+    "packLev": "杠杆",
+    "packLevAuto": "随单",
+    "packCoins": "币种",
+    "packAllCoins": "全部",
+    "packExit": "跟随平仓",
+    "packExitOn": "开",
+    "packEnabling": "启用中…",
+    "packReapply": "重新应用参数",
+    "packTopUp": "补齐剩余 {{n}} 位",
+    "packHint": "选一个,一键跟单"
   }
 }
