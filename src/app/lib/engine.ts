@@ -408,6 +408,41 @@ export const signals = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// console packs — Bearer (project-scoped). The project CLIENT curates these in
+// the rune-console; the dapp renders them as the followable strategy packs.
+// GET /v1/packs → { projectId, packs: ConsolePack[] }.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A project-curated strategy pack from the CONSOLE. `leaderAddress` is the
+ * specific HL leader this pack copies (null = the client hasn't bound a leader
+ * yet → not followable). `params` holds the risk config the client set; key
+ * naming is tolerant (ratioPct|notionalRatio, cap|notionalCapUsd,
+ * daily|dailyCapUsd, coins|allowedCoins, maxLeverage) and pricing-stripped.
+ */
+export interface ConsolePack {
+  slug: string;
+  name: string;
+  category: string;
+  tier: "entry" | "advanced" | "pro" | null;
+  /** The HL leader this pack copies (0x… or null when unbound). */
+  leaderAddress: string | null;
+  /** Minimum follower account value (USD) the client requires (or null). */
+  minBalanceUsd: number | null;
+  /** Optional perf summary the console may attach (shape is client-defined). */
+  perf: unknown | null;
+  /** Risk config (pricing-stripped). Tolerant of both naming styles. */
+  params: Record<string, unknown>;
+}
+
+export const packs = {
+  /** Project's console-curated strategy packs (project-scoped via proxy). */
+  list: () => get<{ projectId: string; packs: ConsolePack[] }>("v1/packs"),
+  /** Alias matching the engine route naming. */
+  consolePacks: () => get<{ projectId: string; packs: ConsolePack[] }>("v1/packs"),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // recommendations / presets — Bearer
 // ─────────────────────────────────────────────────────────────────────────────
 export const recommendations = {
@@ -434,6 +469,7 @@ export default {
   strategies,
   copySubscriptions,
   signals,
+  packs,
   recommendations,
   engine,
 };

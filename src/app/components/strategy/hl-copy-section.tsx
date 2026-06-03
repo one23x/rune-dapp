@@ -44,9 +44,10 @@ import { useToast } from "@app/hooks/use-toast";
 import { arbitrum } from "@/lib/thirdweb/chains";
 import {
   useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations, useHlClose,
+  useConsolePacks,
 } from "@app/lib/engine-hooks";
 import { hyperliquid, users } from "@app/lib/engine";
-import type { HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
+import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
 import { AiDecisionCards } from "./ai-decision-cards";
 import {
   NetworkToggle, HlEmpty, useHlCopy, TIER_META, tierOf,
@@ -1621,6 +1622,218 @@ function PackCard({
   );
 }
 
+// ── CONSOLE 策略包 — 项目方在控制台配置的 pack(替代硬编码预设)──────────────────
+//
+// 每个 console pack 绑定 ONE leaderAddress(项目方指定要复制的 HL 交易员)+ 一套
+// 风险参数(params)。跟单 = 订阅该 pack 的 leaderAddress + 用 params 构建 cfg。
+// params 的 key 命名两种风格都兼容(ratioPct|notionalRatio, cap|notionalCapUsd,
+// daily|dailyCapUsd, coins|allowedCoins, maxLeverage)。
+
+/** Pick the first finite number among candidate keys (tolerant of naming). */
+function pickNum(params: Record<string, unknown>, ...keys: string[]): number | undefined {
+  for (const k of keys) {
+    const v = params[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+  }
+  return undefined;
+}
+
+/** Coin whitelist — tolerant of array or comma/space string. */
+function pickCoins(params: Record<string, unknown>, ...keys: string[]): string[] {
+  for (const k of keys) {
+    const v = params[k];
+    if (Array.isArray(v)) return v.map((c) => String(c).trim().toUpperCase()).filter(Boolean);
+    if (typeof v === "string" && v.trim() !== "") return v.split(/[,\s]+/).map((c) => c.trim().toUpperCase()).filter(Boolean);
+  }
+  return [];
+}
+
+/**
+ * Map a console pack's `params` → the engine HlFollowConfig.
+ *   ratioPct (whole %, e.g. 5) OR notionalRatio (fraction, e.g. 0.05) → notionalRatio
+ *   maxLeverage (0 = 随单/auto) ; cap|notionalCapUsd ; daily|dailyCapUsd ;
+ *   coins|allowedCoins ; takeProfitPct|tpPct ; stopLossPct|slPct.
+ */
+function consolePackConfig(pack: ConsolePack): HlFollowConfig {
+  const p = pack.params ?? {};
+  // ratio: prefer an explicit fraction (notionalRatio/ratio ≤1), else whole-% (ratioPct).
+  const ratioFrac = pickNum(p, "notionalRatio", "ratio");
+  const ratioPct = pickNum(p, "ratioPct", "notionalRatioPct", "mirrorPct");
+  const notionalRatio =
+    ratioFrac != null ? (ratioFrac > 1 ? ratioFrac / 100 : ratioFrac)
+      : ratioPct != null ? ratioPct / 100
+      : 0.05;
+  return {
+    notionalRatio,
+    maxLeverage: pickNum(p, "maxLeverage", "maxLev", "leverage") ?? 0,
+    takeProfitPct: pickNum(p, "takeProfitPct", "tpPct") ?? null,
+    stopLossPct: pickNum(p, "stopLossPct", "slPct") ?? null,
+    notionalCapUsd: pickNum(p, "notionalCapUsd", "cap", "perTradeCapUsd"),
+    dailyCapUsd: pickNum(p, "dailyCapUsd", "daily", "dailyCap"),
+    allowedCoins: pickCoins(p, "allowedCoins", "coins"),
+  };
+}
+
+/** Console tier → display meta (label + color). null tier = neutral. */
+const CONSOLE_TIER_META: Record<NonNullable<ConsolePack["tier"]>, { label: string; color: string }> = {
+  entry: { label: "入门", color: "#34d399" },
+  advanced: { label: "进阶", color: "#818cf8" },
+  pro: { label: "专业", color: "#fb7185" },
+};
+
+/**
+ * One CONSOLE pack card. Mirrors PackCard's visual + one-tap confirm UX, but
+ * follows the pack's single bound leaderAddress with the pack's params.
+ * No leaderAddress → disabled "项目方未绑定 leader" state.
+ */
+function ConsolePackCard({
+  pack, subscribed, busy, onEnable, underfunded = false,
+}: {
+  pack: ConsolePack;
+  subscribed: Set<string>;
+  busy: boolean;
+  onEnable: (pack: ConsolePack) => void;
+  underfunded?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => { if (busy) setConfirm(false); }, [busy]);
+
+  const cfg = useMemo(() => consolePackConfig(pack), [pack]);
+  const tierMeta = pack.tier ? CONSOLE_TIER_META[pack.tier] : null;
+  const color = tierMeta?.color ?? "#a78bfa";
+  const leaderBound = !!pack.leaderAddress;
+  const isOn = leaderBound && subscribed.has(pack.leaderAddress!.toLowerCase());
+
+  const minBal = pack.minBalanceUsd;
+  // perf — show a compact summary if the console attached a number-ish field.
+  const perfWin = pack.perf && typeof pack.perf === "object"
+    ? pickNum(pack.perf as Record<string, unknown>, "winRate", "win", "winRatePct")
+    : undefined;
+  const perfRoi = pack.perf && typeof pack.perf === "object"
+    ? pickNum(pack.perf as Record<string, unknown>, "roi", "roiPct", "pnlPct")
+    : undefined;
+
+  const param = (k: string, v: React.ReactNode) => (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-foreground/45">{k}</span>
+      <span className="font-bold text-foreground/80 tabular-nums">{v}</span>
+    </div>
+  );
+
+  return (
+    <div className="glass-panel p-4" style={isOn ? { boxShadow: `0 0 0 1px ${color}66, 0 0 18px ${color}22` } : undefined}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} />
+          <span className="text-[15px] font-bold text-foreground truncate">{pack.name || pack.slug}</span>
+        </div>
+        {isOn && (
+          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${color}22`, color }}>
+            {t("hl.packOn", "已启用")}
+          </span>
+        )}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        {tierMeta && (
+          <span className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: `${color}1a`, color }}>
+            {t(`hl.consoleTier.${pack.tier}`, tierMeta.label)}
+          </span>
+        )}
+        {pack.category && (
+          <span className="inline-flex w-fit items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-white/[0.05] text-foreground/60">
+            {pack.category}
+          </span>
+        )}
+        {(perfWin != null || perfRoi != null) && (
+          <span className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-300">
+            {perfWin != null ? t("hl.consolePerfWin", "胜率 {{v}}%", { v: perfWin }) : ""}
+            {perfWin != null && perfRoi != null ? " · " : ""}
+            {perfRoi != null ? t("hl.consolePerfRoi", "收益 {{v}}%", { v: perfRoi }) : ""}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
+        {param(t("hl.packRatio", "镜像比例"), `${(cfg.notionalRatio * 100).toFixed(0)}%`)}
+        {param(t("hl.packCap", "单笔上限"), cfg.notionalCapUsd != null ? `$${cfg.notionalCapUsd}` : t("hl.packAuto", "随单"))}
+        {param(t("hl.packDaily", "日上限"), cfg.dailyCapUsd != null ? `$${cfg.dailyCapUsd}` : t("hl.packAuto", "随单"))}
+        {param(t("hl.packLev", "杠杆"), cfg.maxLeverage > 0 ? `≤${cfg.maxLeverage}x` : t("hl.packLevAuto", "随单"))}
+        {param(t("hl.packCoins", "币种"), (cfg.allowedCoins && cfg.allowedCoins.length) ? cfg.allowedCoins.join("/") : t("hl.packAllCoins", "全部"))}
+        {minBal != null ? param(t("hl.packMinBal", "最低余额"), `$${minBal}`) : param(t("hl.packExit", "跟随平仓"), t("hl.packExitOn", "开"))}
+      </div>
+
+      {/* 项目方未绑定 leader → 禁用,提示需在控制台绑定。 */}
+      {!leaderBound ? (
+        <button
+          type="button"
+          disabled
+          className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[13px] font-bold bg-white/[0.04] text-foreground/40 border border-white/10 cursor-not-allowed"
+          data-testid={`button-console-pack-unbound-${pack.slug}`}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          {t("hl.consolePackUnbound", "项目方未绑定 leader")}
+        </button>
+      ) : underfunded ? (
+        <Link href="/strategy" data-testid={`link-console-pack-fund-${pack.slug}`}>
+          <button
+            type="button"
+            className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] bg-white/[0.05] text-amber-200 border border-amber-500/30"
+            data-testid={`button-console-pack-fund-${pack.slug}`}
+          >
+            <Wallet className="h-4 w-4" />
+            {t("hl.packFundToFollow", "充值后跟单")}
+          </button>
+        </Link>
+      ) : (
+        <>
+          {confirm && !isOn && (
+            <div className="mt-3 rounded-xl p-3 space-y-1.5" style={{ background: `${color}12`, border: `1px solid ${color}33` }}>
+              <div className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color }}>
+                <AlertTriangle className="h-3.5 w-3.5" />{t("hl.packConfirmTitle", "确认跟单参数")}
+              </div>
+              <p className="text-[11px] leading-relaxed text-foreground/70">
+                {t("hl.consolePackConfirmSummary", "复制 {{leader}} · 镜像比例 {{ratio}}% · 杠杆 {{lev}} · 单笔上限 {{cap}}", {
+                  leader: shortAddr(pack.leaderAddress!),
+                  ratio: (cfg.notionalRatio * 100).toFixed(0),
+                  lev: cfg.maxLeverage > 0 ? `≤${cfg.maxLeverage}x` : t("hl.packLevAuto", "随单"),
+                  cap: cfg.notionalCapUsd != null ? `$${cfg.notionalCapUsd}` : t("hl.packAuto", "随单"),
+                })}
+              </p>
+              <p className="text-[11px] leading-relaxed text-red-300/90">
+                {t("hl.packRiskLine", "杠杆交易可能亏损全部本金,爆仓后无法追回。")}
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (isOn) { onEnable(pack); return; }
+              if (confirm) { onEnable(pack); setConfirm(false); }
+              else setConfirm(true);
+            }}
+            className={cn(
+              "mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] disabled:opacity-50",
+              isOn ? "bg-white/[0.06] text-foreground/80 border border-white/10" : "text-black",
+            )}
+            style={isOn ? undefined : { background: `linear-gradient(135deg, ${color}, ${color}cc)`, boxShadow: `0 0 18px ${color}40` }}
+            data-testid={`button-console-pack-enable-${pack.slug}`}
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            {busy ? t("hl.packEnabling", "启用中…")
+              : isOn ? t("hl.packReapply", "重新应用参数")
+              : confirm ? t("hl.packConfirmFollow", "确认跟单")
+              : t("hl.oneClickFollow", "一键跟单")}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── 智能跟单HL — full hub page reached from the 跟单 tab hero ──────────────────
 //
 // 数据台 (StatsGrid) · 参数配置 · 策略包 + 一键跟单 (PackRow) · 跟单中 (ActiveSubs)
@@ -1642,7 +1855,14 @@ export function HlHubPage() {
   const acctQ = useHlAccount(hlAddress, network);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
-  const { copyMany } = useHlCopy(userId, network);
+  const packsQ = useConsolePacks();
+  const { copy, copyMany } = useHlCopy(userId, network);
+
+  // CONSOLE packs drive the list when the project client has configured them.
+  // Empty list OR fetch error → fall back to the hardcoded HL_PACKS presets so
+  // nothing regresses for projects that haven't curated packs yet.
+  const consolePacks = packsQ.data?.packs ?? [];
+  const useConsole = packsQ.isSuccess && consolePacks.length > 0;
 
   const subscribedLeaders = useMemo(() => {
     const set = new Set<string>();
@@ -1669,6 +1889,27 @@ export function HlHubPage() {
     if (busyPack) return;
     setBusyPack(pack.key);
     try { await copyMany(picks, packConfig(pack)); } finally { setBusyPack(null); }
+  }
+
+  // CONSOLE pack → follow its single bound leaderAddress with its params.
+  // Synthesize the minimal HlLeader shape copy() needs (it only reads .address).
+  async function onEnableConsolePack(pack: ConsolePack) {
+    if (busyPack || !pack.leaderAddress) return;
+    setBusyPack(pack.slug);
+    try {
+      const leaderObj: HlLeader = {
+        address: pack.leaderAddress,
+        label: pack.name || pack.slug,
+        active: true,
+        network,
+        score: null,
+        medianHoldingS: null,
+        isHft: null,
+      };
+      await copy(leaderObj, consolePackConfig(pack));
+    } finally {
+      setBusyPack(null);
+    }
   }
 
   return (
@@ -1746,7 +1987,23 @@ export function HlHubPage() {
             </Link>
           )}
 
-          {leadersQ.isLoading ? (
+          {/* CONSOLE packs (project-curated) drive the list when configured;
+              otherwise fall back to the hardcoded HL_PACKS presets so projects
+              that haven't set up packs keep the existing top-N-leader behavior. */}
+          {useConsole ? (
+            <div className="space-y-3">
+              {consolePacks.map((p) => (
+                <ConsolePackCard
+                  key={p.slug}
+                  pack={p}
+                  subscribed={subscribedLeaders}
+                  busy={busyPack === p.slug}
+                  onEnable={onEnableConsolePack}
+                  underfunded={underfunded}
+                />
+              ))}
+            </div>
+          ) : packsQ.isLoading || leadersQ.isLoading ? (
             <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}</div>
           ) : leaders.length === 0 ? (
             <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />

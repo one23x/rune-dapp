@@ -17,6 +17,7 @@ import {
   copySubscriptions,
   signals,
   hyperliquid,
+  packs,
   type HlNetwork,
   type PolymarketOrderInput,
 } from "@app/lib/engine";
@@ -52,6 +53,20 @@ export function useHotMarkets() {
     queryFn: () => signals.hotMarkets(),
     staleTime: 60_000,
     refetchInterval: 60_000,
+  });
+}
+
+/**
+ * Project's CONSOLE-curated strategy packs (GET /v1/packs, project-scoped).
+ * These replace the hardcoded HL presets when the client has configured packs;
+ * an empty list / fetch error lets the caller fall back to the built-in presets.
+ */
+export function useConsolePacks() {
+  return useQuery({
+    queryKey: ["engine", "console-packs"],
+    queryFn: () => packs.consolePacks(),
+    staleTime: 60_000,
+    retry: false,
   });
 }
 
