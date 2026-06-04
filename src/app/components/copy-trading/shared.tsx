@@ -509,9 +509,16 @@ export function DepositDialog({
         const addrObj = val?.address ?? val;
         let rows: { chain: string; address: string }[] = [];
         if (addrObj && typeof addrObj === "object" && !Array.isArray(addrObj)) {
-          rows = Object.entries(addrObj)
-            .filter(([, a]) => typeof a === "string" && (a as string).length > 0)
-            .map(([chain, a]) => ({ chain: chain.toUpperCase(), address: String(a) }));
+          // 只保留一个充值地址(EVM = Polygon USDC,最常用);多链地址会让用户困惑。
+          const evm = (addrObj as Record<string, unknown>).evm;
+          if (typeof evm === "string" && evm.length > 0) {
+            rows = [{ chain: "USDC", address: evm }];
+          } else {
+            rows = Object.entries(addrObj)
+              .filter(([, a]) => typeof a === "string" && (a as string).length > 0)
+              .slice(0, 1)
+              .map(([chain, a]) => ({ chain: chain.toUpperCase(), address: String(a) }));
+          }
         } else {
           rows = asArray(addrObj)
             .map((r: any) => ({
