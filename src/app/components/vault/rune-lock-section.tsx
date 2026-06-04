@@ -136,26 +136,26 @@ export function RuneLockSection() {
         >
           <div className="flex gap-4">
             <div>
-              <div className="text-[9px] text-white/50 uppercase mb-0.5">{isZh ? "已锁仓RUNE" : "RUNE Locked"}</div>
+              <div className="text-[9px] text-white/50 uppercase mb-0.5">{t("vault.lock.stakedRune", "RUNE Locked")}</div>
               <div className="text-sm font-bold tabular-nums text-amber-300">
                 {Number(stats?.totalRuneLocked || 0).toLocaleString()}
               </div>
             </div>
             <div>
-              <div className="text-[9px] text-white/50 uppercase mb-0.5">{isZh ? "我的veRUNE" : "My veRUNE"}</div>
+              <div className="text-[9px] text-white/50 uppercase mb-0.5">{t("vault.lock.myVeRune", "My veRUNE")}</div>
               <div className="text-sm font-bold tabular-nums text-amber-300">
                 {Number(stats?.totalVeRune || 0).toFixed(2)}
               </div>
             </div>
             {(stats?.positions || 0) > 0 && (
               <div>
-                <div className="text-[9px] text-white/50 uppercase mb-0.5">{isZh ? "仓位" : "Positions"}</div>
+                <div className="text-[9px] text-white/50 uppercase mb-0.5">{t("vault.lock.positions", "Positions")}</div>
                 <div className="text-sm font-bold tabular-nums text-white">{stats?.positions}</div>
               </div>
             )}
           </div>
           <div className="flex items-center gap-1 text-[10px] text-amber-300/70">
-            <span>{isZh ? "查看仓位" : "My positions"}</span>
+            <span>{t("common.myPositions", "My positions")}</span>
             <ChevronRight className="h-3 w-3" />
           </div>
         </button>

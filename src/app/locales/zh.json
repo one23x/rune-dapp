@@ -73,7 +73,9 @@
       "desc": "该功能即将上线，敬请期待。",
       "descWith": "{{feature}} 即将上线，敬请期待。",
       "title": "暂未开放"
-    }
+    },
+    "copyAddress": "复制地址",
+    "myPositions": "查看仓位"
   },
   "nav": {
     "home": "首页",
@@ -285,7 +287,8 @@
       "validationAmount": "最低 10 USDT",
       "notReadyTitle": "即将开放",
       "notReadyDesc": "RUNE 锁仓功能将在协议正式上线后开放。",
-      "runeLock": "RUNE 质押"
+      "runeLock": "RUNE 质押",
+      "positions": "仓位"
     },
     "remaining": "剩余",
     "action": "操作",
@@ -435,7 +438,8 @@
       "stepBuybackDesc": "金库产生的部分收益将用于在公开市场回购代币。",
       "stepBuybackTitle": "协议回购",
       "stepValueDesc": "随着流通量减少，剩余代币的价值捕获能力将持续增强。",
-      "stepValueTitle": "价值提升"
+      "stepValueTitle": "价值提升",
+      "dailyFire": "每日 FIRE"
     },
     "tabPool": "Rune 池",
     "tabPoolDesc": "募集 → 上线 → 飞轮",
@@ -491,7 +495,21 @@
       "roundPrefix": "第",
       "roundSuffix": "轮",
       "roundTarget": "目标",
-      "roundDone": "全部完成"
+      "roundDone": "全部完成",
+      "stageRaise25": "募集 25%",
+      "stageRaise60": "募集 60%",
+      "stageLaunch": "100% 上线",
+      "stagePost1": "上线 +1",
+      "stagePost2": "上线 +2",
+      "stagePost3": "上线 +3",
+      "stagePost4": "上线 +4",
+      "stagePost5": "上线 +5",
+      "stagePost6": "上线 +6",
+      "phasePre": "募集期",
+      "phaseLaunch": "上线",
+      "phasePost": "上线后",
+      "badgeInject": "35% 注入",
+      "badgeFlywheel": "17.5% × 2 飞轮"
     },
     "viewAnalysis": "查看分析",
     "lockNotReadyTitle": "即将开放",
@@ -2256,7 +2274,12 @@
     "underfundedDesc": "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。",
     "viewOnExplorer": "区块链浏览器查看",
     "walletLabel": "钱包地址",
-    "depositOnchainWait": "充值需等链上确认,约 2–5 分钟到账;到账后余额自动刷新,请耐心等待。"
+    "depositOnchainWait": "充值需等链上确认,约 2–5 分钟到账;到账后余额自动刷新,请耐心等待。",
+    "consoleTier": {
+      "entry": "入门",
+      "advanced": "进阶",
+      "pro": "专业"
+    }
   },
   "pmLab": {
     "title": "预测 AI 实验室",

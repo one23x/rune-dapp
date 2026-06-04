@@ -73,7 +73,9 @@
       "desc": "Cette fonctionnalité arrive bientôt. Restez à l’écoute.",
       "descWith": "{{feature}} arrive bientôt. Restez à l’écoute.",
       "title": "Pas encore disponible"
-    }
+    },
+    "copyAddress": "Copier l'adresse",
+    "myPositions": "Mes positions"
   },
   "nav": {
     "home": "ACCUEIL",
@@ -384,7 +386,21 @@
       "roundPrefix": "Tour",
       "roundSuffix": "",
       "roundTarget": "Cible",
-      "roundDone": "Tous les tours terminés"
+      "roundDone": "Tous les tours terminés",
+      "stageRaise25": "Levée 25%",
+      "stageRaise60": "Levée 60%",
+      "stageLaunch": "Lancement 100%",
+      "stagePost1": "Lancement +1",
+      "stagePost2": "Lancement +2",
+      "stagePost3": "Lancement +3",
+      "stagePost4": "Lancement +4",
+      "stagePost5": "Lancement +5",
+      "stagePost6": "Lancement +6",
+      "phasePre": "Pré-lancement",
+      "phaseLaunch": "Lancement",
+      "phasePost": "Post-lancement",
+      "badgeInject": "35% injection",
+      "badgeFlywheel": "17,5% × 2 volant"
     },
     "viewAnalysis": "Voir l'analyse",
     "lockNotReadyTitle": "Bientôt disponible",
@@ -433,7 +449,8 @@
       "validationAmount": "Minimum 10 USDT",
       "notReadyTitle": "Bientôt disponible",
       "notReadyDesc": "Le verrouillage de RUNE sera ouvert après le lancement du protocole.",
-      "runeLock": "Staking de RUNE"
+      "runeLock": "Staking de RUNE",
+      "positions": "Positions"
     },
     "burn": {
       "sectionTitle": "Brûler RUNE · Rendement FIRE permanent",
@@ -496,7 +513,8 @@
       "stepBuybackDesc": "Une partie des revenus du coffre sert à racheter des jetons sur le marché libre.",
       "stepBuybackTitle": "Rachat du protocole",
       "stepValueDesc": "À mesure que l’offre en circulation diminue, la captation de valeur des jetons restants ne cesse de se renforcer.",
-      "stepValueTitle": "Accumulation de valeur"
+      "stepValueTitle": "Accumulation de valeur",
+      "dailyFire": "FIRE quotidien"
     }
   },
   "deposit": {
@@ -530,7 +548,8 @@
     "buyTitle": "Achat en un clic par carte / cross-chain",
     "customAmount": "Montant personnalisé",
     "enterAmount": "Saisissez ou sélectionnez un montant",
-    "manualTransfer": "Ou transférez à l’adresse"
+    "manualTransfer": "Ou transférez à l’adresse",
+    "onchainWaitPm": "USDC Polygon uniquement. La confirmation on-chain prend ~2–5 min ; ton solde se met à jour automatiquement à l'arrivée — patiente."
   },
   "ma": {
     "chartArea": "Zone",
@@ -2220,7 +2239,13 @@
     "tradingAccountLabelAgent": "Adresse du compte de trading (votre portefeuille)",
     "underfundedDesc": "HL exige au moins ${{min}} pour copier ; capital actuel du compte {{val}}. Touchez ici pour revenir à votre portefeuille et déposer.",
     "viewOnExplorer": "Voir sur l’explorateur de blocs",
-    "walletLabel": "Adresse du portefeuille"
+    "walletLabel": "Adresse du portefeuille",
+    "consoleTier": {
+      "entry": "Débutant",
+      "advanced": "Avancé",
+      "pro": "Pro"
+    },
+    "depositOnchainWait": "Les dépôts nécessitent une confirmation on-chain (~2–5 min) ; le solde se met à jour automatiquement à l'arrivée — patiente."
   },
   "profileVault": {
     "claimed": "Réclamé !",
@@ -2330,6 +2355,28 @@
     "levelBadge": "Nœud L{{level}}",
     "limitPerTrade": "Par trade",
     "limitDaily": "Quotidien",
-    "limitTrades": "Trades/jour"
+    "limitTrades": "Trades/jour",
+    "benefit": {
+      "ADVANCED": "Plafonds quotidiens plus élevés et accès complet au copy-trading.",
+      "FOUNDER": "Niveau supérieur — limites de trading maximales, taux de parrainage maximal et qualification Genesis.",
+      "INITIAL": "Niveau d'entrée — débloque l'ouverture de compte et le copy-trading de base.",
+      "MID": "Plafonds intermédiaires adaptés aux traders actifs.",
+      "SUPER": "Plafonds plus élevés avec signaux prioritaires et taux de parrainage amélioré."
+    },
+    "buyConfirm": "Confirmer l'achat",
+    "buyCta": "Acheter un nœud",
+    "buyDialogDesc": "Choisis un niveau et paie en USDC.",
+    "buyGridTitle": "Acheter un nœud",
+    "buySuccess": "Achat réussi",
+    "buySuccessDesc": "Nœud acheté — actif une fois confirmé on-chain.",
+    "buyTitle": "Acheter un nœud",
+    "emptyDesc": "Achète un nœud pour débloquer l'ouverture de compte et le copy-trading.",
+    "emptyTitle": "Tu ne détiens encore aucun nœud",
+    "heldTitle": "Mes nœuds",
+    "pageSubtitle": "Détiens un nœud pour débloquer l'ouverture de compte et le copy-trading",
+    "pageTitle": "Mes nœuds",
+    "payHint": "Payer en USDC · {{chain}}",
+    "redeemDesc": "Tu as déjà un code ? Saisis-le pour activer l'accès au nœud.",
+    "redeemTitle": "Utiliser le code d'autorisation"
   }
 }

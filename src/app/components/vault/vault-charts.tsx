@@ -70,37 +70,41 @@ const CustomTooltipAlloc = ({ active, payload }: any) => {
 //
 // `usdtSide` and `runeSideUsdt` are both denominated in USDT so the stacked
 // bar reads as "total LP TVL". `runePrice` is on a secondary axis.
-const POOL_GROWTH = [
-  { stage: "募集 25%",   phase: "pre",    usdtSide: 700,    runeSideUsdt: 700,    runePrice: 0.028 },
-  { stage: "募集 60%",   phase: "pre",    usdtSide: 1680,   runeSideUsdt: 1680,   runePrice: 0.028 },
-  { stage: "100% 上线",  phase: "launch", usdtSide: 2800,   runeSideUsdt: 2800,   runePrice: 0.028 },
-  { stage: "上线 +1",    phase: "post",   usdtSide: 2975,   runeSideUsdt: 3060,   runePrice: 0.0301 },
-  { stage: "上线 +2",    phase: "post",   usdtSide: 3238,   runeSideUsdt: 3450,   runePrice: 0.0335 },
-  { stage: "上线 +3",    phase: "post",   usdtSide: 3588,   runeSideUsdt: 4000,   runePrice: 0.0376 },
-  { stage: "上线 +4",    phase: "post",   usdtSide: 4025,   runeSideUsdt: 4720,   runePrice: 0.0425 },
-  { stage: "上线 +5",    phase: "post",   usdtSide: 4550,   runeSideUsdt: 5610,   runePrice: 0.0481 },
-  { stage: "上线 +6",    phase: "post",   usdtSide: 5163,   runeSideUsdt: 6680,   runePrice: 0.0552 },
+// `stageKey` is a stable i18n key; the visible `stage` (X-axis category +
+// ReferenceLine match) is resolved via t() inside the component so the launch
+// marker stays in sync with the translated axis label.
+const POOL_GROWTH_RAW = [
+  { stageKey: "vault.charts.stageRaise25",  stageDefault: "Raise 25%",  phase: "pre",    usdtSide: 700,    runeSideUsdt: 700,    runePrice: 0.028 },
+  { stageKey: "vault.charts.stageRaise60",  stageDefault: "Raise 60%",  phase: "pre",    usdtSide: 1680,   runeSideUsdt: 1680,   runePrice: 0.028 },
+  { stageKey: "vault.charts.stageLaunch",   stageDefault: "100% Launch", phase: "launch", usdtSide: 2800,   runeSideUsdt: 2800,   runePrice: 0.028 },
+  { stageKey: "vault.charts.stagePost1",    stageDefault: "Launch +1",  phase: "post",   usdtSide: 2975,   runeSideUsdt: 3060,   runePrice: 0.0301 },
+  { stageKey: "vault.charts.stagePost2",    stageDefault: "Launch +2",  phase: "post",   usdtSide: 3238,   runeSideUsdt: 3450,   runePrice: 0.0335 },
+  { stageKey: "vault.charts.stagePost3",    stageDefault: "Launch +3",  phase: "post",   usdtSide: 3588,   runeSideUsdt: 4000,   runePrice: 0.0376 },
+  { stageKey: "vault.charts.stagePost4",    stageDefault: "Launch +4",  phase: "post",   usdtSide: 4025,   runeSideUsdt: 4720,   runePrice: 0.0425 },
+  { stageKey: "vault.charts.stagePost5",    stageDefault: "Launch +5",  phase: "post",   usdtSide: 4550,   runeSideUsdt: 5610,   runePrice: 0.0481 },
+  { stageKey: "vault.charts.stagePost6",    stageDefault: "Launch +6",  phase: "post",   usdtSide: 5163,   runeSideUsdt: 6680,   runePrice: 0.0552 },
 ];
 
 const PoolGrowthTooltip = ({ active, payload, label }: any) => {
+  const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
   if (!row) return null;
   const tvl = (row.usdtSide ?? 0) + (row.runeSideUsdt ?? 0);
   const phaseLabel =
-    row.phase === "pre"    ? "募集期 Pre-launch"   :
-    row.phase === "launch" ? "上线 Launch"         :
-                             "上线后 Post-launch";
+    row.phase === "pre"    ? t("vault.charts.phasePre", "Pre-launch")   :
+    row.phase === "launch" ? t("vault.charts.phaseLaunch", "Launch")    :
+                             t("vault.charts.phasePost", "Post-launch");
   return (
     <div className="rounded-xl px-3 py-2.5 text-[11px] bg-popover/95 backdrop-blur-md border border-amber-400/30 shadow-[0_8px_24px_rgba(0,0,0,0.4),0_0_18px_rgba(251,191,36,0.18)]">
       <div className="text-[10px] uppercase tracking-[0.18em] font-bold mb-1" style={{ color: row.phase === "post" ? CYAN : AMBER }}>
         {label} · {phaseLabel}
       </div>
       <div className="space-y-0.5 tabular-nums">
-        <div className="flex justify-between gap-4"><span className="text-teal-300">USDT 侧</span><span className="font-bold">${(row.usdtSide).toLocaleString()}K</span></div>
-        <div className="flex justify-between gap-4"><span className="text-amber-300">RUNE 侧</span><span className="font-bold">${(row.runeSideUsdt).toLocaleString()}K</span></div>
+        <div className="flex justify-between gap-4"><span className="text-teal-300">{t("vault.charts.legendUsdtSide", "USDT side")}</span><span className="font-bold">${(row.usdtSide).toLocaleString()}K</span></div>
+        <div className="flex justify-between gap-4"><span className="text-amber-300">{t("vault.charts.legendRuneSide", "RUNE side")}</span><span className="font-bold">${(row.runeSideUsdt).toLocaleString()}K</span></div>
         <div className="flex justify-between gap-4 pt-1 mt-1 border-t border-white/10"><span className="text-white/80 font-semibold">TVL</span><span className="font-bold text-amber-200">${tvl.toLocaleString()}K</span></div>
-        <div className="flex justify-between gap-4"><span className="text-pink-300">RUNE 价</span><span className="font-bold text-pink-200">${row.runePrice.toFixed(4)}</span></div>
+        <div className="flex justify-between gap-4"><span className="text-pink-300">{t("vault.charts.legendRunePrice", "RUNE price")}</span><span className="font-bold text-pink-200">${row.runePrice.toFixed(4)}</span></div>
       </div>
     </div>
   );
@@ -153,6 +157,9 @@ export function VaultCharts() {
   const motherUsdt  = data?.runeLp ?? 0;
   const reserveUsdt = data?.reserve ?? 0;
   const tradingUsdt = data?.managedPool ?? 0;
+
+  const POOL_GROWTH = POOL_GROWTH_RAW.map((r) => ({ ...r, stage: t(r.stageKey, r.stageDefault) }));
+  const launchStage = t("vault.charts.stageLaunch", "100% Launch");
 
   const allocData = [
     { name: t("vault.charts.runeLp"),      value: motherUsdt,  color: AMBER, pct: "35" },
@@ -274,8 +281,8 @@ export function VaultCharts() {
               </span>
             </div>
             <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider">
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/40">35% 注入</span>
-              <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-200 ring-1 ring-cyan-400/40">17.5% × 2 飞轮</span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/40">{t("vault.charts.badgeInject", "35% inject")}</span>
+              <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-200 ring-1 ring-cyan-400/40">{t("vault.charts.badgeFlywheel", "17.5% × 2 flywheel")}</span>
             </div>
           </div>
 
@@ -340,7 +347,7 @@ export function VaultCharts() {
                 {/* Launch event marker */}
                 <ReferenceLine
                   yAxisId="left"
-                  x="100% 上线"
+                  x={launchStage}
                   stroke={AMBER_LITE}
                   strokeWidth={1.5}
                   strokeDasharray="3 3"
@@ -358,7 +365,7 @@ export function VaultCharts() {
                 <Bar
                   yAxisId="left"
                   dataKey="usdtSide"
-                  name="USDT 侧"
+                  name={t("vault.charts.legendUsdtSide", "USDT side")}
                   stackId="tvl"
                   fill="url(#grad-usdt)"
                   shape={(p: any) => <GlossyBar {...p} fillId="grad-usdt" highlightColor={TEAL_LITE} />}
@@ -367,7 +374,7 @@ export function VaultCharts() {
                 <Bar
                   yAxisId="left"
                   dataKey="runeSideUsdt"
-                  name="RUNE 侧"
+                  name={t("vault.charts.legendRuneSide", "RUNE side")}
                   stackId="tvl"
                   fill="url(#grad-rune)"
                   shape={(p: any) => <GlossyBar {...p} fillId="grad-rune" highlightColor={AMBER_LITE} />}
@@ -379,7 +386,7 @@ export function VaultCharts() {
                   yAxisId="right"
                   type="monotone"
                   dataKey="runePrice"
-                  name="RUNE 价"
+                  name={t("vault.charts.legendRunePrice", "RUNE price")}
                   stroke={PINK}
                   strokeWidth={2.5}
                   filter="url(#priceGlow)"

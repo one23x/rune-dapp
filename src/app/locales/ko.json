@@ -73,7 +73,9 @@
       "desc": "이 기능은 곧 출시됩니다. 기대해 주세요.",
       "descWith": "{{feature}} 은(는) 곧 출시됩니다. 기대해 주세요.",
       "title": "아직 사용할 수 없습니다"
-    }
+    },
+    "copyAddress": "주소 복사",
+    "myPositions": "내 포지션"
   },
   "nav": {
     "home": "홈",
@@ -384,7 +386,21 @@
       "roundPrefix": "제",
       "roundSuffix": "라운드",
       "roundTarget": "목표",
-      "roundDone": "모든 라운드 완료"
+      "roundDone": "모든 라운드 완료",
+      "stageRaise25": "모집 25%",
+      "stageRaise60": "모집 60%",
+      "stageLaunch": "100% 출시",
+      "stagePost1": "출시 +1",
+      "stagePost2": "출시 +2",
+      "stagePost3": "출시 +3",
+      "stagePost4": "출시 +4",
+      "stagePost5": "출시 +5",
+      "stagePost6": "출시 +6",
+      "phasePre": "출시 전",
+      "phaseLaunch": "출시",
+      "phasePost": "출시 후",
+      "badgeInject": "35% 주입",
+      "badgeFlywheel": "17.5% × 2 플라이휠"
     },
     "viewAnalysis": "분석 보기",
     "lockNotReadyTitle": "출시 예정",
@@ -433,7 +449,8 @@
       "validationAmount": "최소 10 USDT",
       "notReadyTitle": "곧 출시",
       "notReadyDesc": "RUNE 락업은 프로토콜 공식 출시 후 열립니다.",
-      "runeLock": "RUNE 스테이킹"
+      "runeLock": "RUNE 스테이킹",
+      "positions": "포지션"
     },
     "burn": {
       "sectionTitle": "RUNE 소각 · 영구 FIRE 수익",
@@ -496,7 +513,8 @@
       "stepBuybackDesc": "볼트 수익의 일부를 사용하여 공개 시장에서 토큰을 매입합니다.",
       "stepBuybackTitle": "프로토콜 바이백",
       "stepValueDesc": "유통 공급량이 줄어들수록 남은 토큰의 가치 포착력이 계속 강해집니다.",
-      "stepValueTitle": "가치 상승"
+      "stepValueTitle": "가치 상승",
+      "dailyFire": "일일 FIRE"
     }
   },
   "deposit": {
@@ -530,7 +548,8 @@
     "buyTitle": "카드 / 크로스체인 원클릭 구매",
     "customAmount": "사용자 지정 금액",
     "enterAmount": "금액 입력 또는 선택",
-    "manualTransfer": "또는 주소로 송금"
+    "manualTransfer": "또는 주소로 송금",
+    "onchainWaitPm": "Polygon USDC만 지원. 온체인 확인에 약 2~5분 소요되며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요."
   },
   "ma": {
     "chartArea": "영역",
@@ -2220,7 +2239,13 @@
     "tradingAccountLabelAgent": "거래 계정 주소(내 지갑)",
     "underfundedDesc": "HL에서 카피 트레이딩하려면 최소 ${{min}}이 필요합니다. 현재 계정 순자산은 {{val}}입니다. 여기를 눌러 지갑으로 돌아가 입금하세요.",
     "viewOnExplorer": "블록 익스플로러에서 보기",
-    "walletLabel": "지갑 주소"
+    "walletLabel": "지갑 주소",
+    "consoleTier": {
+      "entry": "입문",
+      "advanced": "고급",
+      "pro": "프로"
+    },
+    "depositOnchainWait": "입금은 온체인 확인(약 2~5분)이 필요하며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요."
   },
   "profileVault": {
     "claimed": "수령 완료!",
@@ -2330,6 +2355,28 @@
     "levelBadge": "노드 L{{level}}",
     "limitPerTrade": "거래당",
     "limitDaily": "일일",
-    "limitTrades": "일일 거래 수"
+    "limitTrades": "일일 거래 수",
+    "benefit": {
+      "ADVANCED": "더 높은 일일 한도와 전체 카피트레이딩 이용 권한.",
+      "FOUNDER": "최상위 등급 — 최고 거래 한도, 최대 추천 보상률, 제네시스 자격.",
+      "INITIAL": "입문 등급 — 계좌 개설과 기본 카피트레이딩을 잠금 해제.",
+      "MID": "활발한 트레이더에게 적합한 중간 등급 한도.",
+      "SUPER": "더 높은 한도와 우선 신호, 향상된 추천 보상률."
+    },
+    "buyConfirm": "구매 확인",
+    "buyCta": "노드 구매",
+    "buyDialogDesc": "등급을 선택하고 USDC로 결제하세요.",
+    "buyGridTitle": "노드 구매",
+    "buySuccess": "구매 성공",
+    "buySuccessDesc": "노드를 구매했습니다 — 온체인 확인 후 활성화됩니다.",
+    "buyTitle": "노드 구매",
+    "emptyDesc": "노드를 구매하여 계좌 개설과 카피트레이딩을 잠금 해제하세요.",
+    "emptyTitle": "아직 보유한 노드가 없습니다",
+    "heldTitle": "내가 보유한 노드",
+    "pageSubtitle": "노드를 보유하여 계좌 개설과 카피트레이딩 권한을 잠금 해제",
+    "pageTitle": "내 노드",
+    "payHint": "USDC로 결제 · {{chain}}",
+    "redeemDesc": "이미 코드가 있으신가요? 입력하여 노드 접근을 활성화하세요.",
+    "redeemTitle": "인증 코드 사용"
   }
 }

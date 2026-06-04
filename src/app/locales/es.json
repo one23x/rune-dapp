@@ -73,7 +73,9 @@
       "desc": "Esta función estará disponible pronto. Mantente atento.",
       "descWith": "{{feature}} estará disponible pronto. Mantente atento.",
       "title": "Aún no disponible"
-    }
+    },
+    "copyAddress": "Copiar dirección",
+    "myPositions": "Mis posiciones"
   },
   "nav": {
     "home": "INICIO",
@@ -285,7 +287,8 @@
       "validationAmount": "Mínimo 10 USDT",
       "notReadyTitle": "Próximamente",
       "notReadyDesc": "El bloqueo de RUNE se abrirá tras el lanzamiento del protocolo.",
-      "runeLock": "Staking de RUNE"
+      "runeLock": "Staking de RUNE",
+      "positions": "Posiciones"
     },
     "remaining": "Restante",
     "action": "Acción",
@@ -435,7 +438,8 @@
       "stepBuybackDesc": "Una parte de los ingresos del vault se utiliza para recomprar tokens en el mercado abierto.",
       "stepBuybackTitle": "Recompra del protocolo",
       "stepValueDesc": "A medida que el suministro circulante se reduce, la captura de valor de los tokens restantes sigue fortaleciéndose.",
-      "stepValueTitle": "Acumulación de valor"
+      "stepValueTitle": "Acumulación de valor",
+      "dailyFire": "FIRE diario"
     },
     "tabPool": "RUNE Pool",
     "tabPoolDesc": "Captación → Lanzamiento → Volante",
@@ -491,7 +495,21 @@
       "roundPrefix": "Ronda",
       "roundSuffix": "",
       "roundTarget": "Meta",
-      "roundDone": "Todas las rondas completas"
+      "roundDone": "Todas las rondas completas",
+      "stageRaise25": "Recaudo 25%",
+      "stageRaise60": "Recaudo 60%",
+      "stageLaunch": "Lanzamiento 100%",
+      "stagePost1": "Lanzamiento +1",
+      "stagePost2": "Lanzamiento +2",
+      "stagePost3": "Lanzamiento +3",
+      "stagePost4": "Lanzamiento +4",
+      "stagePost5": "Lanzamiento +5",
+      "stagePost6": "Lanzamiento +6",
+      "phasePre": "Prelanzamiento",
+      "phaseLaunch": "Lanzamiento",
+      "phasePost": "Poslanzamiento",
+      "badgeInject": "35% inyección",
+      "badgeFlywheel": "17.5% × 2 volante"
     },
     "viewAnalysis": "Ver análisis",
     "lockNotReadyTitle": "Próximamente",
@@ -530,7 +548,8 @@
     "buyTitle": "Compra con un clic con tarjeta / cross-chain",
     "customAmount": "Cantidad personalizada",
     "enterAmount": "Introduce o selecciona una cantidad",
-    "manualTransfer": "O transfiere a la dirección"
+    "manualTransfer": "O transfiere a la dirección",
+    "onchainWaitPm": "Solo USDC en Polygon. La confirmación on-chain tarda ~2–5 min; tu saldo se actualiza automáticamente al llegar — espera por favor."
   },
   "ma": {
     "chartArea": "Área",
@@ -2254,7 +2273,13 @@
     "tradingAccountLabelAgent": "Dirección de la cuenta de trading (tu billetera)",
     "underfundedDesc": "HL requiere al menos ${{min}} para copiar; patrimonio actual de la cuenta {{val}}. Toca aquí para volver a tu billetera y depositar.",
     "viewOnExplorer": "Ver en el explorador de bloques",
-    "walletLabel": "Dirección de la billetera"
+    "walletLabel": "Dirección de la billetera",
+    "consoleTier": {
+      "entry": "Inicial",
+      "advanced": "Avanzado",
+      "pro": "Pro"
+    },
+    "depositOnchainWait": "Los depósitos requieren confirmación on-chain (~2–5 min); el saldo se actualiza automáticamente al llegar — espera por favor."
   },
   "pmLab": {
     "title": "Laboratorio de IA de Predicción",
@@ -2330,6 +2355,28 @@
     "levelBadge": "Nodo N{{level}}",
     "limitPerTrade": "Por operación",
     "limitDaily": "Diario",
-    "limitTrades": "Operaciones/día"
+    "limitTrades": "Operaciones/día",
+    "benefit": {
+      "ADVANCED": "Límites diarios más altos y acceso completo al copy trading.",
+      "FOUNDER": "Nivel máximo: límites de trading más altos, tasa de referido máxima y calificación Genesis.",
+      "INITIAL": "Nivel inicial: desbloquea la apertura de cuenta y el copy trading básico.",
+      "MID": "Límites de nivel medio para traders activos.",
+      "SUPER": "Límites elevados con señales prioritarias y una tasa de referido mejorada."
+    },
+    "buyConfirm": "Confirmar compra",
+    "buyCta": "Comprar nodo",
+    "buyDialogDesc": "Elige un nivel y paga con USDC.",
+    "buyGridTitle": "Comprar un nodo",
+    "buySuccess": "Compra exitosa",
+    "buySuccessDesc": "Nodo comprado: activo una vez confirmado on-chain.",
+    "buyTitle": "Comprar un nodo",
+    "emptyDesc": "Compra un nodo para desbloquear la apertura de cuenta y el copy trading.",
+    "emptyTitle": "Aún no tienes nodos",
+    "heldTitle": "Nodos que tengo",
+    "pageSubtitle": "Ten un nodo para desbloquear la apertura de cuenta y el copy trading",
+    "pageTitle": "Mis nodos",
+    "payHint": "Pagar con USDC · {{chain}}",
+    "redeemDesc": "¿Ya tienes un código? Ingrésalo para activar el acceso al nodo.",
+    "redeemTitle": "Canjear código de autorización"
   }
 }

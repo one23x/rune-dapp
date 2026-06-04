@@ -1707,9 +1707,9 @@ function consolePackConfig(pack: ConsolePack): HlFollowConfig {
 
 /** Console tier → display meta (label + color). null tier = neutral. */
 const CONSOLE_TIER_META: Record<NonNullable<ConsolePack["tier"]>, { label: string; color: string }> = {
-  entry: { label: "入门", color: "#34d399" },
-  advanced: { label: "进阶", color: "#818cf8" },
-  pro: { label: "专业", color: "#fb7185" },
+  entry: { label: "Entry", color: "#34d399" },
+  advanced: { label: "Advanced", color: "#818cf8" },
+  pro: { label: "Pro", color: "#fb7185" },
 };
 
 /**

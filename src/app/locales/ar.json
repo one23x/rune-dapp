@@ -73,7 +73,9 @@
       "desc": "هذه الميزة قادمة قريباً. ترقبوا.",
       "descWith": "{{feature}} قادمة قريباً. ترقبوا.",
       "title": "غير متاح بعد"
-    }
+    },
+    "copyAddress": "نسخ العنوان",
+    "myPositions": "مراكزي"
   },
   "nav": {
     "home": "الرئيسية",
@@ -384,7 +386,21 @@
       "roundPrefix": "الجولة",
       "roundSuffix": "",
       "roundTarget": "الهدف",
-      "roundDone": "اكتملت جميع الجولات"
+      "roundDone": "اكتملت جميع الجولات",
+      "stageRaise25": "جمع 25%",
+      "stageRaise60": "جمع 60%",
+      "stageLaunch": "إطلاق 100%",
+      "stagePost1": "إطلاق +1",
+      "stagePost2": "إطلاق +2",
+      "stagePost3": "إطلاق +3",
+      "stagePost4": "إطلاق +4",
+      "stagePost5": "إطلاق +5",
+      "stagePost6": "إطلاق +6",
+      "phasePre": "قبل الإطلاق",
+      "phaseLaunch": "الإطلاق",
+      "phasePost": "بعد الإطلاق",
+      "badgeInject": "حقن 35%",
+      "badgeFlywheel": "دولاب 17.5% × 2"
     },
     "viewAnalysis": "عرض التحليل",
     "lockNotReadyTitle": "قريبًا",
@@ -433,7 +449,8 @@
       "validationAmount": "الحد الأدنى 10 USDT",
       "notReadyTitle": "قريبًا",
       "notReadyDesc": "سيُفتح قفل RUNE بعد إطلاق البروتوكول.",
-      "runeLock": "تخزين RUNE"
+      "runeLock": "تخزين RUNE",
+      "positions": "المراكز"
     },
     "burn": {
       "sectionTitle": "حرق RUNE · عائد FIRE دائم",
@@ -496,7 +513,8 @@
       "stepBuybackDesc": "يُستخدم جزء من إيرادات الخزنة لإعادة شراء الرموز في السوق المفتوحة.",
       "stepBuybackTitle": "إعادة شراء البروتوكول",
       "stepValueDesc": "مع تقلّص المعروض المتداول، تستمر قدرة الرموز المتبقية على التقاط القيمة في التعزّز.",
-      "stepValueTitle": "تنامي القيمة"
+      "stepValueTitle": "تنامي القيمة",
+      "dailyFire": "FIRE اليومي"
     }
   },
   "deposit": {
@@ -530,7 +548,8 @@
     "buyTitle": "شراء بنقرة واحدة بالبطاقة / عبر السلاسل",
     "customAmount": "مبلغ مخصص",
     "enterAmount": "أدخل أو اختر مبلغاً",
-    "manualTransfer": "أو حوّل إلى العنوان"
+    "manualTransfer": "أو حوّل إلى العنوان",
+    "onchainWaitPm": "USDC على Polygon فقط. يستغرق التأكيد على السلسلة نحو 2–5 دقائق؛ سيتم تحديث رصيدك تلقائيًا عند وصوله — يُرجى الانتظار."
   },
   "ma": {
     "chartArea": "مساحة",
@@ -2220,7 +2239,13 @@
     "tradingAccountLabelAgent": "عنوان حساب التداول (محفظتك)",
     "underfundedDesc": "يتطلب HL ما لا يقل عن ${{min}} للنسخ؛ صافي قيمة الحساب الحالي {{val}}. اضغط هنا للعودة إلى محفظتك للإيداع.",
     "viewOnExplorer": "عرض في مستكشف البلوكشين",
-    "walletLabel": "عنوان المحفظة"
+    "walletLabel": "عنوان المحفظة",
+    "consoleTier": {
+      "entry": "مبتدئ",
+      "advanced": "متقدم",
+      "pro": "احترافي"
+    },
+    "depositOnchainWait": "تحتاج الإيداعات إلى تأكيد على السلسلة (نحو 2–5 دقائق)؛ يتم تحديث الرصيد تلقائيًا عند وصوله — يُرجى الانتظار."
   },
   "profileVault": {
     "claimed": "تم الاستلام!",
@@ -2330,6 +2355,28 @@
     "levelBadge": "العقدة L{{level}}",
     "limitPerTrade": "لكل صفقة",
     "limitDaily": "يوميًا",
-    "limitTrades": "الصفقات/اليوم"
+    "limitTrades": "الصفقات/اليوم",
+    "benefit": {
+      "ADVANCED": "حدود يومية أعلى ووصول كامل للتداول النسخي.",
+      "FOUNDER": "أعلى مستوى — أعلى حدود تداول وأعلى معدل إحالة وأهلية الجينيسيس.",
+      "INITIAL": "المستوى التمهيدي — يفتح فتح الحساب والتداول النسخي الأساسي.",
+      "MID": "حدود متوسطة المستوى تناسب المتداولين النشطين.",
+      "SUPER": "حدود مرتفعة مع إشارات ذات أولوية ومعدل إحالة محسّن."
+    },
+    "buyConfirm": "تأكيد الشراء",
+    "buyCta": "شراء عقدة",
+    "buyDialogDesc": "اختر فئة وادفع بـ USDC.",
+    "buyGridTitle": "شراء عقدة",
+    "buySuccess": "تم الشراء بنجاح",
+    "buySuccessDesc": "تم شراء العقدة — تُفعَّل بعد التأكيد على السلسلة.",
+    "buyTitle": "شراء عقدة",
+    "emptyDesc": "اشترِ عقدة لفتح فتح الحساب والتداول النسخي.",
+    "emptyTitle": "لا تمتلك أي عُقد بعد",
+    "heldTitle": "العُقد التي أملكها",
+    "pageSubtitle": "امتلك عقدة لفتح فتح الحساب والتداول النسخي",
+    "pageTitle": "عُقدي",
+    "payHint": "الدفع بـ USDC · {{chain}}",
+    "redeemDesc": "لديك رمز بالفعل؟ أدخله لتفعيل وصول العقدة.",
+    "redeemTitle": "استبدال رمز التفويض"
   }
 }

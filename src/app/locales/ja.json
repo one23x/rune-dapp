@@ -73,7 +73,9 @@
       "desc": "この機能はまもなく公開予定です。お楽しみに。",
       "descWith": "{{feature}} はまもなく公開予定です。お楽しみに。",
       "title": "まだ利用できません"
-    }
+    },
+    "copyAddress": "アドレスをコピー",
+    "myPositions": "ポジションを見る"
   },
   "nav": {
     "home": "ホーム",
@@ -285,7 +287,8 @@
       "validationAmount": "最低 10 USDT",
       "notReadyTitle": "近日公開",
       "notReadyDesc": "RUNE のロックはプロトコル正式公開後に開始されます。",
-      "runeLock": "RUNE ステーキング"
+      "runeLock": "RUNE ステーキング",
+      "positions": "ポジション"
     },
     "remaining": "残り",
     "action": "アクション",
@@ -435,7 +438,8 @@
       "stepBuybackDesc": "金庫収益の一部を使い、公開市場でトークンを買い戻します。",
       "stepBuybackTitle": "プロトコル買い戻し",
       "stepValueDesc": "流通量が減るにつれ、残るトークンの価値捕捉力は強まり続けます。",
-      "stepValueTitle": "価値の向上"
+      "stepValueTitle": "価値の向上",
+      "dailyFire": "デイリー FIRE"
     },
     "tabPool": "RUNE プール",
     "tabPoolDesc": "募集 → ローンチ → フライホイール",
@@ -491,7 +495,21 @@
       "roundPrefix": "第",
       "roundSuffix": "ラウンド",
       "roundTarget": "目標",
-      "roundDone": "全ラウンド完了"
+      "roundDone": "全ラウンド完了",
+      "stageRaise25": "調達 25%",
+      "stageRaise60": "調達 60%",
+      "stageLaunch": "100% ローンチ",
+      "stagePost1": "ローンチ +1",
+      "stagePost2": "ローンチ +2",
+      "stagePost3": "ローンチ +3",
+      "stagePost4": "ローンチ +4",
+      "stagePost5": "ローンチ +5",
+      "stagePost6": "ローンチ +6",
+      "phasePre": "ローンチ前",
+      "phaseLaunch": "ローンチ",
+      "phasePost": "ローンチ後",
+      "badgeInject": "35% 注入",
+      "badgeFlywheel": "17.5% × 2 フライホイール"
     },
     "viewAnalysis": "分析を見る",
     "lockNotReadyTitle": "近日公開",
@@ -530,7 +548,8 @@
     "buyTitle": "カード / クロスチェーンでワンクリック購入",
     "customAmount": "カスタム金額",
     "enterAmount": "金額を入力または選択",
-    "manualTransfer": "またはアドレスへ送金"
+    "manualTransfer": "またはアドレスへ送金",
+    "onchainWaitPm": "Polygon の USDC のみ。オンチェーン確認に約 2〜5 分かかります。着金後に残高が自動更新されます。お待ちください。"
   },
   "ma": {
     "chartArea": "エリア",
@@ -2254,7 +2273,13 @@
     "tradingAccountLabelAgent": "取引口座アドレス（あなたのウォレット）",
     "underfundedDesc": "HL でコピートレードするには最低 ${{min}} 必要です。現在の口座純資産は {{val}} です。ここをタップしてウォレットに戻り入金してください。",
     "viewOnExplorer": "ブロックエクスプローラーで表示",
-    "walletLabel": "ウォレットアドレス"
+    "walletLabel": "ウォレットアドレス",
+    "consoleTier": {
+      "entry": "エントリー",
+      "advanced": "アドバンス",
+      "pro": "プロ"
+    },
+    "depositOnchainWait": "入金にはオンチェーン確認（約 2〜5 分）が必要です。着金後に残高が自動更新されます。お待ちください。"
   },
   "pmLab": {
     "title": "予測 AI ラボ",
@@ -2330,6 +2355,28 @@
     "levelBadge": "ノード L{{level}}",
     "limitPerTrade": "1回あたり",
     "limitDaily": "1日あたり",
-    "limitTrades": "1日の取引数"
+    "limitTrades": "1日の取引数",
+    "benefit": {
+      "ADVANCED": "より高い日次上限と完全なコピートレードアクセス。",
+      "FOUNDER": "最上位ティア — 最高の取引上限、最大の紹介率、ジェネシス資格。",
+      "INITIAL": "エントリーティア — 口座開設と基本のコピートレードを解放。",
+      "MID": "アクティブなトレーダー向けの中位の上限。",
+      "SUPER": "より高い上限、優先シグナル、強化された紹介率。"
+    },
+    "buyConfirm": "購入を確認",
+    "buyCta": "ノードを購入",
+    "buyDialogDesc": "ティアを選んで USDC で支払います。",
+    "buyGridTitle": "ノードを購入",
+    "buySuccess": "購入に成功しました",
+    "buySuccessDesc": "ノードを購入しました — オンチェーン確認後に有効になります。",
+    "buyTitle": "ノードを購入",
+    "emptyDesc": "ノードを購入して口座開設とコピートレードを解放しましょう。",
+    "emptyTitle": "まだノードを保有していません",
+    "heldTitle": "保有中のノード",
+    "pageSubtitle": "ノードを保有して口座開設とコピートレードを解放",
+    "pageTitle": "マイノード",
+    "payHint": "USDC で支払う · {{chain}}",
+    "redeemDesc": "コードをお持ちですか？入力してノードアクセスを有効化します。",
+    "redeemTitle": "認証コードを引き換える"
   }
 }

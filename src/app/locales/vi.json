@@ -73,7 +73,9 @@
       "desc": "Tính năng này sắp ra mắt. Hãy đón chờ.",
       "descWith": "{{feature}} sắp ra mắt. Hãy đón chờ.",
       "title": "Chưa khả dụng"
-    }
+    },
+    "copyAddress": "Sao chép địa chỉ",
+    "myPositions": "Vị thế của tôi"
   },
   "nav": {
     "home": "TRANG CHỦ",
@@ -384,7 +386,21 @@
       "roundPrefix": "Vòng",
       "roundSuffix": "",
       "roundTarget": "Mục tiêu",
-      "roundDone": "Hoàn tất tất cả các vòng"
+      "roundDone": "Hoàn tất tất cả các vòng",
+      "stageRaise25": "Gọi vốn 25%",
+      "stageRaise60": "Gọi vốn 60%",
+      "stageLaunch": "Ra mắt 100%",
+      "stagePost1": "Ra mắt +1",
+      "stagePost2": "Ra mắt +2",
+      "stagePost3": "Ra mắt +3",
+      "stagePost4": "Ra mắt +4",
+      "stagePost5": "Ra mắt +5",
+      "stagePost6": "Ra mắt +6",
+      "phasePre": "Trước ra mắt",
+      "phaseLaunch": "Ra mắt",
+      "phasePost": "Sau ra mắt",
+      "badgeInject": "Bơm 35%",
+      "badgeFlywheel": "17.5% × 2 bánh đà"
     },
     "viewAnalysis": "Xem phân tích",
     "lockNotReadyTitle": "Sắp ra mắt",
@@ -433,7 +449,8 @@
       "validationAmount": "Tối thiểu 10 USDT",
       "notReadyTitle": "Sắp ra mắt",
       "notReadyDesc": "Tính năng khóa RUNE sẽ mở sau khi giao thức ra mắt.",
-      "runeLock": "Staking RUNE"
+      "runeLock": "Staking RUNE",
+      "positions": "Vị thế"
     },
     "burn": {
       "sectionTitle": "Đốt RUNE · Lợi nhuận FIRE vĩnh viễn",
@@ -496,7 +513,8 @@
       "stepBuybackDesc": "Một phần doanh thu của kho được dùng để mua lại token trên thị trường mở.",
       "stepBuybackTitle": "Mua lại giao thức",
       "stepValueDesc": "Khi nguồn cung lưu hành thu hẹp, khả năng tích lũy giá trị của các token còn lại tiếp tục được củng cố.",
-      "stepValueTitle": "Tích lũy giá trị"
+      "stepValueTitle": "Tích lũy giá trị",
+      "dailyFire": "FIRE hằng ngày"
     }
   },
   "deposit": {
@@ -530,7 +548,8 @@
     "buyTitle": "Mua một chạm bằng thẻ / xuyên chuỗi",
     "customAmount": "Số tiền tùy chỉnh",
     "enterAmount": "Nhập hoặc chọn một số tiền",
-    "manualTransfer": "Hoặc chuyển tới địa chỉ"
+    "manualTransfer": "Hoặc chuyển tới địa chỉ",
+    "onchainWaitPm": "Chỉ USDC trên Polygon. Xác nhận on-chain mất ~2–5 phút; số dư tự động làm mới khi nhận được — vui lòng đợi."
   },
   "ma": {
     "chartArea": "Vùng",
@@ -2220,7 +2239,13 @@
     "tradingAccountLabelAgent": "Địa chỉ tài khoản giao dịch (ví của bạn)",
     "underfundedDesc": "HL yêu cầu tối thiểu ${{min}} để sao chép lệnh; vốn chủ sở hữu tài khoản hiện tại {{val}}. Nhấn vào đây để quay lại ví và nạp tiền.",
     "viewOnExplorer": "Xem trên trình khám phá khối",
-    "walletLabel": "Địa chỉ ví"
+    "walletLabel": "Địa chỉ ví",
+    "consoleTier": {
+      "entry": "Cơ bản",
+      "advanced": "Nâng cao",
+      "pro": "Chuyên nghiệp"
+    },
+    "depositOnchainWait": "Nạp tiền cần xác nhận on-chain (~2–5 phút); số dư tự động làm mới khi nhận được — vui lòng đợi."
   },
   "profileVault": {
     "claimed": "Đã nhận!",
@@ -2330,6 +2355,28 @@
     "levelBadge": "Node L{{level}}",
     "limitPerTrade": "Mỗi lệnh",
     "limitDaily": "Hằng ngày",
-    "limitTrades": "Lệnh/ngày"
+    "limitTrades": "Lệnh/ngày",
+    "benefit": {
+      "ADVANCED": "Hạn mức hằng ngày cao hơn và toàn quyền sao chép giao dịch.",
+      "FOUNDER": "Hạng cao nhất — hạn mức giao dịch cao nhất, tỷ lệ giới thiệu tối đa và đủ điều kiện Genesis.",
+      "INITIAL": "Hạng nhập môn — mở khoá mở tài khoản và sao chép giao dịch cơ bản.",
+      "MID": "Hạn mức tầm trung phù hợp với nhà giao dịch năng động.",
+      "SUPER": "Hạn mức cao hơn với tín hiệu ưu tiên và tỷ lệ giới thiệu nâng cao."
+    },
+    "buyConfirm": "Xác nhận mua",
+    "buyCta": "Mua node",
+    "buyDialogDesc": "Chọn hạng và thanh toán bằng USDC.",
+    "buyGridTitle": "Mua node",
+    "buySuccess": "Mua thành công",
+    "buySuccessDesc": "Đã mua node — kích hoạt sau khi xác nhận on-chain.",
+    "buyTitle": "Mua node",
+    "emptyDesc": "Mua node để mở khoá mở tài khoản và sao chép giao dịch.",
+    "emptyTitle": "Bạn chưa sở hữu node nào",
+    "heldTitle": "Node tôi đang giữ",
+    "pageSubtitle": "Giữ một node để mở khoá mở tài khoản và sao chép giao dịch",
+    "pageTitle": "Node của tôi",
+    "payHint": "Thanh toán bằng USDC · {{chain}}",
+    "redeemDesc": "Đã có mã? Nhập để kích hoạt quyền truy cập node.",
+    "redeemTitle": "Đổi mã uỷ quyền"
   }
 }

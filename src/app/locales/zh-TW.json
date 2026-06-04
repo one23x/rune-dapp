@@ -73,7 +73,9 @@
       "desc": "該功能即將上線，敬請期待。",
       "descWith": "{{feature}} 即將上線，敬請期待。",
       "title": "暫未開放"
-    }
+    },
+    "copyAddress": "複製地址",
+    "myPositions": "查看倉位"
   },
   "nav": {
     "home": "首頁",
@@ -384,7 +386,21 @@
       "roundPrefix": "第",
       "roundSuffix": "輪",
       "roundTarget": "目標",
-      "roundDone": "全部完成"
+      "roundDone": "全部完成",
+      "stageRaise25": "募集 25%",
+      "stageRaise60": "募集 60%",
+      "stageLaunch": "100% 上線",
+      "stagePost1": "上線 +1",
+      "stagePost2": "上線 +2",
+      "stagePost3": "上線 +3",
+      "stagePost4": "上線 +4",
+      "stagePost5": "上線 +5",
+      "stagePost6": "上線 +6",
+      "phasePre": "募集期",
+      "phaseLaunch": "上線",
+      "phasePost": "上線後",
+      "badgeInject": "35% 注入",
+      "badgeFlywheel": "17.5% × 2 飛輪"
     },
     "viewAnalysis": "查看分析",
     "lockNotReadyTitle": "即將開放",
@@ -433,7 +449,8 @@
       "validationAmount": "最低 10 USDT",
       "notReadyTitle": "即將開放",
       "notReadyDesc": "RUNE 鎖倉功能將在協議正式上線後開放。",
-      "runeLock": "RUNE 質押"
+      "runeLock": "RUNE 質押",
+      "positions": "倉位"
     },
     "burn": {
       "sectionTitle": "銷毀 RUNE · 永久產出 FIRE",
@@ -496,7 +513,8 @@
       "stepBuybackDesc": "金庫產生的部分收益將般於在公開市場回購代幣。",
       "stepBuybackTitle": "協議回購",
       "stepValueDesc": "隨着流一量減少，剩餘代幣的價值捕獲能力將持續增強。",
-      "stepValueTitle": "價值提升"
+      "stepValueTitle": "價值提升",
+      "dailyFire": "每日 FIRE"
     }
   },
   "deposit": {
@@ -530,7 +548,8 @@
     "buyTitle": "般卡 / 跨鏈一鍵買入",
     "customAmount": "自定義金額",
     "enterAmount": "輸入或選擇金額",
-    "manualTransfer": "或轉帳到地址"
+    "manualTransfer": "或轉帳到地址",
+    "onchainWaitPm": "僅支援 Polygon 網路 USDC。鏈上確認約需 2–5 分鐘到帳，到帳後餘額會自動刷新，請耐心等待。"
   },
   "ma": {
     "chartArea": "面积",
@@ -2220,7 +2239,13 @@
     "tradingAccountLabelAgent": "交易帳戶地址(你的錢包)",
     "underfundedDesc": "HL 最低需 ${{min}} 才能跟單;當前帳戶淨值 {{val}}。點此回錢包充值。",
     "viewOnExplorer": "區塊鏈瀏覽器查看",
-    "walletLabel": "錢包地址"
+    "walletLabel": "錢包地址",
+    "consoleTier": {
+      "entry": "入門",
+      "advanced": "進階",
+      "pro": "專業"
+    },
+    "depositOnchainWait": "充值需等鏈上確認，約 2–5 分鐘到帳；到帳後餘額自動刷新，請耐心等待。"
   },
   "hlVaults": {
     "title": "推薦金庫",
@@ -2330,6 +2355,28 @@
     "levelBadge": "節點 L{{level}}",
     "limitPerTrade": "單筆",
     "limitDaily": "每日",
-    "limitTrades": "每日筆數"
+    "limitTrades": "每日筆數",
+    "benefit": {
+      "ADVANCED": "更高每日額度，完整跟單權限。",
+      "FOUNDER": "最高檔位 —— 最高交易額度、最高推薦返佣，並具備創世資格。",
+      "INITIAL": "入門檔位 —— 解鎖開戶與基礎跟單。",
+      "MID": "中檔額度，適合活躍交易者。",
+      "SUPER": "更高額度，優先信號與更高推薦返佣。"
+    },
+    "buyConfirm": "確認購買",
+    "buyCta": "購買節點",
+    "buyDialogDesc": "選擇檔位，使用 USDC 支付。",
+    "buyGridTitle": "購買節點",
+    "buySuccess": "購買成功",
+    "buySuccessDesc": "節點已購買，鏈上確認後即生效。",
+    "buyTitle": "購買節點",
+    "emptyDesc": "購買節點即可解鎖開戶與跟單。",
+    "emptyTitle": "你還沒有持有任何節點",
+    "heldTitle": "我持有的節點",
+    "pageSubtitle": "持有節點解鎖開戶與跟單權限",
+    "pageTitle": "我的節點",
+    "payHint": "USDC 支付 · {{chain}}",
+    "redeemDesc": "已有授權碼？輸入即可開通節點權限。",
+    "redeemTitle": "授權碼兌換"
   }
 }

@@ -73,7 +73,9 @@
       "desc": "Este recurso estará disponível em breve. Fique atento.",
       "descWith": "{{feature}} estará disponível em breve. Fique atento.",
       "title": "Ainda não disponível"
-    }
+    },
+    "copyAddress": "Copiar endereço",
+    "myPositions": "Minhas posições"
   },
   "nav": {
     "home": "INÍCIO",
@@ -285,7 +287,8 @@
       "validationAmount": "Mínimo 10 USDT",
       "notReadyTitle": "Em breve",
       "notReadyDesc": "O bloqueio de RUNE será aberto após o lançamento do protocolo.",
-      "runeLock": "Staking de RUNE"
+      "runeLock": "Staking de RUNE",
+      "positions": "Posições"
     },
     "remaining": "Restante",
     "action": "Ação",
@@ -435,7 +438,8 @@
       "stepBuybackDesc": "Uma parte da receita do cofre é usada para recomprar tokens no mercado aberto.",
       "stepBuybackTitle": "Recompra do protocolo",
       "stepValueDesc": "À medida que a oferta circulante diminui, a captura de valor dos tokens restantes continua a se fortalecer.",
-      "stepValueTitle": "Acúmulo de valor"
+      "stepValueTitle": "Acúmulo de valor",
+      "dailyFire": "FIRE diário"
     },
     "tabPool": "RUNE Pool",
     "tabPoolDesc": "Captação → Lançamento → Volante",
@@ -491,7 +495,21 @@
       "roundPrefix": "Rodada",
       "roundSuffix": "",
       "roundTarget": "Meta",
-      "roundDone": "Todas as rodadas concluídas"
+      "roundDone": "Todas as rodadas concluídas",
+      "stageRaise25": "Captação 25%",
+      "stageRaise60": "Captação 60%",
+      "stageLaunch": "Lançamento 100%",
+      "stagePost1": "Lançamento +1",
+      "stagePost2": "Lançamento +2",
+      "stagePost3": "Lançamento +3",
+      "stagePost4": "Lançamento +4",
+      "stagePost5": "Lançamento +5",
+      "stagePost6": "Lançamento +6",
+      "phasePre": "Pré-lançamento",
+      "phaseLaunch": "Lançamento",
+      "phasePost": "Pós-lançamento",
+      "badgeInject": "35% injeção",
+      "badgeFlywheel": "17,5% × 2 volante"
     },
     "viewAnalysis": "Ver análise",
     "lockNotReadyTitle": "Em breve",
@@ -530,7 +548,8 @@
     "buyTitle": "Compra com um clique via cartão / cross-chain",
     "customAmount": "Valor personalizado",
     "enterAmount": "Insira ou selecione um valor",
-    "manualTransfer": "Ou transfira para o endereço"
+    "manualTransfer": "Ou transfira para o endereço",
+    "onchainWaitPm": "Apenas USDC na Polygon. A confirmação on-chain leva ~2–5 min; seu saldo é atualizado automaticamente ao chegar — aguarde."
   },
   "ma": {
     "chartArea": "Área",
@@ -2254,7 +2273,13 @@
     "tradingAccountLabelAgent": "Endereço da conta de negociação (sua carteira)",
     "underfundedDesc": "A HL exige no mínimo ${{min}} para copiar operações; patrimônio atual da conta {{val}}. Toque aqui para voltar à sua carteira e depositar.",
     "viewOnExplorer": "Ver no explorador de blocos",
-    "walletLabel": "Endereço da carteira"
+    "walletLabel": "Endereço da carteira",
+    "consoleTier": {
+      "entry": "Inicial",
+      "advanced": "Avançado",
+      "pro": "Pro"
+    },
+    "depositOnchainWait": "Depósitos precisam de confirmação on-chain (~2–5 min); o saldo é atualizado automaticamente ao chegar — aguarde."
   },
   "pmLab": {
     "title": "Laboratório de IA de Previsão",
@@ -2330,6 +2355,28 @@
     "levelBadge": "Nó N{{level}}",
     "limitPerTrade": "Por operação",
     "limitDaily": "Diário",
-    "limitTrades": "Operações/dia"
+    "limitTrades": "Operações/dia",
+    "benefit": {
+      "ADVANCED": "Limites diários maiores e acesso completo ao copy trading.",
+      "FOUNDER": "Nível máximo — maiores limites de trading, taxa de indicação máxima e qualificação Genesis.",
+      "INITIAL": "Nível inicial — desbloqueia a abertura de conta e o copy trading básico.",
+      "MID": "Limites de nível médio para traders ativos.",
+      "SUPER": "Limites elevados com sinais prioritários e taxa de indicação aprimorada."
+    },
+    "buyConfirm": "Confirmar compra",
+    "buyCta": "Comprar nó",
+    "buyDialogDesc": "Escolha um nível e pague com USDC.",
+    "buyGridTitle": "Comprar um nó",
+    "buySuccess": "Compra bem-sucedida",
+    "buySuccessDesc": "Nó comprado — ativo após confirmação on-chain.",
+    "buyTitle": "Comprar um nó",
+    "emptyDesc": "Compre um nó para desbloquear a abertura de conta e o copy trading.",
+    "emptyTitle": "Você ainda não tem nós",
+    "heldTitle": "Nós que possuo",
+    "pageSubtitle": "Tenha um nó para desbloquear a abertura de conta e o copy trading",
+    "pageTitle": "Meus nós",
+    "payHint": "Pagar com USDC · {{chain}}",
+    "redeemDesc": "Já tem um código? Insira-o para ativar o acesso ao nó.",
+    "redeemTitle": "Resgatar código de autorização"
   }
 }

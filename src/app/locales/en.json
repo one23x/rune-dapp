@@ -73,7 +73,9 @@
       "desc": "This feature is coming soon. Stay tuned.",
       "descWith": "{{feature}} is coming soon. Stay tuned.",
       "title": "Not available yet"
-    }
+    },
+    "copyAddress": "Copy address",
+    "myPositions": "My positions"
   },
   "nav": {
     "home": "HOME",
@@ -285,7 +287,8 @@
       "validationAmount": "Minimum 10 USDT",
       "notReadyTitle": "Coming soon",
       "notReadyDesc": "RUNE locking will open after the protocol launch.",
-      "runeLock": "RUNE Staking"
+      "runeLock": "RUNE Staking",
+      "positions": "Positions"
     },
     "remaining": "Remaining",
     "action": "Action",
@@ -435,7 +438,8 @@
       "stepBuybackDesc": "A portion of vault revenue is used to buy back tokens on the open market.",
       "stepBuybackTitle": "Protocol Buyback",
       "stepValueDesc": "As circulating supply shrinks, the value capture of remaining tokens keeps strengthening.",
-      "stepValueTitle": "Value Accrual"
+      "stepValueTitle": "Value Accrual",
+      "dailyFire": "Daily FIRE"
     },
     "tabPool": "RUNE Pool",
     "tabPoolDesc": "Fundraise → Launch → Flywheel",
@@ -491,7 +495,21 @@
       "roundPrefix": "Round",
       "roundSuffix": "",
       "roundTarget": "Target",
-      "roundDone": "All rounds complete"
+      "roundDone": "All rounds complete",
+      "stageRaise25": "Raise 25%",
+      "stageRaise60": "Raise 60%",
+      "stageLaunch": "100% Launch",
+      "stagePost1": "Launch +1",
+      "stagePost2": "Launch +2",
+      "stagePost3": "Launch +3",
+      "stagePost4": "Launch +4",
+      "stagePost5": "Launch +5",
+      "stagePost6": "Launch +6",
+      "phasePre": "Pre-launch",
+      "phaseLaunch": "Launch",
+      "phasePost": "Post-launch",
+      "badgeInject": "35% inject",
+      "badgeFlywheel": "17.5% × 2 flywheel"
     },
     "viewAnalysis": "View Analysis",
     "lockNotReadyTitle": "Coming soon",
@@ -2256,7 +2274,12 @@
     "underfundedDesc": "HL requires at least ${{min}} to copy trade; current account equity {{val}}. Tap here to return to your wallet to deposit.",
     "viewOnExplorer": "View on block explorer",
     "walletLabel": "Wallet address",
-    "depositOnchainWait": "Deposits need on-chain confirmation (~2–5 min); balance auto-refreshes once it arrives — please wait."
+    "depositOnchainWait": "Deposits need on-chain confirmation (~2–5 min); balance auto-refreshes once it arrives — please wait.",
+    "consoleTier": {
+      "entry": "Entry",
+      "advanced": "Advanced",
+      "pro": "Pro"
+    }
   },
   "pmLab": {
     "title": "Prediction AI Lab",

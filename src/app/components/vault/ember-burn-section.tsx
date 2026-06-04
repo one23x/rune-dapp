@@ -161,11 +161,11 @@ export function EmberBurnSection() {
         </div>
         <div className="grid grid-cols-2 gap-3 relative z-10">
           <div className="bg-black/20 border border-white/10 rounded-lg p-3">
-            <div className="text-xs text-white/50 mb-1">{isZh ? "每日FIRE" : "Daily FIRE"}</div>
+            <div className="text-xs text-white/50 mb-1">{t("vault.burn.dailyFire", "Daily FIRE")}</div>
             <div className="text-sm font-bold text-orange-400 tabular-nums">{Number(stats?.dailyEmber || 0).toFixed(4)}</div>
           </div>
           <div className="bg-black/20 border border-white/10 rounded-lg p-3">
-            <div className="text-xs text-white/50 mb-1">{isZh ? "已领取" : "Claimed"}</div>
+            <div className="text-xs text-white/50 mb-1">{t("vault.burn.statClaimed", "Claimed")}</div>
             <div className="text-sm font-bold text-emerald-400 tabular-nums">{Number(stats?.totalClaimedEmber || 0).toFixed(2)}</div>
           </div>
         </div>
@@ -178,9 +178,9 @@ export function EmberBurnSection() {
           className="glass-panel w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
           data-testid="button-view-burn-positions"
         >
-          <span className="text-xs font-semibold text-white/80">{isZh ? "我的销毁仓位" : "My Burn Positions"}</span>
+          <span className="text-xs font-semibold text-white/80">{t("vault.burn.myPositions", "My Burn Positions")}</span>
           <div className="flex items-center gap-1 text-[10px] text-orange-400/70">
-            <span>{isZh ? "查看仓位" : "My positions"}</span>
+            <span>{t("common.myPositions", "My positions")}</span>
             <ChevronRight className="h-3 w-3" />
           </div>
         </button>

@@ -73,7 +73,9 @@
       "desc": "Diese Funktion kommt bald. Bleib dran.",
       "descWith": "{{feature}} kommt bald. Bleib dran.",
       "title": "Noch nicht verfügbar"
-    }
+    },
+    "copyAddress": "Adresse kopieren",
+    "myPositions": "Meine Positionen"
   },
   "nav": {
     "home": "START",
@@ -384,7 +386,21 @@
       "roundPrefix": "Runde",
       "roundSuffix": "",
       "roundTarget": "Ziel",
-      "roundDone": "Alle Runden abgeschlossen"
+      "roundDone": "Alle Runden abgeschlossen",
+      "stageRaise25": "Aufbau 25%",
+      "stageRaise60": "Aufbau 60%",
+      "stageLaunch": "100% Start",
+      "stagePost1": "Start +1",
+      "stagePost2": "Start +2",
+      "stagePost3": "Start +3",
+      "stagePost4": "Start +4",
+      "stagePost5": "Start +5",
+      "stagePost6": "Start +6",
+      "phasePre": "Vor dem Start",
+      "phaseLaunch": "Start",
+      "phasePost": "Nach dem Start",
+      "badgeInject": "35% Einspeisung",
+      "badgeFlywheel": "17,5% × 2 Schwungrad"
     },
     "viewAnalysis": "Analyse ansehen",
     "lockNotReadyTitle": "Demnächst verfügbar",
@@ -433,7 +449,8 @@
       "validationAmount": "Mindestens 10 USDT",
       "notReadyTitle": "Demnächst verfügbar",
       "notReadyDesc": "RUNE-Sperren werden nach dem Protokollstart geöffnet.",
-      "runeLock": "RUNE-Staking"
+      "runeLock": "RUNE-Staking",
+      "positions": "Positionen"
     },
     "burn": {
       "sectionTitle": "RUNE verbrennen · Permanenter FIRE-Ertrag",
@@ -496,7 +513,8 @@
       "stepBuybackDesc": "Ein Teil der Vault-Einnahmen wird genutzt, um Token am freien Markt zurückzukaufen.",
       "stepBuybackTitle": "Protokoll-Rückkauf",
       "stepValueDesc": "Mit schrumpfendem Umlaufangebot verstärkt sich die Wertschöpfung der verbleibenden Token kontinuierlich.",
-      "stepValueTitle": "Wertzuwachs"
+      "stepValueTitle": "Wertzuwachs",
+      "dailyFire": "Tägliches FIRE"
     }
   },
   "deposit": {
@@ -530,7 +548,8 @@
     "buyTitle": "Ein-Klick-Kauf mit Karte / Cross-Chain",
     "customAmount": "Eigener Betrag",
     "enterAmount": "Betrag eingeben oder auswählen",
-    "manualTransfer": "Oder an Adresse überweisen"
+    "manualTransfer": "Oder an Adresse überweisen",
+    "onchainWaitPm": "Nur Polygon-USDC. Die On-Chain-Bestätigung dauert ca. 2–5 Min.; dein Guthaben aktualisiert sich automatisch nach Eingang — bitte warten."
   },
   "ma": {
     "chartArea": "Fläche",
@@ -2220,7 +2239,13 @@
     "tradingAccountLabelAgent": "Handelskonto-Adresse (deine Wallet)",
     "underfundedDesc": "HL erfordert mindestens ${{min}} zum Kopieren; aktuelles Konto-Eigenkapital {{val}}. Tippe hier, um zur Einzahlung in deine Wallet zurückzukehren.",
     "viewOnExplorer": "Im Block-Explorer ansehen",
-    "walletLabel": "Wallet-Adresse"
+    "walletLabel": "Wallet-Adresse",
+    "consoleTier": {
+      "entry": "Einstieg",
+      "advanced": "Fortgeschritten",
+      "pro": "Profi"
+    },
+    "depositOnchainWait": "Einzahlungen brauchen eine On-Chain-Bestätigung (ca. 2–5 Min.); das Guthaben aktualisiert sich automatisch nach Eingang — bitte warten."
   },
   "profileVault": {
     "claimed": "Beansprucht!",
@@ -2330,6 +2355,28 @@
     "levelBadge": "Node L{{level}}",
     "limitPerTrade": "Pro Trade",
     "limitDaily": "Täglich",
-    "limitTrades": "Trades/Tag"
+    "limitTrades": "Trades/Tag",
+    "benefit": {
+      "ADVANCED": "Höhere Tageslimits und voller Copy-Trading-Zugang.",
+      "FOUNDER": "Top-Stufe — höchste Handelslimits, maximale Empfehlungsrate und Genesis-Qualifikation.",
+      "INITIAL": "Einstiegsstufe — schaltet Kontoeröffnung und einfaches Copy-Trading frei.",
+      "MID": "Mittelklasse-Limits für aktive Trader.",
+      "SUPER": "Erhöhte Limits mit priorisierten Signalen und besserer Empfehlungsrate."
+    },
+    "buyConfirm": "Kauf bestätigen",
+    "buyCta": "Node kaufen",
+    "buyDialogDesc": "Wähle eine Stufe und zahle mit USDC.",
+    "buyGridTitle": "Node kaufen",
+    "buySuccess": "Kauf erfolgreich",
+    "buySuccessDesc": "Node gekauft — aktiv nach On-Chain-Bestätigung.",
+    "buyTitle": "Node kaufen",
+    "emptyDesc": "Kaufe eine Node, um Kontoeröffnung und Copy-Trading freizuschalten.",
+    "emptyTitle": "Du hältst noch keine Nodes",
+    "heldTitle": "Meine Nodes",
+    "pageSubtitle": "Halte eine Node, um Kontoeröffnung und Copy-Trading freizuschalten",
+    "pageTitle": "Meine Nodes",
+    "payHint": "Zahlen mit USDC · {{chain}}",
+    "redeemDesc": "Schon einen Code? Gib ihn ein, um den Node-Zugang zu aktivieren.",
+    "redeemTitle": "Autorisierungscode einlösen"
   }
 }
