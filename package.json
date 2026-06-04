@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "BASE_PATH=/ PORT=5173 vite --config vite.config.ts --host 0.0.0.0",
+    "dev": "BASE_PATH=/ PORT=5000 vite --config vite.config.ts --host 0.0.0.0",
     "build": "BASE_PATH=/ PORT=8080 vite build --config vite.config.ts",
     "build:mainnet": "VITE_RUNE_CHAIN=bsc_mainnet VITE_SUPABASE_URL=https://mefjuecwawmjfmeofnck.supabase.co VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_UBNS5SeIx7ZAhsR01NYQQQ_t86zzdXz VITE_THIRDWEB_CLIENT_ID=959f0ed19c3936fbccbe4b59d7c0fa0d BASE_PATH=/ PORT=8080 vite build --config vite.config.ts",
-    "deploy:mainnet": "pnpm run build:mainnet && pnpm exec wrangler pages deploy dist/public --project-name rune-final --branch main --commit-dirty=true",
+    "deploy:mainnet": "pnpm run build:mainnet && pnpm exec wrangler pages deploy dist/public --project-name rune-lastest --branch main --commit-dirty=true",
     "serve": "BASE_PATH=/ PORT=4173 vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -82,6 +82,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lightweight-charts": "^4.2.3",
+    "pnpm": "^11.5.0",
     "react-countup": "^6.5.3",
     "react-i18next": "^17.0.6",
     "thirdweb": "^5.90.0",

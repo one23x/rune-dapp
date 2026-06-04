@@ -157,7 +157,7 @@
   --app-font-num: 'NumUnified', 'Cinzel', 'Space Mono', 'JetBrains Mono', ui-monospace, monospace;
   --app-font-num-tabular: 'NumUnified', 'Space Mono', 'JetBrains Mono', ui-monospace, monospace;
   
-  --radius: 0.375rem;
+  --radius: 0.5rem; /* F16: unify with app/index.css (was 0.375 — duplicate token mismatch) */
 }
 
 @layer base {
@@ -556,3 +556,22 @@
   100% { transform: translateX(400%); }
 }
 .animate-bar-sweep { animation: bar-sweep 2.2s ease-in-out infinite; }
+
+/* thirdweb PayEmbed fit — the inline embed's "Choose Payment Method" content has
+   a ~400px hard minimum width, so widening the dialog can't fit it on a phone;
+   the content stays 400px and overflows. Pin the embed to its natural 400px (so
+   internal content never clips) and zoom-to-fit per breakpoint — `zoom` shrinks
+   the whole widget AND its layout footprint, unlike transform:scale.
+   See .agents/memory/payembed-dialog-overflow.md */
+.tw-pay-embed-fit {
+  width: 400px !important;
+  min-width: 400px !important;
+  max-width: 400px !important;
+  zoom: 0.9;
+}
+@media (max-width: 480px) {
+  .tw-pay-embed-fit { zoom: 0.84; }
+}
+@media (max-width: 360px) {
+  .tw-pay-embed-fit { zoom: 0.76; }
+}

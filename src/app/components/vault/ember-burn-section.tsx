@@ -117,49 +117,70 @@ export function EmberBurnSection() {
     { icon: Sparkles, color: "rgb(196,181,253)", lk: "vault.burn.benefitScarcity", ld: "Protocol Scarcity",    dk: "vault.burn.benefitScarcityDesc", dd: "Hard cap 1.31M FIRE. External projects compete" },
   ];
 
+  const burnSteps = [
+    {
+      title: t("vault.burn.stepBuybackTitle", isZh ? "协议回购" : "Protocol Buyback"),
+      desc: t("vault.burn.stepBuybackDesc", isZh ? "金库产生的部分收益将用于在公开市场回购代币。" : "A portion of vault revenue is used to buy back tokens on the open market."),
+    },
+    {
+      title: t("vault.burn.stepBurnTitle", isZh ? "永久销毁" : "Permanent Burn"),
+      desc: t("vault.burn.stepBurnDesc", isZh ? "回购的代币将被发送至黑洞地址，永久退出流通，形成通缩效应。" : "Bought-back tokens are sent to a burn address, permanently removed from supply for a deflationary effect."),
+    },
+    {
+      title: t("vault.burn.stepValueTitle", isZh ? "价值提升" : "Value Accrual"),
+      desc: t("vault.burn.stepValueDesc", isZh ? "随着流通量减少，剩余代币的价值捕获能力将持续增强。" : "As circulating supply shrinks, the value capture of remaining tokens keeps strengthening."),
+    },
+  ];
+
   return (
     <div className="px-4 lg:px-6 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
-          <Flame className="h-3 w-3 text-red-400" />
+        <div className="h-5 w-5 rounded-md flex items-center justify-center bg-orange-500/15 border border-orange-500/30">
+          <Flame className="h-3 w-3 text-orange-400" />
         </div>
-        <h3 className="text-sm font-bold">{t("vault.burn.sectionTitle", "Burn RUNE · Permanent FIRE Yield")}</h3>
-        <Badge className="text-[9px] border-0 ml-auto" style={{ background: "rgba(239,68,68,0.12)", color: "rgb(248,113,113)" }}>
+        <h3 className="text-sm font-bold text-white">{t("vault.burn.sectionTitle", "Burn RUNE · Permanent FIRE Yield")}</h3>
+        <Badge className="text-[9px] border-0 ml-auto bg-orange-500/15 text-orange-400">
           {t("vault.burn.badge", "Permanent Deflation")}
         </Badge>
       </div>
 
-      {/* My stats summary + link to positions */}
+      {/* Cumulative burn hero */}
+      <div className="glass-panel-strong relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute top-0 right-0 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl" />
+        <div className="flex items-center gap-3 mb-4 relative z-10">
+          <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/30">
+            <Flame className="h-5 w-5 text-orange-400" />
+          </div>
+          <div>
+            <div className="text-white/80 text-sm font-medium">{t("vault.burn.cumulativeBurn", isZh ? "累计销毁 (FIRE)" : "Cumulative Burn (FIRE)")}</div>
+            <div className="text-2xl font-bold tracking-tight gold-text tabular-nums">
+              {Number(stats?.totalRuneBurned || 0).toLocaleString()}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 relative z-10">
+          <div className="bg-black/20 border border-white/10 rounded-lg p-3">
+            <div className="text-xs text-white/50 mb-1">{t("vault.burn.dailyFire", "Daily FIRE")}</div>
+            <div className="text-sm font-bold text-orange-400 tabular-nums">{Number(stats?.dailyEmber || 0).toFixed(4)}</div>
+          </div>
+          <div className="bg-black/20 border border-white/10 rounded-lg p-3">
+            <div className="text-xs text-white/50 mb-1">{t("vault.burn.statClaimed", "Claimed")}</div>
+            <div className="text-sm font-bold text-emerald-400 tabular-nums">{Number(stats?.totalClaimedEmber || 0).toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Link to positions */}
       {wallet && (
         <button
           onClick={() => navigate("/profile/vault")}
-          className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity"
-          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}
+          className="glass-panel w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
           data-testid="button-view-burn-positions"
         >
-          <div className="flex gap-4">
-            <div>
-              <div className="text-[9px] text-muted-foreground uppercase mb-0.5">{isZh ? "已销毁RUNE" : "RUNE Burned"}</div>
-              <div className="text-sm font-bold tabular-nums text-red-400">
-                {Number(stats?.totalRuneBurned || 0).toLocaleString()}
-              </div>
-            </div>
-            <div>
-              <div className="text-[9px] text-muted-foreground uppercase mb-0.5">{isZh ? "每日FIRE" : "Daily FIRE"}</div>
-              <div className="text-sm font-bold tabular-nums text-orange-400">
-                {Number(stats?.dailyEmber || 0).toFixed(4)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[9px] text-muted-foreground uppercase mb-0.5">{isZh ? "已领取" : "Claimed"}</div>
-              <div className="text-sm font-bold tabular-nums text-orange-300">
-                {Number(stats?.totalClaimedEmber || 0).toFixed(2)}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-[10px]" style={{ color: "rgba(239,68,68,0.7)" }}>
-            <span>{isZh ? "查看仓位" : "My positions"}</span>
+          <span className="text-xs font-semibold text-white/80">{t("vault.burn.myPositions", "My Burn Positions")}</span>
+          <div className="flex items-center gap-1 text-[10px] text-orange-400/70">
+            <span>{t("common.myPositions", "My positions")}</span>
             <ChevronRight className="h-3 w-3" />
           </div>
         </button>
@@ -177,8 +198,8 @@ export function EmberBurnSection() {
               <Icon className="h-3 w-3" style={{ color }} />
             </div>
             <div>
-              <div className="text-[11px] font-semibold">{t(lk, ld)}</div>
-              <div className="text-[10px] text-muted-foreground">{t(dk, dd)}</div>
+              <div className="text-[11px] font-semibold text-white">{t(lk, ld)}</div>
+              <div className="text-[10px] text-white/60">{t(dk, dd)}</div>
             </div>
           </div>
         ))}
@@ -186,29 +207,28 @@ export function EmberBurnSection() {
 
       {/* Rate Tiers */}
       <button onClick={() => setShowTiers(v => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors"
-        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid hsl(var(--border))" }}>
+        className="glass-panel w-full flex items-center justify-between px-4 py-2.5 text-xs text-white/60 hover:text-white transition-colors">
         <span>{t("vault.burn.tiersTitle", "Daily Rate Tiers (by RUNE amount burned)")}</span>
         {showTiers ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
 
       {showTiers && (
-        <div className="rounded-lg overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
+        <div className="glass-panel rounded-lg overflow-hidden">
           <table className="w-full text-[10px]">
-            <thead><tr style={{ background: "rgba(255,255,255,0.04)" }}>
-              <th className="text-left px-3 py-2 text-muted-foreground font-medium">{t("vault.burn.tierAmount", "RUNE Burned")}</th>
-              <th className="text-center px-3 py-2 text-muted-foreground font-medium">{t("vault.burn.tierLevel", "Level")}</th>
-              <th className="text-right px-3 py-2 text-muted-foreground font-medium">{t("vault.burn.tierRate", "Daily")}</th>
+            <thead><tr className="bg-white/5">
+              <th className="text-left px-3 py-2 text-white/50 font-medium">{t("vault.burn.tierAmount", "RUNE Burned")}</th>
+              <th className="text-center px-3 py-2 text-white/50 font-medium">{t("vault.burn.tierLevel", "Level")}</th>
+              <th className="text-right px-3 py-2 text-white/50 font-medium">{t("vault.burn.tierRate", "Daily")}</th>
             </tr></thead>
             <tbody>
               {BURN_TIERS.map(t2 => (
-                <tr key={t2.minRune} className={cn("border-t", t2.best ? "text-orange-300" : "")} style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                  <td className="px-3 py-1.5 text-muted-foreground">
+                <tr key={t2.minRune} className={cn("border-t border-white/5", t2.best ? "text-orange-300" : "text-white/80")}>
+                  <td className="px-3 py-1.5 text-white/60">
                     {t2.maxRune === Infinity ? `≥ ${t2.minRune.toLocaleString()}` : `${t2.minRune.toLocaleString()} – ${t2.maxRune.toLocaleString()}`}
                   </td>
                   <td className="px-3 py-1.5 text-center">
                     {t2.best
-                      ? <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: "rgba(239,68,68,0.2)", color: "rgb(248,113,113)" }}>{t(t2.tierKey, t2.tierDefault)}</span>
+                      ? <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-300">{t(t2.tierKey, t2.tierDefault)}</span>
                       : t(t2.tierKey, t2.tierDefault)}
                   </td>
                   <td className="px-3 py-1.5 text-right font-bold">{t2.rateLabel}</td>
@@ -219,9 +239,24 @@ export function EmberBurnSection() {
         </div>
       )}
 
+      {/* Burn Mechanism — numbered steps */}
+      <div className="glass-panel p-4">
+        <div className="text-xs font-semibold text-white/80 mb-3">{t("vault.burn.mechanismTitle", isZh ? "销毁机制" : "Burn Mechanism")}</div>
+        <div className="space-y-3">
+          {burnSteps.map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-orange-500/15 border border-orange-500/30 flex items-center justify-center shrink-0 text-[11px] font-bold text-orange-400">{i + 1}</div>
+              <div className="pt-0.5">
+                <div className="text-[11px] font-semibold text-white">{step.title}</div>
+                <div className="text-[10px] text-white/60 mt-0.5 leading-relaxed">{step.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Burn Button */}
-      <Button className="w-full h-10 text-sm font-bold"
-        style={{ background: "linear-gradient(135deg, rgba(239,68,68,0.85), rgba(220,38,38,0.85))", color: "#fff" }}
+      <Button className="w-full h-12 text-sm font-bold gold-button rounded-xl"
         onClick={() => { setOpen(true); setConfirmed(false); }} data-testid="button-ember-burn-open">
         <Flame className="mr-2 h-4 w-4" />
         {t("vault.burn.burnButton", "Pay USDT · Burn RUNE → FIRE Yield")}
@@ -229,72 +264,72 @@ export function EmberBurnSection() {
 
       {/* Dialog */}
       <Dialog open={open} onOpenChange={v => { if (!isPaying) { setOpen(v); if (!v) { payment.reset(); setConfirmed(false); } } }}>
-        <DialogContent className="bg-card border-border max-w-sm">
+        <DialogContent className="glass-panel-strong border-0 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-orange-400">
               <Flame className="h-4 w-4" />
               {t("vault.burn.confirmTitle", "Burn RUNE for FIRE")}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription className="text-xs text-white/60">
               {t("vault.burn.confirmDesc", "Pay USDT → buy RUNE at market price → burn permanently for daily FIRE yield")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div>
-              <div className="text-xs text-muted-foreground mb-1.5">{t("vault.burn.amountLabel", "USDT Amount")}</div>
+              <div className="text-xs text-white/60 mb-1.5">{t("vault.burn.amountLabel", "USDT Amount")}</div>
               <div className="relative">
                 <Input type="number" placeholder={t("vault.burn.amountPlaceholder", "Min 10 USDT")}
                   value={usdtAmount} onChange={e => { setUsdtAmount(e.target.value); setConfirmed(false); }}
-                  className="bg-background border-border pr-16" data-testid="input-ember-burn-amount" />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">USDT</span>
+                  className="bg-black/20 border-white/10 text-white pr-16" data-testid="input-ember-burn-amount" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-white/60">USDT</span>
               </div>
             </div>
 
             {usdtNum >= 10 && (
-              <div className="rounded-lg p-3 space-y-2" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
+              <div className="rounded-lg p-3 space-y-2 bg-orange-500/5 border border-orange-500/15">
                 <div className="flex items-center gap-1.5 text-xs flex-wrap">
-                  <span className="font-bold">${usdtNum.toFixed(2)} USDT</span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-bold text-red-400">{runeEquiv.toFixed(2)} RUNE</span>
-                  <span className="text-[10px] text-muted-foreground">(@ ${runePrice.toFixed(4)})</span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <span className="font-bold text-white">${usdtNum.toFixed(2)} USDT</span>
+                  <ArrowRight className="h-3 w-3 text-white/50" />
+                  <span className="font-bold text-orange-400">{runeEquiv.toFixed(2)} RUNE</span>
+                  <span className="text-[10px] text-white/50">(@ ${runePrice.toFixed(4)})</span>
+                  <ArrowRight className="h-3 w-3 text-white/50" />
                   <span className="font-bold text-orange-400">{t("vault.burn.burned", "burned")}</span>
                 </div>
-                <div className="border-t border-border/30 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("vault.burn.currentTier", "Tier")}</span><span className="font-semibold" style={{ color: tier.best ? "rgb(248,113,113)" : undefined }}>{t(tier.tierKey, tier.tierDefault)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("vault.burn.dailyRateLabel", "Rate")}</span><span className="font-bold text-orange-400">{tier.rateLabel}/day</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("vault.burn.dailyYield", "Daily FIRE")}</span><span className="font-semibold text-orange-300">{dailyEmber.toFixed(4)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("vault.burn.yearlyYield", "Annual Est.")}</span><span className="font-semibold text-orange-300">{yearlyEmber.toFixed(0)}</span></div>
+                <div className="border-t border-white/10 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex justify-between"><span className="text-white/50">{t("vault.burn.currentTier", "Tier")}</span><span className={cn("font-semibold", tier.best ? "text-orange-300" : "text-white")}>{t(tier.tierKey, tier.tierDefault)}</span></div>
+                  <div className="flex justify-between"><span className="text-white/50">{t("vault.burn.dailyRateLabel", "Rate")}</span><span className="font-bold text-orange-400">{tier.rateLabel}/day</span></div>
+                  <div className="flex justify-between"><span className="text-white/50">{t("vault.burn.dailyYield", "Daily FIRE")}</span><span className="font-semibold text-orange-300">{dailyEmber.toFixed(4)}</span></div>
+                  <div className="flex justify-between"><span className="text-white/50">{t("vault.burn.yearlyYield", "Annual Est.")}</span><span className="font-semibold text-orange-300">{yearlyEmber.toFixed(0)}</span></div>
                 </div>
                 {runeEquiv < 5000 && (
-                  <div className="text-[9px] text-muted-foreground mt-1">
-                    💡 {t("vault.burn.tipUpgrade", "Spend more to reach higher tiers — max rate 1.5% at 5,000+ RUNE")}
+                  <div className="text-[9px] text-white/60 mt-1">
+                    {t("vault.burn.tipUpgrade", "Spend more to reach higher tiers — max rate 1.5% at 5,000+ RUNE")}
                   </div>
                 )}
               </div>
             )}
 
             <div className="space-y-2">
-              <div className="flex items-start gap-2 text-[10px] rounded-lg p-2.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)" }}>
+              <div className="flex items-start gap-2 text-[10px] rounded-lg p-2.5 bg-red-500/8 border border-red-500/20">
                 <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
                 <div className="text-red-300 space-y-0.5">
-                  <div className="font-semibold">{t("vault.burn.irreversible", "⚠️ Irreversible Action")}</div>
+                  <div className="font-semibold">{t("vault.burn.irreversible", "Irreversible Action")}</div>
                   <div>{t("vault.burn.irreversibleDesc", "RUNE is permanently removed from circulation. Principal cannot be returned. You receive perpetual daily FIRE yield.")}</div>
                 </div>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="rounded" data-testid="checkbox-burn-confirm" />
-                <span className="text-[11px] text-muted-foreground">{t("vault.burn.checkboxLabel", "I understand this is irreversible and confirm")}</span>
+                <span className="text-[11px] text-white/60">{t("vault.burn.checkboxLabel", "I understand this is irreversible and confirm")}</span>
               </label>
             </div>
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setOpen(false); payment.reset(); setConfirmed(false); }} disabled={isPaying}>{t("common.cancel", "Cancel")}</Button>
+            <Button variant="outline" size="sm" onClick={() => { setOpen(false); payment.reset(); setConfirmed(false); }} disabled={isPaying} className="glass-button border-0 text-white">{t("common.cancel", "Cancel")}</Button>
             <Button size="sm" onClick={handleBurn}
               disabled={isPaying || !usdtAmount || parseFloat(usdtAmount) < 10 || !confirmed}
-              style={{ background: "linear-gradient(135deg, rgba(239,68,68,0.9), rgba(220,38,38,0.9))", color: "#fff" }}
+              className="gold-button"
               data-testid="button-ember-burn-confirm">
               {isPaying ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />{payLabel}</> : <><Flame className="mr-1.5 h-3.5 w-3.5" />{t("vault.burn.confirmBtn", "Confirm Burn")}</>}
             </Button>

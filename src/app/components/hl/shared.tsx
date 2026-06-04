@@ -7,6 +7,7 @@
  * No mocked arrays.
  */
 
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@app/lib/utils";
@@ -108,7 +109,7 @@ export function NetworkToggle({
     { id: "testnet", labelKey: "hl.testnet" },
   ];
   return (
-    <div className="inline-flex gap-1 rounded-xl border border-border/55 bg-card/60 p-1 surface-3d">
+    <div className="inline-flex gap-1 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
       {opts.map((o) => {
         const active = value === o.id;
         return (
@@ -116,10 +117,10 @@ export function NetworkToggle({
             key={o.id}
             onClick={() => onChange(o.id)}
             className={cn(
-              "px-3.5 py-1.5 rounded-lg text-[12px] font-bold tracking-wide transition-colors",
+              "px-3.5 py-1.5 rounded-xl text-[12px] font-bold tracking-wide transition-colors",
               active
-                ? "bg-gradient-to-br from-amber-500/20 via-amber-600/15 to-amber-700/10 ring-1 ring-amber-500/35 text-primary"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                : "text-white/55 hover:text-white/90",
             )}
           >
             {t(o.labelKey)}
@@ -143,49 +144,164 @@ export function isEndpointMissing(err: unknown): boolean {
   return /\b(404|405|not.?found|method.?not.?allowed|no_route|route)\b/i.test(s);
 }
 
+/** The engine refuses to start an *active* follow on an unfunded HL account
+ *  (400 insufficient_funds). Surface this as a "请先充值" prompt, not an error. */
+export function isInsufficientFunds(err: unknown): boolean {
+  return /insufficient_funds|fund your hyperliquid|account value/i.test(String((err as any)?.message ?? err));
+}
+
+/** Per-follow risk configuration — preset by a strategy pack (or a custom dialog). */
+export interface HlFollowConfig {
+  /** Fraction of the leader's notional mirrored per trade (0–1). */
+  notionalRatio: number;
+  /** Hard cap on leverage applied to mirrored positions. */
+  maxLeverage: number;
+  /** Auto take-profit on the mirrored position (%, null = off). */
+  takeProfitPct?: number | null;
+  /** Auto stop-loss on the mirrored position (%, null = off). */
+  stopLossPct?: number | null;
+  /** Per-trade notional cap (USD). Omit = engine default. */
+  notionalCapUsd?: number;
+  /** Daily notional cap (USD). Omit = engine default. */
+  dailyCapUsd?: number;
+  /** Coin whitelist (e.g. ["BTC","ETH","SOL"]). Empty = all coins. */
+  allowedCoins?: string[];
+}
+
+export const HL_DEFAULT_FOLLOW: HlFollowConfig = {
+  notionalRatio: 0.1,
+  maxLeverage: 3,
+  takeProfitPct: null,
+  stopLossPct: null,
+};
+
+interface CopyVars {
+  leader: HlLeader;
+  config: HlFollowConfig;
+}
+
+type CopyOutcome = "ok" | "no_user" | "pending" | "funds" | "error";
+
 export function useHlCopy(userId: string | undefined, network: HlNetwork) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  // We track the in-flight leader ourselves so a *batch* (copyMany) can surface
+  // a single spinner per row while it walks the selection sequentially.
+  const [pendingFor, setPendingFor] = useState<string | undefined>(undefined);
+  const [batchPending, setBatchPending] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: async (leader: HlLeader) => {
+  // Raw follow request — shared by single + batch flows so the request shape
+  // stays in one place. Throws a typed error the callers categorize.
+  const submit = useCallback(
+    async (leader: HlLeader, config: HlFollowConfig): Promise<CopyOutcome> => {
       if (!userId) throw new Error("no_user");
-      return hyperliquid.subscribeCreate(userId, {
+      await hyperliquid.subscribeCreate(userId, {
         leaderAddress: leader.address,
         network,
-        // Sensible defaults; the engine create route will validate/clamp.
-        notionalRatio: 0.1,
-        maxLeverage: 3,
+        // Pack/custom risk params; the engine create route validates/clamps.
+        notionalRatio: config.notionalRatio,
+        maxLeverage: config.maxLeverage,
+        takeProfitPct: config.takeProfitPct ?? undefined,
+        stopLossPct: config.stopLossPct ?? undefined,
+        notionalCapUsd: config.notionalCapUsd,
+        dailyCapUsd: config.dailyCapUsd,
+        allowedCoins: config.allowedCoins && config.allowedCoins.length > 0 ? config.allowedCoins : undefined,
       });
+      return "ok";
     },
-    onSuccess: () => {
-      toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedDesc") });
-      if (userId) queryClient.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
-    },
-    onError: (err: unknown) => {
-      // Not onboarded yet → guide the user to 开通 instead of a raw error string.
-      if (String((err as any)?.message ?? err) === "no_user") {
-        toast({
-          title: t("hl.needOnboard", "请先开通交易账户"),
-          description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。"),
-        });
-        return;
-      }
-      if (isEndpointMissing(err)) {
-        toast({
-          title: t("hl.copyPending"),
-          description: t("hl.copyPendingDesc"),
-        });
-        return;
-      }
-      toast({ title: t("common.error"), description: String((err as any)?.message ?? err), variant: "destructive" });
-    },
-  });
+    [userId, network],
+  );
 
-  return {
-    copy: (leader: HlLeader) => mutation.mutate(leader),
-    pendingFor: mutation.isPending ? (mutation.variables as HlLeader | undefined)?.address : undefined,
-  };
+  const categorize = useCallback((err: unknown): CopyOutcome => {
+    if (String((err as any)?.message ?? err) === "no_user") return "no_user";
+    if (isInsufficientFunds(err)) return "funds";
+    if (isEndpointMissing(err)) return "pending";
+    return "error";
+  }, []);
+
+  const invalidate = useCallback(() => {
+    if (userId) queryClient.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
+  }, [userId]);
+
+  // Single follow — one toast per the categorized outcome (unchanged UX).
+  const copy = useCallback(
+    async (leader: HlLeader, config: HlFollowConfig) => {
+      setPendingFor(leader.address);
+      try {
+        await submit(leader, config);
+        toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedDesc") });
+        invalidate();
+      } catch (err) {
+        const kind = categorize(err);
+        if (kind === "no_user") {
+          toast({ title: t("hl.needOnboard", "请先开通交易账户"), description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。") });
+        } else if (kind === "funds") {
+          toast({ title: t("hl.needFunds", "余额不足,请先充值"), description: t("hl.needFundsDesc", "请先充值 USDC 到 HL 交易账户,有余额后即可开始跟单。") });
+        } else if (kind === "pending") {
+          toast({ title: t("hl.copyPending"), description: t("hl.copyPendingDesc") });
+        } else {
+          toast({ title: t("common.error"), description: String((err as any)?.message ?? err), variant: "destructive" });
+        }
+      } finally {
+        setPendingFor(undefined);
+      }
+    },
+    [submit, categorize, invalidate, toast, t],
+  );
+
+  // Batch follow — walks the selection sequentially (no request bursts) and
+  // emits a SINGLE summarized toast instead of one per leader. Returns the set
+  // of leader addresses that succeeded so the caller can keep failed ones.
+  const copyMany = useCallback(
+    async (leaders: HlLeader[], config: HlFollowConfig): Promise<Set<string>> => {
+      const succeeded = new Set<string>();
+      if (leaders.length === 0) return succeeded;
+      // Single follow → defer to copy() so the user gets the precise toast.
+      if (leaders.length === 1) {
+        await copy(leaders[0], config);
+        return succeeded; // caller treats single via copy()'s own UX
+      }
+      setBatchPending(true);
+      let okCount = 0, pendingCount = 0, errCount = 0, needOnboard = false, needFunds = false;
+      let lastErr: unknown;
+      try {
+        for (const leader of leaders) {
+          setPendingFor(leader.address);
+          try {
+            await submit(leader, config);
+            okCount += 1;
+            succeeded.add(leader.address.toLowerCase());
+          } catch (err) {
+            const kind = categorize(err);
+            if (kind === "no_user") { needOnboard = true; break; }
+            if (kind === "funds") { needFunds = true; break; }
+            if (kind === "pending") pendingCount += 1;
+            else { errCount += 1; lastErr = err; }
+          }
+        }
+      } finally {
+        setPendingFor(undefined);
+        setBatchPending(false);
+        invalidate();
+      }
+      // One summarized toast, priority: onboard > funds > started > pending > error.
+      if (needOnboard) {
+        toast({ title: t("hl.needOnboard", "请先开通交易账户"), description: t("hl.needOnboardDesc", "在上方点击「开通交易账户」后即可一键跟单。") });
+      } else if (needFunds) {
+        toast({ title: t("hl.needFunds", "余额不足,请先充值"), description: t("hl.needFundsDesc", "请先充值 USDC 到 HL 交易账户,有余额后即可开始跟单。") });
+      } else if (okCount > 0) {
+        toast({ title: t("hl.copyStarted"), description: t("hl.copyStartedBatch", "已开始跟单 {{count}} 个策略", { count: okCount }) });
+      } else if (pendingCount > 0) {
+        toast({ title: t("hl.copyPending"), description: t("hl.copyPendingDesc") });
+      } else if (errCount > 0) {
+        toast({ title: t("common.error"), description: String((lastErr as any)?.message ?? lastErr), variant: "destructive" });
+      }
+      return succeeded;
+    },
+    [copy, submit, categorize, invalidate, toast, t],
+  );
+
+  return { copy, copyMany, pendingFor, batchPending };
 }
 
 // ─── State atoms ─────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 function seededRandom(seed: number) {
@@ -163,8 +164,32 @@ function getCumulativeStats(timeSeed = 0, realByDay?: RealPnlMap) {
 export function StrategyHeader() {
   const { t } = useTranslation();
   return (
-    <div className="px-4 pt-4 pb-2" style={{ animation: "fadeSlideIn 0.4s ease-out" }}>
-      <h2 className="text-lg font-bold" data-testid="text-strategy-title">{t("strategy.aiStrategies")}</h2>
+    <div className="px-4 pt-6 pb-2" style={{ animation: "fadeSlideIn 0.4s ease-out" }}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl border border-amber-500/30 bg-black/60 backdrop-blur-md flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(245,158,11,0.25)]">
+            <span className="text-[13px] font-black text-amber-400 tracking-tighter">HL</span>
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold tracking-tight gold-text leading-none drop-shadow-md" data-testid="text-strategy-title">
+              {t("strategy.aiStrategies")}
+            </h2>
+            <span className="text-[10px] text-white/45 tracking-wide">
+              {t("strategy.headerSubtitle", "链上永续金库 · 智能合约跟单")}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-white/60 font-mono bg-white/5 px-2 py-1 rounded-full border border-white/10 shrink-0">
+          <div className="relative w-1.5 h-1.5">
+            <div
+              className="absolute inset-0 bg-emerald-400 rounded-full"
+              style={{ animation: "pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}
+            />
+            <div className="absolute inset-0 bg-emerald-400 rounded-full border border-black/50" />
+          </div>
+          <span>{t("hl.live", "实时")}</span>
+        </div>
+      </div>
     </div>
   );
 }

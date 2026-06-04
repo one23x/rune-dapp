@@ -59,7 +59,7 @@ export default function ProfileSwapPage() {
             <button
               onClick={() => navigate("/profile")}
               className="absolute left-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors lg:hidden"
-              aria-label="Back"
+              aria-label={t("common.back", "Back")}
             >
               <ArrowLeft className="h-5 w-5 text-white/80" />
             </button>

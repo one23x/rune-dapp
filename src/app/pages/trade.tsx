@@ -8,18 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
-  getAiPredictions, fetchPolymarkets, getNewsPredictions,
-  getPredictionBets, placePredictionBet,
+  getAiPredictionsReal, fetchPolymarkets, getNewsPredictions,
+  getPredictionBets,
 } from "@app/lib/api";
+import { useEngineUser, usePolymarketPlaceOrder } from "@app/lib/engine-hooks";
 import { queryClient } from "@app/lib/queryClient";
 import { formatCompact } from "@app/lib/constants";
 import {
   Search, Globe, Brain, Newspaper, TrendingUp, TrendingDown,
   ExternalLink, BarChart3, Clock, Trophy, Minus, Sparkles,
   ChevronDown, Flame, Star, AlertCircle, Wallet, RefreshCw,
+  Users, BarChart2, ShieldCheck, Zap, ChevronRight,
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
-import { CopyTradingEntry } from "@app/components/copy-trading-entry";
+import { Link } from "wouter";
+import { PredictionAiLab } from "@app/components/strategy/prediction-ai-lab";
 import type { AiPrediction, PredictionBet } from "@app-shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -29,9 +32,17 @@ type SortKey = "volume" | "ending" | "newest";
 
 interface PolymarketMarket {
   id: string;
+  conditionId?: string;
   question: string;
   yesPrice: number;
   noPrice: number;
+  // CLOB outcome token IDs (Yes / No legs). Present on live Polymarket data;
+  // absent on SEED data → a real bet is only offered when these exist.
+  yesTokenId?: string;
+  noTokenId?: string;
+  tickSize?: number;
+  minOrderSize?: number;
+  acceptingOrders?: boolean;
   volume: number;
   liquidity: number;
   endDate?: string;
@@ -104,18 +115,18 @@ const SEED_AI_PREDICTIONS: AiPrediction[] = [
 ];
 
 const SEED_NEWS: NewsPred[] = [
-  { id: "n-1", headline: "BlackRock Bitcoin ETF sees record $1.2B daily inflow", asset: "BTC", prediction: "BULLISH", confidence: 82, reasoning: "Massive institutional demand signals sustained buying pressure. Likely to push BTC above key resistance levels.", impact: "HIGH", source: "Bloomberg", url: "#", publishedAt: hoursAgo(1) },
-  { id: "n-2", headline: "SEC delays Ethereum options decision to Q3 2026", asset: "ETH", prediction: "BEARISH", confidence: 58, reasoning: "Regulatory delay dampens short-term sentiment. May cause temporary pullback as traders adjust positions.", impact: "MEDIUM", source: "Reuters", url: "#", publishedAt: hoursAgo(2) },
-  { id: "n-3", headline: "Solana processes 100M transactions in 24 hours — new record", asset: "SOL", prediction: "BULLISH", confidence: 75, reasoning: "Network performance milestone validates scalability thesis. Likely to attract more DeFi and gaming projects.", impact: "HIGH", source: "CoinDesk", url: "#", publishedAt: hoursAgo(3) },
-  { id: "n-4", headline: "Major crypto exchange announces $500M insurance fund", asset: "CRYPTO", prediction: "BULLISH", confidence: 65, reasoning: "Increased security measures boost institutional confidence. Positive for overall market sentiment.", impact: "MEDIUM", source: "The Block", url: "#", publishedAt: hoursAgo(4) },
-  { id: "n-5", headline: "EU MiCA regulation fully enforced — compliance deadline hits", asset: "CRYPTO", prediction: "BEARISH", confidence: 60, reasoning: "Strict compliance requirements may cause small exchanges to exit EU. Short-term friction for market access.", impact: "HIGH", source: "Financial Times", url: "#", publishedAt: hoursAgo(5) },
-  { id: "n-6", headline: "Chainlink CCIP integrated by 5 major banks for cross-chain", asset: "LINK", prediction: "BULLISH", confidence: 78, reasoning: "Enterprise adoption of Chainlink infrastructure validates long-term thesis. Strong fundamental catalyst.", impact: "HIGH", source: "Decrypt", url: "#", publishedAt: hoursAgo(2) },
-  { id: "n-7", headline: "Whale alert: $400M BTC moved from exchange to cold storage", asset: "BTC", prediction: "BULLISH", confidence: 70, reasoning: "Large withdrawal from exchanges reduces sell-side liquidity. Historically precedes upward price moves.", impact: "MEDIUM", source: "CryptoQuant", url: "#", publishedAt: hoursAgo(6) },
-  { id: "n-8", headline: "Dogecoin foundation announces smart contract upgrade", asset: "DOGE", prediction: "BULLISH", confidence: 62, reasoning: "Smart contract capability could expand DOGE utility beyond meme status. Watch for developer adoption.", impact: "LOW", source: "CoinTelegraph", url: "#", publishedAt: hoursAgo(7) },
-  { id: "n-9", headline: "US Treasury proposes new stablecoin reporting requirements", asset: "CRYPTO", prediction: "BEARISH", confidence: 55, reasoning: "Additional compliance burden on stablecoin issuers. May slow DeFi growth temporarily.", impact: "MEDIUM", source: "WSJ", url: "#", publishedAt: hoursAgo(8) },
-  { id: "n-10", headline: "Avalanche subnet adopted by major gaming studio for Web3 game", asset: "AVAX", prediction: "BULLISH", confidence: 72, reasoning: "AAA gaming adoption strengthens Avalanche ecosystem. Expected to drive TVL and user growth.", impact: "MEDIUM", source: "GameFi News", url: "#", publishedAt: hoursAgo(3) },
-  { id: "n-11", headline: "BNB Chain burns $200M in quarterly token burn", asset: "BNB", prediction: "BULLISH", confidence: 68, reasoning: "Deflationary mechanism reduces supply. Historically bullish for BNB price action.", impact: "MEDIUM", source: "Binance Blog", url: "#", publishedAt: hoursAgo(9) },
-  { id: "n-12", headline: "Federal Reserve signals potential rate pause through 2026", asset: "BTC", prediction: "NEUTRAL", confidence: 52, reasoning: "Uncertainty in macro direction. Risk assets could go either way depending on economic data.", impact: "HIGH", source: "CNBC", url: "#", publishedAt: hoursAgo(10) },
+  { id: "n-1", headline: "BlackRock Bitcoin ETF sees record $1.2B daily inflow", asset: "BTC", prediction: "BULLISH", confidence: 82, reasoning: "Massive institutional demand signals sustained buying pressure. Likely to push BTC above key resistance levels.", impact: "HIGH", source: "", url: "#", publishedAt: hoursAgo(1) },
+  { id: "n-2", headline: "SEC delays Ethereum options decision to Q3 2026", asset: "ETH", prediction: "BEARISH", confidence: 58, reasoning: "Regulatory delay dampens short-term sentiment. May cause temporary pullback as traders adjust positions.", impact: "MEDIUM", source: "", url: "#", publishedAt: hoursAgo(2) },
+  { id: "n-3", headline: "Solana processes 100M transactions in 24 hours — new record", asset: "SOL", prediction: "BULLISH", confidence: 75, reasoning: "Network performance milestone validates scalability thesis. Likely to attract more DeFi and gaming projects.", impact: "HIGH", source: "", url: "#", publishedAt: hoursAgo(3) },
+  { id: "n-4", headline: "Major crypto exchange announces $500M insurance fund", asset: "CRYPTO", prediction: "BULLISH", confidence: 65, reasoning: "Increased security measures boost institutional confidence. Positive for overall market sentiment.", impact: "MEDIUM", source: "", url: "#", publishedAt: hoursAgo(4) },
+  { id: "n-5", headline: "EU MiCA regulation fully enforced — compliance deadline hits", asset: "CRYPTO", prediction: "BEARISH", confidence: 60, reasoning: "Strict compliance requirements may cause small exchanges to exit EU. Short-term friction for market access.", impact: "HIGH", source: "", url: "#", publishedAt: hoursAgo(5) },
+  { id: "n-6", headline: "Chainlink CCIP integrated by 5 major banks for cross-chain", asset: "LINK", prediction: "BULLISH", confidence: 78, reasoning: "Enterprise adoption of Chainlink infrastructure validates long-term thesis. Strong fundamental catalyst.", impact: "HIGH", source: "", url: "#", publishedAt: hoursAgo(2) },
+  { id: "n-7", headline: "Whale alert: $400M BTC moved from exchange to cold storage", asset: "BTC", prediction: "BULLISH", confidence: 70, reasoning: "Large withdrawal from exchanges reduces sell-side liquidity. Historically precedes upward price moves.", impact: "MEDIUM", source: "", url: "#", publishedAt: hoursAgo(6) },
+  { id: "n-8", headline: "Dogecoin foundation announces smart contract upgrade", asset: "DOGE", prediction: "BULLISH", confidence: 62, reasoning: "Smart contract capability could expand DOGE utility beyond meme status. Watch for developer adoption.", impact: "LOW", source: "", url: "#", publishedAt: hoursAgo(7) },
+  { id: "n-9", headline: "US Treasury proposes new stablecoin reporting requirements", asset: "CRYPTO", prediction: "BEARISH", confidence: 55, reasoning: "Additional compliance burden on stablecoin issuers. May slow DeFi growth temporarily.", impact: "MEDIUM", source: "", url: "#", publishedAt: hoursAgo(8) },
+  { id: "n-10", headline: "Avalanche subnet adopted by major gaming studio for Web3 game", asset: "AVAX", prediction: "BULLISH", confidence: 72, reasoning: "AAA gaming adoption strengthens Avalanche ecosystem. Expected to drive TVL and user growth.", impact: "MEDIUM", source: "", url: "#", publishedAt: hoursAgo(3) },
+  { id: "n-11", headline: "BNB Chain burns $200M in quarterly token burn", asset: "BNB", prediction: "BULLISH", confidence: 68, reasoning: "Deflationary mechanism reduces supply. Historically bullish for BNB price action.", impact: "MEDIUM", source: "", url: "#", publishedAt: hoursAgo(9) },
+  { id: "n-12", headline: "Federal Reserve signals potential rate pause through 2026", asset: "BTC", prediction: "NEUTRAL", confidence: 52, reasoning: "Uncertainty in macro direction. Risk assets could go either way depending on economic data.", impact: "HIGH", source: "", url: "#", publishedAt: hoursAgo(10) },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -139,6 +150,23 @@ function endingLabel(dateStr: string | undefined, t: (key: string, opts?: Record
   return t("trade.endsOn", { date: new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" }) });
 }
 
+// Build a REAL bet target from a Polymarket market: each choice carries the CLOB
+// outcome `tokenId` + `price` (probability) so the dialog can submit a live
+// order. When the live market lacks `clobTokenIds` (e.g. seed data) the tokenId
+// is undefined → openBet() detects that and stays an honest "coming soon".
+function buildPolyTarget(m: PolymarketMarket): BetTarget {
+  return {
+    marketId: m.id,
+    question: m.question,
+    marketType: "polymarket",
+    minOrderSize: m.minOrderSize,
+    choices: [
+      { label: "Yes", odds: m.yesPrice, price: m.yesPrice, tokenId: m.yesTokenId, color: "emerald" },
+      { label: "No", odds: m.noPrice, price: m.noPrice, tokenId: m.noTokenId, color: "red" },
+    ],
+  };
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ProbBar({ yes, no }: { yes: number; no: number }) {
@@ -159,6 +187,17 @@ function VolBadge({ volume }: { volume: number }) {
       <BarChart3 className="h-2.5 w-2.5" />
       {formatCompact(volume)}
     </span>
+  );
+}
+
+// Persistent honesty badge: stamped on AI / News cards whenever the live data
+// source returned empty and we're showing bundled SAMPLE content instead.
+function SampleBadge() {
+  const { t } = useTranslation();
+  return (
+    <Badge className="text-[10px] bg-zinc-500/15 text-zinc-300 border-zinc-400/30 no-default-hover-elevate no-default-active-elevate">
+      {t("trade.sampleData", "示例数据 / Sample")}
+    </Badge>
   );
 }
 
@@ -258,10 +297,11 @@ function PolyCard({
 // ─── Market Card: AI Prediction ───────────────────────────────────────────────
 
 function AiCard({
-  pred, hasBet, onBetBull, onBetBear,
+  pred, hasBet, sample, onBetBull, onBetBear,
 }: {
   pred: AiPrediction;
   hasBet: boolean;
+  sample?: boolean;
   onBetBull: () => void;
   onBetBear: () => void;
 }) {
@@ -304,6 +344,7 @@ function AiCard({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            {sample && <SampleBadge />}
             {hasBet && (
               <Badge className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30 no-default-hover-elevate no-default-active-elevate">
                 <Trophy className="h-2.5 w-2.5 mr-0.5" /> {t("trade.inBadge")}
@@ -383,14 +424,18 @@ function AiCard({
 // ─── Market Card: News Prediction ─────────────────────────────────────────────
 
 function NewsCard({
-  news, hasBet, onBetBull, onBetBear,
+  news, hasBet, sample, onBetBull, onBetBear,
 }: {
   news: NewsPred;
   hasBet: boolean;
+  sample?: boolean;
   onBetBull: () => void;
   onBetBear: () => void;
 }) {
   const { t } = useTranslation();
+  // Only treat the source link as real when it's an actual URL (seed data uses
+  // "#"). Avoid rendering a dead external-link affordance.
+  const hasRealUrl = !!news.url && news.url !== "#" && /^https?:\/\//i.test(news.url);
   const isBullish = news.prediction === "BULLISH";
   const isBearish = news.prediction === "BEARISH";
   const bullOdds = isBullish
@@ -419,20 +464,25 @@ function NewsCard({
           <p className="text-[13px] font-semibold leading-snug text-foreground/90 flex-1 line-clamp-2">
             {news.headline}
           </p>
-          <a href={news.url} target="_blank" rel="noopener noreferrer"
-            className="shrink-0 p-1 rounded text-muted-foreground hover:text-primary transition-colors">
-            <ExternalLink className="h-3 w-3" />
-          </a>
+          {hasRealUrl && (
+            <a href={news.url} target="_blank" rel="noopener noreferrer"
+              className="shrink-0 p-1 rounded text-muted-foreground hover:text-primary transition-colors">
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap mb-2">
+          {sample && <SampleBadge />}
           <Badge className={`text-[10px] no-default-hover-elevate no-default-active-elevate border ${impactClass}`}>
             {news.impact}
           </Badge>
           <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">
             {news.asset}
           </Badge>
-          <span className="text-[11px] text-muted-foreground">{news.source} · {timeAgo(news.publishedAt)}</span>
+          <span className="text-[11px] text-muted-foreground">
+            {news.source ? `${news.source} · ` : ""}{timeAgo(news.publishedAt)}
+          </span>
           {hasBet && (
             <Badge className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30 no-default-hover-elevate no-default-active-elevate ml-auto">
               <Trophy className="h-2.5 w-2.5 mr-0.5" /> {t("trade.enteredBadge")}
@@ -480,7 +530,12 @@ interface BetTarget {
   marketId: string;
   question: string;
   marketType: string;
-  choices: { label: string; odds: number; color: string }[];
+  // For a REAL Polymarket bet each choice carries the CLOB outcome `tokenId`
+  // and a `price` (0–1 probability). When present, the dialog submits a live
+  // CLOB order via the engine; when absent (AI / News / seed markets) the
+  // dialog is never opened — those buttons stay an honest "coming soon".
+  choices: { label: string; odds: number; color: string; tokenId?: string; price?: number }[];
+  minOrderSize?: number;
 }
 
 // Minimum / maximum stake guardrails for the prediction bet form. Kept
@@ -505,31 +560,51 @@ function sanitizeAmount(raw: string): string {
 }
 
 function BetDialog({
-  open, onOpenChange, target, walletAddr,
+  open, onOpenChange, target, walletAddr, userId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   target: BetTarget | null;
   walletAddr: string;
+  userId: string | undefined;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [choice, setChoice] = useState("");
   const [amount, setAmount] = useState("");
 
+  // REAL Polymarket CLOB order placement (engine.ts → placeOrder).
+  const placeOrder = usePolymarketPlaceOrder(userId);
+
   const amountNum = Number(amount);
   const amountValid = !!amount && Number.isFinite(amountNum) && amountNum >= MIN_STAKE && amountNum <= MAX_STAKE;
-  const canSubmit = !!target && !!choice && amountValid && !!walletAddr;
+  const selectedChoice = target?.choices.find(c => c.label === choice);
+  // A real bet requires: the chosen outcome's CLOB tokenId + a valid price + the
+  // engine userId (the trading subaccount). Without any of these we never submit.
+  const hasReal = !!selectedChoice?.tokenId && (selectedChoice?.price ?? 0) > 0 && !!userId;
+  const canSubmit = !!target && !!choice && amountValid && !!walletAddr && hasReal;
 
   const betMutation = useMutation({
     mutationFn: async () => {
       if (!target || !choice) throw new Error(t("trade.missingFieldsError"));
       if (!amountValid) throw new Error(t("trade.missingFieldsError"));
       const ch = target.choices.find(c => c.label === choice);
-      await placePredictionBet(
-        walletAddr, target.marketId, target.marketType,
-        target.question, choice, ch?.odds ?? 0, amountNum,
-      );
+      if (!ch?.tokenId || !ch.price || !userId) {
+        // Should be unreachable (button disabled), but never fall back to a fake
+        // success path — fail loudly instead.
+        throw new Error(t("trade.realBetUnavailable", "该市场暂不支持真实下单"));
+      }
+      // CLOB order: BUY `size` shares of the chosen outcome token at `price`
+      // (probability). size = USDC amount / price; payout-if-win = size * $1.
+      const price = Math.min(0.99, Math.max(0.01, ch.price));
+      const size = Number((amountNum / price).toFixed(2));
+      await placeOrder.mutateAsync({
+        marketId: target.marketId,
+        tokenId: ch.tokenId,
+        side: "BUY",
+        price,
+        size,
+      });
     },
     onSuccess: () => {
       toast({ title: t("trade.betPlacedSuccess"), description: t("trade.betPlacedSuccessDesc") });
@@ -542,8 +617,11 @@ function BetDialog({
     },
   });
 
-  const selectedOdds = target?.choices.find(c => c.label === choice)?.odds ?? 0;
-  const payout = selectedOdds > 0 && amountValid ? (amountNum / selectedOdds).toFixed(2) : "--";
+  // Polymarket prices ARE the probability (0–1). "Odds" multiplier = 1/price;
+  // payout-if-win = stake / price.
+  const selectedPrice = selectedChoice?.price ?? selectedChoice?.odds ?? 0;
+  const payout = selectedPrice > 0 && amountValid ? (amountNum / selectedPrice).toFixed(2) : "--";
+  const selectedOdds = selectedPrice;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -628,6 +706,12 @@ function BetDialog({
                 </div>
               </div>
             )}
+
+            {!walletAddr ? (
+              <p className="text-[11px] text-amber-400/80">{t("trade.connectWalletBet")}</p>
+            ) : !userId ? (
+              <p className="text-[11px] text-amber-400/80">{t("trade.preparingAccount", "正在准备交易账户…")}</p>
+            ) : null}
           </div>
         )}
 
@@ -688,6 +772,8 @@ export default function Trade() {
   const walletAddr = account?.address || "";
 
   const [category, setCategory] = useState<Category>("all");
+  // Top-level page mode: 预测市场 (markets) vs AI 实验室 — a distinct entry, not a filter.
+  const [showLab, setShowLab] = useState(false);
   const [sort, setSort] = useState<SortKey>("volume");
   const [search, setSearch] = useState("");
   const [sortOpen, setSortOpen] = useState(false);
@@ -713,12 +799,13 @@ export default function Trade() {
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   });
 
-  // AI / news predictions are effectively static per session (and the legacy
-  // /api/* routes 404 in production, falling back to seed data). Fetch once on
-  // mount with a single retry — no polling, to avoid hammering a dead route.
+  // AI predictions: REAL source = Supabase `ai-forecast-multi` edge fn, fanned
+  // out over an asset basket (api.ts getAiPredictionsReal). The legacy
+  // `/api/ai-predictions` route was dead (404 → seed). When this returns rows we
+  // render them; when empty we fall back to clearly-badged SAMPLE data.
   const { data: aiPredictions = [], isLoading: aiLoading } = useQuery<AiPrediction[]>({
-    queryKey: ["ai-predictions"],
-    queryFn: getAiPredictions,
+    queryKey: ["ai-predictions-real"],
+    queryFn: () => getAiPredictionsReal("4H"),
     staleTime: 5 * 60_000,
     gcTime: 10 * 60_000,
     placeholderData: keepPreviousData,
@@ -748,10 +835,32 @@ export default function Trade() {
 
   const betIds = useMemo(() => new Set(myBets.map((b: PredictionBet) => b.marketId)), [myBets]);
 
+  // Resolve the engine trading subaccount for the connected wallet (auto-onboard
+  // on first sight — idempotent find-or-create on the engine). userId is required
+  // to place a REAL Polymarket CLOB order.
+  const engineUserQ = useEngineUser(walletAddr || undefined);
+  const userId: string | undefined = engineUserQ.data?.id as string | undefined;
+
   const { toast } = useToast();
 
-  const openBet = (_target: BetTarget) => {
-    toast({ title: t("common.comingSoon") });
+  // Open the bet dialog for a REAL Polymarket market (choices carry tokenId +
+  // price). For markets without a tokenId (AI / News predictions, or seed data)
+  // there is no real CLOB venue — we stay honest and do NOT fake a success.
+  const openBet = (target: BetTarget) => {
+    const isReal = target.choices.some(c => !!c.tokenId && (c.price ?? 0) > 0);
+    if (!isReal) {
+      toast({
+        title: t("common.comingSoon"),
+        description: t("trade.realBetUnavailable", "该市场暂不支持真实下单"),
+      });
+      return;
+    }
+    if (!walletAddr) {
+      toast({ title: t("trade.connectWalletBet") });
+      return;
+    }
+    setBetTarget(target);
+    setBetOpen(true);
   };
 
   // First-paint skeleton: only while every source is still on its initial
@@ -761,10 +870,13 @@ export default function Trade() {
   // fastest query resolved; we keep that intent but make it explicit.)
   const isLoading = polyLoading && aiLoading && newsLoading;
 
-  // Use seed data as fallback when APIs return empty
+  // Use seed data as fallback when APIs return empty. `*Sample` flags drive the
+  // persistent "示例数据 / Sample" badge so demo content is honestly labeled.
   const polyData = polymarkets.length > 0 ? polymarkets : SEED_POLYMARKETS;
   const aiData = aiPredictions.length > 0 ? aiPredictions : SEED_AI_PREDICTIONS;
   const newsData = (newsPredictions as NewsPred[]).length > 0 ? (newsPredictions as NewsPred[]) : SEED_NEWS;
+  const aiSample = aiPredictions.length === 0;
+  const newsSample = (newsPredictions as NewsPred[]).length === 0;
 
   // Build unified filtered list
   const filtered = useMemo(() => {
@@ -865,6 +977,149 @@ export default function Trade() {
           </div>
         </div>
 
+      </div>
+
+      {/* ── Stats bar ───────────────────────────────── */}
+      <div className="mt-2 mb-1">
+        <StatsBar
+          polyCount={polyData.length}
+          aiCount={aiData.length}
+          newsCount={newsData.length}
+          betsCount={myBets.length}
+        />
+      </div>
+
+      {/* ── No wallet warning ───────────────────────── */}
+      {!walletAddr && (
+        <div className="mx-4 lg:mx-6 mt-3 rounded-lg p-3 flex items-center gap-2"
+          style={{ background: "rgba(212,168,50,0.06)", border: "1px solid rgba(212,168,50,0.15)" }}>
+          <AlertCircle className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-[12px] text-foreground/70">{t("trade.connectWalletBet")}</span>
+        </div>
+      )}
+
+      {/* ── Smart Trading hero card ────────────── */}
+      <div className="px-4 lg:px-6 mt-3">
+        <div className="relative rounded-2xl overflow-hidden border border-[#f59e0b]/25 bg-gradient-to-br from-[#1a1408] via-[#161100] to-[#0c0a07]"
+          style={{ boxShadow: "0 0 40px rgba(245,158,11,0.08), inset 0 1px 0 rgba(245,158,11,0.15)" }}>
+
+          {/* Background glow blobs */}
+          <div className="absolute -top-8 -right-8 w-36 h-36 bg-[#f59e0b]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 -left-4 w-24 h-24 bg-amber-600/10 rounded-full blur-2xl pointer-events-none" />
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#f59e0b]/60 to-transparent" />
+
+          <div className="relative z-10 p-5">
+            {/* Badge row */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5 bg-[#f59e0b]/12 border border-[#f59e0b]/25 rounded-full px-2.5 py-1">
+                <Zap size={11} className="text-[#f59e0b]" />
+                <span className="text-[10px] font-semibold text-[#f59e0b] uppercase tracking-wider">
+                  Smart Trading
+                </span>
+              </div>
+              {/* Honesty: this hero is a marketing/illustrative panel — it does
+                  not reflect a verified funded or active account, so we label it
+                  as a sample rather than asserting a live "已激活" state. */}
+              <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                {t("trade.heroSampleBadge", "示例展示")}
+              </div>
+            </div>
+
+            {/* Headline */}
+            <h2 className="text-[22px] font-bold text-white leading-tight tracking-tight mb-1">
+              {t("trade.heroTitle1", "让 AI 帮你")}<br />
+              <span className="bg-gradient-to-r from-[#f59e0b] via-amber-300 to-[#f59e0b] bg-clip-text text-transparent">
+                {t("trade.heroTitle2", "智能交易预测市场")}
+              </span>
+            </h2>
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+              {t("trade.heroSubtitle", "One-Agents 引擎实时分析顶级交易员策略，自动执行 YES / NO 仓位")}
+            </p>
+
+            {/* Stats row — illustrative figures only. These are not derived from
+                a real performance feed, so they are clearly captioned as sample
+                values to avoid presenting fabricated metrics as live data. */}
+            <div className="mb-4">
+              <div className="grid grid-cols-3 gap-2 mb-1.5">
+                <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Users size={10} className="text-zinc-500" />
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">{t("trade.heroStatFollowers","跟随者")}</span>
+                  </div>
+                  <p className="text-sm font-bold text-white/70">2,847</p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                  <div className="flex items-center gap-1 mb-1">
+                    <BarChart2 size={10} className="text-zinc-500" />
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">{t("trade.heroStatWinRate","胜率")}</span>
+                  </div>
+                  <p className="text-sm font-bold text-[#10b981]/70">68.4%</p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                  <div className="flex items-center gap-1 mb-1">
+                    <TrendingUp size={10} className="text-zinc-500" />
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">{t("trade.heroStatMonthly","月收益")}</span>
+                  </div>
+                  <p className="text-sm font-bold text-[#f59e0b]/70">+24.1%</p>
+                </div>
+              </div>
+              <p className="text-[9px] text-zinc-600 text-center">
+                {t("trade.heroSampleStats", "以上为示例数据,非实时业绩")}
+              </p>
+            </div>
+
+            {/* CTA button */}
+            <Link href="/copy-trading/auto">
+              <button className="w-full relative overflow-hidden rounded-xl bg-[#f59e0b] text-black font-bold text-sm py-3 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
+                style={{ boxShadow: "0 4px 20px rgba(245,158,11,0.35)" }}>
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                <Zap size={15} strokeWidth={2.5} className="relative z-10" />
+                <span className="relative z-10">{t("trade.heroCta","进入智能交易")}</span>
+                <ChevronRight size={15} strokeWidth={2.5} className="relative z-10 ml-0.5" />
+              </button>
+            </Link>
+
+            {/* Trust line */}
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              <ShieldCheck size={11} className="text-zinc-500" />
+              <span className="text-[10px] text-zinc-500">{t("trade.heroTrustLine", "基于 Polymarket · Polygon 网络结算")}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 模式切换:预测市场 / AI 实验室(独立入口,非筛选)──── */}
+      <div className="px-4 lg:px-6 mt-4">
+        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
+          {([
+            { id: false, labelKey: "trade.modeMarkets", fallback: "预测市场", icon: BarChart2 },
+            { id: true,  labelKey: "trade.modeLab",     fallback: "AI 实验室", icon: Sparkles },
+          ] as const).map((m) => {
+            const Icon = m.icon;
+            const active = showLab === m.id;
+            return (
+              <button
+                key={String(m.id)}
+                onClick={() => setShowLab(m.id)}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[13px] font-bold tracking-wide transition-all ${
+                  active
+                    ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    : "text-white/55 hover:text-white/90 hover:bg-white/5"
+                }`}
+                data-testid={`trade-mode-${m.id ? "lab" : "markets"}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {t(m.labelKey, m.fallback)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Search + category filters (markets mode only) ──── */}
+      <div className={`px-4 lg:px-6 mt-4 ${showLab ? "hidden" : ""}`}>
         {/* Search */}
         <div className="relative mb-2.5">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -872,7 +1127,7 @@ export default function Trade() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t("trade.searchMarkets")}
-            className="pl-8 h-8 text-[13px] bg-background/50 border-border"
+            className="pl-8 h-9 text-[13px] bg-background/50 border-border"
           />
         </div>
 
@@ -909,32 +1164,15 @@ export default function Trade() {
         </div>
       </div>
 
-      {/* ── Stats bar ───────────────────────────────── */}
-      <div className="mt-2 mb-1">
-        <StatsBar
-          polyCount={polyData.length}
-          aiCount={aiData.length}
-          newsCount={newsData.length}
-          betsCount={myBets.length}
-        />
-      </div>
-
-      {/* ── No wallet warning ───────────────────────── */}
-      {!walletAddr && (
-        <div className="mx-4 lg:mx-6 mt-3 rounded-lg p-3 flex items-center gap-2"
-          style={{ background: "rgba(212,168,50,0.06)", border: "1px solid rgba(212,168,50,0.15)" }}>
-          <AlertCircle className="h-4 w-4 text-primary shrink-0" />
-          <span className="text-[12px] text-foreground/70">{t("trade.connectWalletBet")}</span>
+      {/* ── 预测实验室 — distinct AI 实验室 mode (toggle above) ─ */}
+      {showLab && (
+        <div className="px-4 lg:px-6 mt-3">
+          <PredictionAiLab />
         </div>
       )}
 
-      {/* ── Smart Copy-Trading entry ────────────────── */}
-      <div className="px-4 lg:px-6 mt-3">
-        <CopyTradingEntry />
-      </div>
-
       {/* ── Market list ─────────────────────────────── */}
-      <div className="px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3" onClick={() => sortOpen && setSortOpen(false)}>
+      <div className={`px-4 lg:px-6 mt-3 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 ${showLab ? "hidden" : ""}`} onClick={() => sortOpen && setSortOpen(false)}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-44 w-full rounded-xl" />
@@ -960,20 +1198,8 @@ export default function Trade() {
                   key={item.id}
                   market={m}
                   hasBet={betIds.has(m.id)}
-                  onBetYes={() => openBet({
-                    marketId: m.id, question: m.question, marketType: "polymarket",
-                    choices: [
-                      { label: "Yes", odds: m.yesPrice, color: "emerald" },
-                      { label: "No", odds: m.noPrice, color: "red" },
-                    ],
-                  })}
-                  onBetNo={() => openBet({
-                    marketId: m.id, question: m.question, marketType: "polymarket",
-                    choices: [
-                      { label: "Yes", odds: m.yesPrice, color: "emerald" },
-                      { label: "No", odds: m.noPrice, color: "red" },
-                    ],
-                  })}
+                  onBetYes={() => openBet(buildPolyTarget(m))}
+                  onBetNo={() => openBet(buildPolyTarget(m))}
                 />
               );
             }
@@ -989,6 +1215,7 @@ export default function Trade() {
                   key={item.id}
                   pred={p}
                   hasBet={betIds.has(item.id)}
+                  sample={aiSample}
                   onBetBull={() => openBet({
                     marketId: item.id,
                     question: `${p.asset} will go UP within ${p.timeframe}`,
@@ -1025,6 +1252,7 @@ export default function Trade() {
                   key={item.id}
                   news={n}
                   hasBet={betIds.has(n.id)}
+                  sample={newsSample}
                   onBetBull={() => openBet({
                     marketId: n.id,
                     question: `${n.asset}: ${n.headline}`,
@@ -1071,6 +1299,7 @@ export default function Trade() {
         onOpenChange={setBetOpen}
         target={betTarget}
         walletAddr={walletAddr}
+        userId={userId}
       />
     </div>
   );

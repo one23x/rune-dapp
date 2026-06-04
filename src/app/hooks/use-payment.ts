@@ -169,7 +169,14 @@ export function usePayment() {
       if (!client) throw new Error("Thirdweb client not ready");
       if (!account) throw new Error("Wallet not connected");
 
-      const prices: Record<string, number> = { MINI: 100, MAX: 600 };
+      // Node tier → whole-USD price. Includes the legacy MINI/MAX presell tiers
+      // plus the 5 on-chain tiers from NODE_META (FOUNDER/SUPER/ADVANCED/MID/INITIAL).
+      // The contract resolves the authoritative price on-chain; this map only
+      // sizes the approve() amount, so it must cover every nodeType the UI sells.
+      const prices: Record<string, number> = {
+        MINI: 100, MAX: 600,
+        FOUNDER: 50000, SUPER: 10000, ADVANCED: 5000, MID: 2500, INITIAL: 1000,
+      };
       const amountUsd = prices[nodeType] || 0;
       if (!amountUsd) throw new Error("Invalid node type");
 

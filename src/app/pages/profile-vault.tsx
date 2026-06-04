@@ -58,8 +58,7 @@ function calcDaysLeft(endDate: string) {
 }
 
 export default function ProfileVaultPage() {
-  const { t, i18n } = useTranslation();
-  const isZh = i18n.language === "zh" || i18n.language === "zh-TW";
+  const { t } = useTranslation();
   const account = useActiveAccount();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -85,15 +84,15 @@ export default function ProfileVaultPage() {
       apiPost("/api/ember-burn/claim", { walletAddress: wallet, positionId }),
     onSuccess: (_, positionId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ember-burn", wallet] });
-      toast({ title: isZh ? "领取成功" : "Claimed!", description: isZh ? "FIRE 已领取" : "FIRE claimed successfully." });
+      toast({ title: t("profileVault.claimed", "领取成功"), description: t("profileVault.claimedDesc", "FIRE 已领取") });
     },
-    onError: () => toast({ title: isZh ? "领取失败" : "Claim failed", variant: "destructive" }),
+    onError: () => toast({ title: t("profileVault.claimFailed", "领取失败"), variant: "destructive" }),
   });
 
-  const TABS: Array<{ key: PosTab; icon: React.ElementType; labelZh: string; labelEn: string; accent: string; count: number }> = [
-    { key: "lock",  icon: Lock,     labelZh: "锁仓RUNE",  labelEn: "Lock RUNE",  accent: "rgba(212,168,50,0.9)", count: lockPositions.filter(p => p.status === "ACTIVE").length },
-    { key: "burn",  icon: Flame,    labelZh: "销毁RUNE",  labelEn: "Burn RUNE",  accent: "rgba(239,68,68,0.9)",  count: burnPositions.filter(p => p.status === "ACTIVE").length },
-    { key: "ember", icon: Sparkles, labelZh: "锁仓FIRE", labelEn: "Lock FIRE", accent: "rgba(251,146,60,0.9)", count: 0 },
+  const TABS: Array<{ key: PosTab; icon: React.ElementType; label: string; accent: string; count: number }> = [
+    { key: "lock",  icon: Lock,     label: t("profileVault.tabLock", "锁仓RUNE"),  accent: "rgba(212,168,50,0.9)", count: lockPositions.filter(p => p.status === "ACTIVE").length },
+    { key: "burn",  icon: Flame,    label: t("profileVault.tabBurn", "销毁RUNE"),  accent: "rgba(239,68,68,0.9)",  count: burnPositions.filter(p => p.status === "ACTIVE").length },
+    { key: "ember", icon: Sparkles, label: t("profileVault.tabEmber", "锁仓FIRE"), accent: "rgba(251,146,60,0.9)", count: 0 },
   ];
 
   const activeTabData = TABS.find(t => t.key === activeTab)!;
@@ -113,10 +112,10 @@ export default function ProfileVaultPage() {
         </button>
         <div>
           <h2 className="text-sm font-bold tracking-tight">
-            {isZh ? "我的金库仓位" : "My Vault Positions"}
+            {t("profileVault.headerTitle", "我的金库仓位")}
           </h2>
           <p className="text-[10px] text-muted-foreground">
-            {isZh ? "锁仓 · 销毁 · FIRE锁仓" : "Lock · Burn · FIRE Lock"}
+            {t("profileVault.headerSubtitle", "锁仓 · 销毁 · FIRE锁仓")}
           </p>
         </div>
       </div>
@@ -147,7 +146,7 @@ export default function ProfileVaultPage() {
                 <Icon className="h-4 w-4" style={{ color: isActive ? tab.accent : "rgba(255,255,255,0.35)" }} />
                 <span className="text-[10px] font-bold leading-none"
                   style={{ color: isActive ? tab.accent : "rgba(255,255,255,0.4)" }}>
-                  {isZh ? tab.labelZh : tab.labelEn}
+                  {tab.label}
                 </span>
                 {tab.count > 0 && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
@@ -169,21 +168,17 @@ export default function ProfileVaultPage() {
       {activeTab === "lock" && (
         <div className="px-4 lg:px-6 pt-4 space-y-3">
           {!isConnected ? (
-            <NotConnected isZh={isZh} />
+            <NotConnected />
           ) : lockLoading ? (
             [1, 2].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)
           ) : lockPositions.length === 0 ? (
             <EmptyState
               icon={Lock}
               accent="rgba(212,168,50,0.9)"
-              titleZh="暂无锁仓记录"
-              titleEn="No lock positions"
-              descZh="前往金库锁仓RUNE获得veRUNE权益"
-              descEn="Go to Vault → Lock to create positions"
-              isZh={isZh}
+              title={t("profileVault.emptyLockTitle", "暂无锁仓记录")}
+              desc={t("profileVault.emptyLockDesc", "前往金库锁仓RUNE获得veRUNE权益")}
               onAction={() => navigate("/vault")}
-              actionZh="去锁仓"
-              actionEn="Go Lock"
+              action={t("profileVault.emptyLockAction", "去锁仓")}
             />
           ) : (
             lockPositions.map(pos => {
@@ -221,18 +216,18 @@ export default function ProfileVaultPage() {
                         ? { background: "rgba(100,116,139,0.2)", color: "rgb(148,163,184)" }
                         : { background: "rgba(212,168,50,0.15)", color: "rgba(212,168,50,0.9)", border: "1px solid rgba(212,168,50,0.25)" }}
                     >
-                      {isExpired ? (isZh ? "已到期" : "Expired") : `${daysLeft}d`}
+                      {isExpired ? t("profileVault.expired", "已到期") : `${daysLeft}d`}
                     </Badge>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <StatChip
-                      label={isZh ? "veRUNE" : "veRUNE"}
+                      label={t("profileVault.veRune", "veRUNE")}
                       value={Number(pos.veRune).toFixed(4)}
                       accent="rgba(212,168,50,0.7)"
                     />
                     <StatChip
-                      label={isZh ? "USDT入金" : "USDT in"}
+                      label={t("profileVault.usdtIn", "USDT入金")}
                       value={pos.usdtAmount ? `$${Number(pos.usdtAmount).toFixed(0)}` : "—"}
                       accent="rgba(255,255,255,0.4)"
                     />
@@ -245,7 +240,7 @@ export default function ProfileVaultPage() {
                         style={{ width: `${pct}%`, background: "rgba(212,168,50,0.7)" }} />
                     </div>
                     <div className="text-[8px] text-muted-foreground text-right">
-                      {pct.toFixed(0)}% {isZh ? "已过" : "elapsed"}
+                      {pct.toFixed(0)}% {t("profileVault.elapsed", "已过")}
                     </div>
                   </div>
                 </div>
@@ -259,21 +254,17 @@ export default function ProfileVaultPage() {
       {activeTab === "burn" && (
         <div className="px-4 lg:px-6 pt-4 space-y-3">
           {!isConnected ? (
-            <NotConnected isZh={isZh} />
+            <NotConnected />
           ) : burnLoading ? (
             [1, 2].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)
           ) : burnPositions.length === 0 ? (
             <EmptyState
               icon={Flame}
               accent="rgba(239,68,68,0.9)"
-              titleZh="暂无销毁记录"
-              titleEn="No burn positions"
-              descZh="前往金库销毁RUNE获得每日FIRE"
-              descEn="Go to Vault → Burn to create positions"
-              isZh={isZh}
+              title={t("profileVault.emptyBurnTitle", "暂无销毁记录")}
+              desc={t("profileVault.emptyBurnDesc", "前往金库销毁RUNE获得每日FIRE")}
               onAction={() => navigate("/vault")}
-              actionZh="去销毁"
-              actionEn="Go Burn"
+              action={t("profileVault.emptyBurnAction", "去销毁")}
             />
           ) : (
             burnPositions.map(pos => {
@@ -297,10 +288,10 @@ export default function ProfileVaultPage() {
                       </div>
                       <div>
                         <div className="text-[11px] font-bold" style={{ color: "rgba(239,68,68,0.9)" }}>
-                          {fmtRune(pos.runeAmount)} RUNE {isZh ? "已销毁" : "burned"}
+                          {fmtRune(pos.runeAmount)} RUNE {t("profileVault.burned", "已销毁")}
                         </div>
                         <div className="text-[9px] text-muted-foreground">
-                          {(Number(pos.dailyRate) * 100).toFixed(1)}%/d · {fmtDate(pos.lastClaimAt)} {isZh ? "最近领取" : "last claim"}
+                          {(Number(pos.dailyRate) * 100).toFixed(1)}%/d · {fmtDate(pos.lastClaimAt)} {t("profileVault.lastClaim", "最近领取")}
                         </div>
                       </div>
                     </div>
@@ -314,17 +305,17 @@ export default function ProfileVaultPage() {
 
                   <div className="grid grid-cols-3 gap-1.5">
                     <StatChip
-                      label={isZh ? "每日FIRE" : "Daily"}
+                      label={t("profileVault.daily", "每日FIRE")}
                       value={dailyEmber.toFixed(2)}
                       accent="rgba(239,68,68,0.7)"
                     />
                     <StatChip
-                      label={isZh ? "待领取" : "Pending"}
+                      label={t("profileVault.pending", "待领取")}
                       value={pending.toFixed(2)}
                       accent="rgba(251,146,60,0.8)"
                     />
                     <StatChip
-                      label={isZh ? "已领取" : "Claimed"}
+                      label={t("profileVault.claimedLabel", "已领取")}
                       value={Number(pos.totalClaimedEmber).toFixed(2)}
                       accent="rgba(255,255,255,0.4)"
                     />
@@ -345,8 +336,8 @@ export default function ProfileVaultPage() {
                     data-testid={`button-claim-ember-${pos.id}`}
                   >
                     {claimMutation.isPending
-                      ? (isZh ? "领取中..." : "Claiming...")
-                      : (isZh ? `领取 ${pending.toFixed(2)} FIRE` : `Claim ${pending.toFixed(2)} FIRE`)}
+                      ? t("profileVault.claiming", "领取中...")
+                      : t("profileVault.claimAmount", "领取 {{amount}} FIRE", { amount: pending.toFixed(2) })}
                   </Button>
                 </div>
               );
@@ -371,30 +362,28 @@ export default function ProfileVaultPage() {
             </div>
             <div>
               <div className="text-sm font-bold mb-1" style={{ color: "rgba(251,146,60,0.9)" }}>
-                {isZh ? "锁仓FIRE" : "FIRE Lock"}
+                {t("profileVault.fireLockTitle", "锁仓FIRE")}
               </div>
               <div className="text-[11px] text-muted-foreground max-w-[240px] leading-relaxed">
-                {isZh
-                  ? "将FIRE销毁收益锁仓，获得更高权益加成与协议分红。合约部署后开放。"
-                  : "Lock your daily FIRE yield for enhanced protocol benefits and revenue share. Available after contract deployment."}
+                {t("profileVault.fireLockDesc", "将FIRE销毁收益锁仓，获得更高权益加成与协议分红。合约部署后开放。")}
               </div>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
               style={{ background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.2)" }}>
               <Clock className="h-3 w-3" style={{ color: "rgba(251,146,60,0.8)" }} />
               <span className="text-[10px] font-semibold" style={{ color: "rgba(251,146,60,0.8)" }}>
-                {isZh ? "即将上线" : "Coming Soon"}
+                {t("profileVault.comingSoon", "即将上线")}
               </span>
             </div>
             <div className="mt-2 space-y-2 w-full max-w-[260px]">
               {[
-                { zh: "协议分红 · 更高比例", en: "Higher protocol revenue share" },
-                { zh: "veFIRE 治理权重", en: "veFIRE governance weight" },
-                { zh: "IDO白名单加成", en: "IDO whitelist boost" },
+                t("profileVault.benefitRevenue", "协议分红 · 更高比例"),
+                t("profileVault.benefitGovernance", "veFIRE 治理权重"),
+                t("profileVault.benefitIdo", "IDO白名单加成"),
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2 text-[10px] text-muted-foreground">
                   <Zap className="h-3 w-3 shrink-0" style={{ color: "rgba(251,146,60,0.6)" }} />
-                  {isZh ? item.zh : item.en}
+                  {item}
                 </div>
               ))}
             </div>
@@ -415,24 +404,24 @@ function StatChip({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
-function NotConnected({ isZh }: { isZh: boolean }) {
+function NotConnected() {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl p-6 flex flex-col items-center gap-2 text-center"
       style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
       <AlertCircle className="h-8 w-8 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
-        {isZh ? "请先连接钱包" : "Connect wallet to view positions"}
+        {t("profileVault.notConnected", "请先连接钱包")}
       </p>
     </div>
   );
 }
 
 function EmptyState({
-  icon: Icon, accent, titleZh, titleEn, descZh, descEn, isZh, onAction, actionZh, actionEn,
+  icon: Icon, accent, title, desc, onAction, action,
 }: {
-  icon: React.ElementType; accent: string; titleZh: string; titleEn: string;
-  descZh: string; descEn: string; isZh: boolean; onAction: () => void;
-  actionZh: string; actionEn: string;
+  icon: React.ElementType; accent: string; title: string;
+  desc: string; onAction: () => void; action: string;
 }) {
   return (
     <div className="rounded-xl p-6 flex flex-col items-center gap-3 text-center"
@@ -443,10 +432,10 @@ function EmptyState({
       </div>
       <div>
         <div className="text-sm font-semibold text-foreground/70">
-          {isZh ? titleZh : titleEn}
+          {title}
         </div>
         <div className="text-[10px] text-muted-foreground mt-0.5">
-          {isZh ? descZh : descEn}
+          {desc}
         </div>
       </div>
       <Button
@@ -456,7 +445,7 @@ function EmptyState({
         style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}
         data-testid="button-go-vault"
       >
-        {isZh ? actionZh : actionEn}
+        {action}
         <ChevronRight className="h-3 w-3 ml-1" />
       </Button>
     </div>

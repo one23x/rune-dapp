@@ -118,11 +118,11 @@ export function RuneLockSection() {
     <div className="px-4 lg:px-6 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: "rgba(212,168,50,0.15)", border: "1px solid rgba(212,168,50,0.3)" }}>
-          <Lock className="h-3 w-3" style={{ color: "rgba(212,168,50,0.9)" }} />
+        <div className="h-5 w-5 rounded-md flex items-center justify-center bg-amber-500/15 border border-amber-400/30">
+          <Lock className="h-3 w-3 text-amber-300" />
         </div>
-        <h3 className="text-sm font-bold">{t("vault.lock.sectionTitle", "Lock RUNE · Earn veRUNE")}</h3>
-        <Badge className="text-[9px] border-0 ml-auto" style={{ background: "rgba(212,168,50,0.15)", color: "rgba(212,168,50,0.9)" }}>
+        <h3 className="text-sm font-bold text-white">{t("vault.lock.sectionTitle", "Lock RUNE · Earn veRUNE")}</h3>
+        <Badge className="text-[9px] border-0 ml-auto bg-amber-500/15 text-amber-300">
           {t("vault.lock.badge", "ve(3,3) Model")}
         </Badge>
       </div>
@@ -131,32 +131,31 @@ export function RuneLockSection() {
       {wallet && (
         <button
           onClick={() => navigate("/profile/vault")}
-          className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity"
-          style={{ background: "rgba(212,168,50,0.06)", border: "1px solid rgba(212,168,50,0.15)" }}
+          className="glass-panel w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
           data-testid="button-view-lock-positions"
         >
           <div className="flex gap-4">
             <div>
-              <div className="text-[9px] text-muted-foreground uppercase mb-0.5">{isZh ? "已锁仓RUNE" : "RUNE Locked"}</div>
-              <div className="text-sm font-bold tabular-nums" style={{ color: "rgba(212,168,50,0.9)" }}>
+              <div className="text-[9px] text-white/50 uppercase mb-0.5">{t("vault.lock.stakedRune", "RUNE Locked")}</div>
+              <div className="text-sm font-bold tabular-nums text-amber-300">
                 {Number(stats?.totalRuneLocked || 0).toLocaleString()}
               </div>
             </div>
             <div>
-              <div className="text-[9px] text-muted-foreground uppercase mb-0.5">{isZh ? "我的veRUNE" : "My veRUNE"}</div>
-              <div className="text-sm font-bold tabular-nums" style={{ color: "rgba(212,168,50,0.9)" }}>
+              <div className="text-[9px] text-white/50 uppercase mb-0.5">{t("vault.lock.myVeRune", "My veRUNE")}</div>
+              <div className="text-sm font-bold tabular-nums text-amber-300">
                 {Number(stats?.totalVeRune || 0).toFixed(2)}
               </div>
             </div>
             {(stats?.positions || 0) > 0 && (
               <div>
-                <div className="text-[9px] text-muted-foreground uppercase mb-0.5">{isZh ? "仓位" : "Positions"}</div>
-                <div className="text-sm font-bold tabular-nums text-foreground">{stats?.positions}</div>
+                <div className="text-[9px] text-white/50 uppercase mb-0.5">{t("vault.lock.positions", "Positions")}</div>
+                <div className="text-sm font-bold tabular-nums text-white">{stats?.positions}</div>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1 text-[10px]" style={{ color: "rgba(212,168,50,0.7)" }}>
-            <span>{isZh ? "查看仓位" : "My positions"}</span>
+          <div className="flex items-center gap-1 text-[10px] text-amber-300/70">
+            <span>{t("common.myPositions", "My positions")}</span>
             <ChevronRight className="h-3 w-3" />
           </div>
         </button>
@@ -175,7 +174,7 @@ export function RuneLockSection() {
             </div>
             <div>
               <div className="text-[11px] font-semibold">{t(lk, ld)}</div>
-              <div className="text-[10px] text-muted-foreground">{t(dk, dd)}</div>
+              <div className="text-[10px] text-white/60">{t(dk, dd)}</div>
             </div>
           </div>
         ))}
@@ -187,29 +186,39 @@ export function RuneLockSection() {
         accent="primary"
         icon={Calculator}
       >
-        <div className="font-mono text-[11px] text-foreground/85">{t("vault.lock.formulaExpr", "veRUNE = RUNE × 35% × (lock days ÷ 540)")}</div>
-        <div className="text-[10px] text-muted-foreground">
-          {t("vault.lock.formulaNote", "Lock 540 days")} = <span className="text-primary font-semibold">{t("vault.lock.maxWeight", "maximum veRUNE weight")}</span>
+        <div className="font-mono text-[11px] text-white/85">{t("vault.lock.formulaExpr", "veRUNE = RUNE × 35% × (lock days ÷ 540)")}</div>
+        <div className="text-[10px] text-white/60">
+          {t("vault.lock.formulaNote", "Lock 540 days")} = <span className="text-amber-300 font-semibold">{t("vault.lock.maxWeight", "maximum veRUNE weight")}</span>
         </div>
       </CollapsibleInfoCard>
 
       {/* Period Selector */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {LOCK_PERIODS.map(p => (
-          <button key={p.days} onClick={() => setSelectedDays(p.days)}
-            className={cn("rounded-lg py-2 px-1 text-center transition-all relative", selectedDays === p.days ? "ring-1" : "opacity-60 hover:opacity-80")}
-            style={{ background: selectedDays === p.days ? `${p.color}18` : "rgba(255,255,255,0.03)", border: `1px solid ${selectedDays === p.days ? p.color : "rgba(255,255,255,0.08)"}` }}
-            data-testid={`button-lock-period-${p.days}`}
-          >
-            {p.best && <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] px-1 rounded font-bold" style={{ background: p.color, color: "#000" }}>{t("vault.lock.best", "Best")}</span>}
-            <div className="text-[10px] font-bold" style={{ color: selectedDays === p.days ? p.color : undefined }}>{p.label}</div>
-            <div className="text-[8px] text-muted-foreground mt-0.5">{p.pctLabel}</div>
-          </button>
-        ))}
+      <div className="glass-panel p-4">
+        <div className="text-xs text-white/60 mb-2">{t("vault.lock.periodLabel", "Lock Period")}</div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {LOCK_PERIODS.map(p => {
+            const isActive = selectedDays === p.days;
+            return (
+              <button key={p.days} onClick={() => setSelectedDays(p.days)}
+                className={cn(
+                  "rounded-lg py-2 px-1 text-center transition-all relative",
+                  isActive
+                    ? "bg-[#f59e0b] text-black shadow-[0_0_15px_rgba(245,158,11,0.45)]"
+                    : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
+                )}
+                data-testid={`button-lock-period-${p.days}`}
+              >
+                {p.best && <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] px-1 rounded font-bold bg-amber-400 text-black">{t("vault.lock.best", "Best")}</span>}
+                <div className="text-[10px] font-bold">{p.label}</div>
+                <div className={cn("text-[8px] mt-0.5", isActive ? "text-black/70" : "text-white/40")}>{p.pctLabel}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Lock Button */}
-      <Button className="w-full h-10 text-sm font-bold" style={{ background: "linear-gradient(135deg, rgba(212,168,50,0.9), rgba(180,130,30,0.9))", color: "#0a0704" }}
+      <Button className="w-full h-12 text-sm font-bold gold-button rounded-xl"
         onClick={() => setOpen(true)} data-testid="button-rune-lock-open">
         <Lock className="mr-2 h-4 w-4" />
         {t("vault.lock.lockButton", "Pay USDT · Lock RUNE for veRUNE")}
@@ -217,68 +226,72 @@ export function RuneLockSection() {
 
       {/* Dialog */}
       <Dialog open={open} onOpenChange={v => { if (!isPaying) { setOpen(v); if (!v) payment.reset(); } }}>
-        <DialogContent className="bg-card border-border max-w-sm">
+        <DialogContent className="glass-panel-strong border-0 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="h-4 w-4" style={{ color: "rgba(212,168,50,0.9)" }} />
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <Lock className="h-4 w-4 text-amber-300" />
               {t("vault.lock.confirmTitle", "Lock RUNE for veRUNE")}
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription className="text-xs text-white/60">
               {t("vault.lock.confirmDesc", "Pay USDT → buy RUNE at market price → lock for veRUNE benefits")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div>
-              <div className="text-xs text-muted-foreground mb-1.5">{t("vault.lock.amountLabel", "USDT Amount")}</div>
+              <div className="text-xs text-white/60 mb-1.5">{t("vault.lock.amountLabel", "USDT Amount")}</div>
               <div className="relative">
                 <Input type="number" placeholder={t("vault.lock.amountPlaceholder", "Min 10 USDT")}
                   value={usdtAmount} onChange={e => setUsdtAmount(e.target.value)}
-                  className="bg-background border-border pr-16" data-testid="input-rune-lock-amount" />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">USDT</span>
+                  className="bg-black/20 border-white/10 text-white pr-16" data-testid="input-rune-lock-amount" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-white/60">USDT</span>
               </div>
             </div>
 
             {usdtNum >= 10 && (
-              <div className="rounded-lg p-3 space-y-1.5" style={{ background: "rgba(212,168,50,0.05)", border: "1px solid rgba(212,168,50,0.15)" }}>
+              <div className="rounded-lg p-3 space-y-1.5 bg-amber-500/5 border border-amber-400/15">
                 <div className="flex items-center gap-1.5 text-xs flex-wrap">
-                  <span className="font-bold">${usdtNum.toFixed(2)} USDT</span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-bold" style={{ color: "rgba(212,168,50,0.9)" }}>{runeEquiv.toFixed(2)} RUNE</span>
-                  <span className="text-[10px] text-muted-foreground">(@ ${runePrice.toFixed(4)})</span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-bold text-green-400">{veRunePreview.toFixed(4)} veRUNE</span>
+                  <span className="font-bold text-white">${usdtNum.toFixed(2)} USDT</span>
+                  <ArrowRight className="h-3 w-3 text-white/50" />
+                  <span className="font-bold text-amber-300">{runeEquiv.toFixed(2)} RUNE</span>
+                  <span className="text-[10px] text-white/50">(@ ${runePrice.toFixed(4)})</span>
+                  <ArrowRight className="h-3 w-3 text-white/50" />
+                  <span className="font-bold text-emerald-400">{veRunePreview.toFixed(4)} veRUNE</span>
                 </div>
-                <div className="border-t border-border/30 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("vault.lock.previewPeriod", "Lock Period")}</span><span className="font-semibold">{selectedPeriod.label}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("vault.lock.previewWeight", "veRUNE Weight")}</span><span className="font-semibold" style={{ color: "rgba(212,168,50,0.9)" }}>{selectedPeriod.pctLabel}</span></div>
+                <div className="border-t border-white/10 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex justify-between"><span className="text-white/50">{t("vault.lock.previewPeriod", "Lock Period")}</span><span className="font-semibold text-white">{selectedPeriod.label}</span></div>
+                  <div className="flex justify-between"><span className="text-white/50">{t("vault.lock.previewWeight", "veRUNE Weight")}</span><span className="font-semibold text-amber-300">{selectedPeriod.pctLabel}</span></div>
                 </div>
               </div>
             )}
 
             <div>
-              <div className="text-xs text-muted-foreground mb-1.5">{t("vault.lock.periodLabel", "Lock Period")}</div>
+              <div className="text-xs text-white/60 mb-1.5">{t("vault.lock.periodLabel", "Lock Period")}</div>
               <div className="grid grid-cols-5 gap-1">
                 {LOCK_PERIODS.map(p => (
                   <button key={p.days} onClick={() => setSelectedDays(p.days)}
-                    className={cn("rounded-lg py-1.5 text-center text-[10px] font-bold transition-all", selectedDays === p.days ? "ring-1" : "opacity-50 hover:opacity-70")}
-                    style={{ background: selectedDays === p.days ? `${p.color}20` : "rgba(255,255,255,0.04)", border: `1px solid ${selectedDays === p.days ? p.color : "rgba(255,255,255,0.08)"}`, color: selectedDays === p.days ? p.color : undefined }}>
+                    className={cn(
+                      "rounded-lg py-1.5 text-center text-[10px] font-bold transition-all",
+                      selectedDays === p.days
+                        ? "bg-[#f59e0b] text-black shadow-[0_0_15px_rgba(245,158,11,0.45)]"
+                        : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
+                    )}>
                     {p.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-start gap-2 text-[10px] text-muted-foreground rounded-lg p-2" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
+            <div className="flex items-start gap-2 text-[10px] text-white/60 rounded-lg p-2 bg-red-500/5 border border-red-500/15">
               <AlertCircle className="h-3 w-3 text-red-400 shrink-0 mt-0.5" />
               <span>{t("vault.lock.warning", "RUNE cannot be withdrawn during the lock period. veRUNE decays linearly — extend to reset weight.")}</span>
             </div>
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setOpen(false); payment.reset(); }} disabled={isPaying}>{t("common.cancel", "Cancel")}</Button>
+            <Button variant="outline" size="sm" onClick={() => { setOpen(false); payment.reset(); }} disabled={isPaying} className="glass-button border-0 text-white">{t("common.cancel", "Cancel")}</Button>
             <Button size="sm" onClick={handleLock} disabled={isPaying || !usdtAmount || parseFloat(usdtAmount) < 10}
-              style={{ background: "linear-gradient(135deg, rgba(212,168,50,0.9), rgba(180,130,30,0.9))", color: "#0a0704" }}
+              className="gold-button"
               data-testid="button-rune-lock-confirm">
               {isPaying ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />{payLabel}</> : t("vault.lock.confirmBtn", "Confirm & Pay")}
             </Button>

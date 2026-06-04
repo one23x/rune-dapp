@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { BarChart2, TrendingUp, Zap, Shield, RefreshCw, Activity } from "lucide-react";
+import { BarChart2, TrendingUp, Shield, RefreshCw, Activity } from "lucide-react";
 import {
   AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -66,9 +66,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg px-3 py-2 text-[11px]"
-      style={{ background: "rgba(10,8,4,0.95)", border: "1px solid rgba(59,130,246,0.25)" }}>
+      style={{ background: "rgba(10,8,4,0.95)", border: "1px solid rgba(245,158,11,0.30)" }}>
       <div className="text-muted-foreground">{label}</div>
-      <div className="font-bold text-blue-300">{payload[0].value}%</div>
+      <div className="font-bold text-amber-300">{payload[0].value}%</div>
     </div>
   );
 };
@@ -86,16 +86,16 @@ export function TradingVaultBanner() {
   const STATS = [
     {
       icon: TrendingUp,
-      colorClass: "text-blue-400",
-      bgClass: "bg-blue-500/[0.06] ring-blue-500/25",
+      colorClass: "text-amber-300",
+      bgClass: "bg-amber-500/[0.06] ring-amber-500/25",
       label: t("strategy.banner.monthlyReturn"),
       value: `${lastMonthPct >= 0 ? "+" : ""}${lastMonthPct.toFixed(1)}%`,
       sub: t("strategy.banner.monthlyReturnSub"),
     },
     {
       icon: Activity,
-      colorClass: "text-purple-400",
-      bgClass: "bg-purple-500/[0.06] ring-purple-500/25",
+      colorClass: "text-amber-300",
+      bgClass: "bg-amber-500/[0.06] ring-amber-500/25",
       label: t("strategy.banner.annualEst"),
       // Annual ≈ last-month-pct × 12 (linear) so it reads coherent with
       // the headline monthly figure — with monthly 20-45% that's 240-540%.
@@ -117,21 +117,21 @@ export function TradingVaultBanner() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="relative mx-4 lg:mx-0 rounded-3xl overflow-hidden border-2 border-blue-500/40"
+      className="relative rounded-3xl overflow-hidden border-2 border-amber-500/40"
       style={{
-        background: "linear-gradient(140deg, rgba(8,18,40,0.95) 0%, rgba(20,18,40,0.92) 35%, rgba(40,30,8,0.85) 70%, rgba(8,12,28,0.98) 100%)",
+        background: "linear-gradient(140deg, rgba(40,30,8,0.95) 0%, rgba(26,19,7,0.93) 40%, rgba(30,21,7,0.85) 70%, rgba(10,8,4,0.98) 100%)",
         boxShadow:
-          "inset 0 1px 0 rgba(96,165,250,0.30), inset 0 -1px 0 rgba(0,0,0,0.45), 0 14px 40px -12px rgba(59,130,246,0.35), 0 28px 64px -28px rgba(251,191,36,0.18), 0 32px 80px -24px rgba(0,0,0,0.65)",
+          "inset 0 1px 0 rgba(251,191,36,0.30), inset 0 -1px 0 rgba(0,0,0,0.45), 0 14px 40px -12px rgba(245,158,11,0.35), 0 28px 64px -28px rgba(251,191,36,0.20), 0 32px 80px -24px rgba(0,0,0,0.65)",
       }}
     >
-      {/* Layered ambient glows — blue + amber dual aurora */}
-      <div className="pointer-events-none absolute -top-32 -right-20 h-72 w-72 rounded-full bg-blue-500/[0.30] blur-[100px]" />
-      <div className="pointer-events-none absolute -top-20 left-1/3 h-56 w-56 rounded-full bg-amber-500/[0.18] blur-[90px]" />
-      <div className="pointer-events-none absolute -bottom-24 -left-16 h-60 w-60 rounded-full bg-blue-600/[0.18] blur-[80px]" />
+      {/* Layered ambient glows — warm amber aurora */}
+      <div className="pointer-events-none absolute -top-32 -right-20 h-72 w-72 rounded-full bg-amber-500/[0.28] blur-[100px]" />
+      <div className="pointer-events-none absolute -top-20 left-1/3 h-56 w-56 rounded-full bg-amber-400/[0.16] blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-24 -left-16 h-60 w-60 rounded-full bg-amber-600/[0.16] blur-[80px]" />
 
-      {/* Top dual-tone accent lines */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-300/85 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-[12%] top-[1.5px] h-[1px] bg-gradient-to-r from-transparent via-amber-300/55 to-transparent" />
+      {/* Top accent lines */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-300/85 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-[12%] top-[1.5px] h-[1px] bg-gradient-to-r from-transparent via-amber-200/55 to-transparent" />
 
       {/* Diagonal scan-line shimmer (slow infinite) */}
       <motion.div
@@ -153,7 +153,7 @@ export function TradingVaultBanner() {
         "bottom-3 left-3 border-b-2 border-l-2 rounded-bl-md",
         "bottom-3 right-3 border-b-2 border-r-2 rounded-br-md",
       ].map((cls, i) => (
-        <span key={i} className={`absolute w-3 h-3 pointer-events-none ${cls}`} style={{ borderColor: "rgba(96,165,250,0.50)" }} />
+        <span key={i} className={`absolute w-3 h-3 pointer-events-none ${cls}`} style={{ borderColor: "rgba(251,191,36,0.50)" }} />
       ))}
 
       <div className="relative p-5 space-y-4">
@@ -162,13 +162,13 @@ export function TradingVaultBanner() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="h-12 w-12 rounded-2xl flex items-center justify-center ring-2 ring-blue-400/55"
+              className="h-12 w-12 rounded-2xl flex items-center justify-center ring-2 ring-amber-400/55"
               style={{
-                background: "linear-gradient(135deg, rgba(96,165,250,0.40), rgba(30,64,160,0.20))",
-                boxShadow: "0 6px 20px -4px hsl(217 76% 58% / 0.55), inset 0 1px 0 rgba(255,255,255,0.25)",
+                background: "linear-gradient(135deg, rgba(251,191,36,0.40), rgba(180,120,20,0.20))",
+                boxShadow: "0 6px 20px -4px hsl(38 95% 55% / 0.55), inset 0 1px 0 rgba(255,255,255,0.25)",
               }}
             >
-              <BarChart2 className="h-5 w-5 text-blue-200" strokeWidth={2.5} />
+              <BarChart2 className="h-5 w-5 text-amber-100" strokeWidth={2.5} />
             </div>
             <div>
               <div
@@ -183,7 +183,7 @@ export function TradingVaultBanner() {
               >
                 {t("strategy.banner.title")}
               </div>
-              <div className="text-[11px] text-blue-200/70 leading-tight mt-1 tracking-wide">
+              <div className="text-[11px] text-amber-200/70 leading-tight mt-1 tracking-wide">
                 {t("strategy.banner.subtitle")}
               </div>
             </div>
@@ -191,36 +191,41 @@ export function TradingVaultBanner() {
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
             style={{
-              background: "linear-gradient(135deg, rgba(96,165,250,0.20), rgba(96,165,250,0.05))",
-              border: "1px solid rgba(96,165,250,0.40)",
-              boxShadow: "0 0 12px hsl(217 76% 58% / 0.30)",
+              background: "linear-gradient(135deg, rgba(251,191,36,0.20), rgba(251,191,36,0.05))",
+              border: "1px solid rgba(251,191,36,0.40)",
+              boxShadow: "0 0 12px hsl(38 95% 55% / 0.30)",
             }}
           >
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-50 animate-ping" />
-              <span className="relative inline-flex h-full w-full rounded-full bg-blue-300" />
+              <span className="absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-50 animate-ping" />
+              <span className="relative inline-flex h-full w-full rounded-full bg-amber-300" />
             </span>
-            <span className="text-[10px] uppercase tracking-[0.22em] font-black text-blue-200">
+            <span className="text-[10px] uppercase tracking-[0.22em] font-black text-amber-200">
               {t("strategy.banner.live")}
             </span>
           </div>
         </div>
 
-        {/* KPI grid — taller, glow accent on the AUM tile (the headline number) */}
+        {/* Intro — what the trading vault is */}
+        <p className="text-[12px] leading-relaxed text-amber-100/80">
+          {t("strategy.banner.intro")}
+        </p>
+
+        {/* KPI grid — taller, glow accent on the hero tile (the headline number) */}
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {STATS.map(({ icon: Icon, colorClass, label, value, sub }, idx) => {
-            const isHero = idx === 1; // Total AUM
+            const isHero = idx === 1; // Annual estimate
             return (
               <div
                 key={label}
-                className={`relative rounded-2xl px-3 py-3 overflow-hidden ${isHero ? "ring-2 ring-amber-400/45" : "ring-1 ring-blue-400/25"}`}
+                className={`relative rounded-2xl px-3 py-3 overflow-hidden ${isHero ? "ring-2 ring-amber-400/45" : "ring-1 ring-white/10"}`}
                 style={{
                   background: isHero
                     ? "linear-gradient(160deg, rgba(251,191,36,0.20), rgba(120,80,10,0.12) 60%, rgba(0,0,0,0.30))"
-                    : "linear-gradient(160deg, rgba(96,165,250,0.14), rgba(20,40,80,0.08) 60%, rgba(0,0,0,0.30))",
+                    : "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02) 60%, rgba(0,0,0,0.30))",
                   boxShadow: isHero
                     ? "inset 0 1px 0 rgba(251,191,36,0.40), 0 6px 18px -6px rgba(251,191,36,0.40)"
-                    : "inset 0 1px 0 rgba(96,165,250,0.30), 0 4px 14px -6px rgba(59,130,246,0.30)",
+                    : "inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 14px -6px rgba(0,0,0,0.40)",
                 }}
               >
                 {isHero && (
@@ -254,21 +259,21 @@ export function TradingVaultBanner() {
             the banner shell. Inset glow + corner accents echo the outer
             HUD frame so this reads as part of the same instrument panel. */}
         <div
-          className="relative rounded-2xl px-3.5 pt-3 pb-2 overflow-hidden ring-1 ring-blue-400/25"
+          className="relative rounded-2xl px-3.5 pt-3 pb-2 overflow-hidden ring-1 ring-amber-400/25"
           style={{
             background:
-              "linear-gradient(160deg, rgba(59,130,246,0.10), rgba(20,40,80,0.04) 60%, rgba(0,0,0,0.30))",
+              "linear-gradient(160deg, rgba(245,158,11,0.10), rgba(80,52,8,0.05) 60%, rgba(0,0,0,0.30))",
             boxShadow:
-              "inset 0 1px 0 rgba(96,165,250,0.20), inset 0 -1px 0 rgba(0,0,0,0.30), 0 4px 18px -8px rgba(59,130,246,0.30)",
+              "inset 0 1px 0 rgba(251,191,36,0.20), inset 0 -1px 0 rgba(0,0,0,0.30), 0 4px 18px -8px rgba(245,158,11,0.30)",
           }}
         >
-          <div className="pointer-events-none absolute -top-10 -right-6 h-24 w-24 rounded-full bg-blue-500/[0.20] blur-2xl" />
-          <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/45 to-transparent" />
+          <div className="pointer-events-none absolute -top-10 -right-6 h-24 w-24 rounded-full bg-amber-500/[0.20] blur-2xl" />
+          <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/45 to-transparent" />
           <div className="relative flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black text-blue-200/85 uppercase tracking-[0.18em]">
+            <span className="text-[10px] font-black text-amber-200/85 uppercase tracking-[0.18em]">
               {t("strategy.banner.trendTitle")}
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 ring-1 ring-blue-400/35 text-blue-200">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 ring-1 ring-amber-400/35 text-amber-200">
               {t("strategy.banner.trendBadge")}
             </span>
           </div>
@@ -277,8 +282,8 @@ export function TradingVaultBanner() {
               <AreaChart data={PERF_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="tvGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.38} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="month"
@@ -288,15 +293,15 @@ export function TradingVaultBanner() {
                   tick={{ fontSize: 8, fill: "rgba(255,255,255,0.28)", fontFamily: "monospace" }}
                   axisLine={false} tickLine={false}
                   tickFormatter={(v) => `${v}%`} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(59,130,246,0.2)", strokeWidth: 1 }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(245,158,11,0.2)", strokeWidth: 1 }} />
                 <Area
                   type="monotone"
                   dataKey="rate"
-                  stroke="#3b82f6"
+                  stroke="#f59e0b"
                   strokeWidth={2}
                   fill="url(#tvGrad)"
-                  dot={{ r: 2.5, fill: "#3b82f6", strokeWidth: 0 }}
-                  activeDot={{ r: 4, fill: "#60a5fa", strokeWidth: 0 }}
+                  dot={{ r: 2.5, fill: "#f59e0b", strokeWidth: 0 }}
+                  activeDot={{ r: 4, fill: "#fbbf24", strokeWidth: 0 }}
                   animationDuration={1200}
                 />
               </AreaChart>
@@ -305,8 +310,8 @@ export function TradingVaultBanner() {
 
           {/* Range labels */}
           <div className="flex justify-between text-[10px] text-muted-foreground mt-1 px-1">
-            <span className="text-yellow-400/80">▼ 20% {t("strategy.banner.floor")}</span>
-            <span className="text-blue-400/80">▲ 45% {t("strategy.banner.ceiling")}</span>
+            <span className="text-amber-400/70">▼ 20% {t("strategy.banner.floor")}</span>
+            <span className="text-amber-300/90">▲ 45% {t("strategy.banner.ceiling")}</span>
           </div>
         </div>
 

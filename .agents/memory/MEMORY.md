@@ -1,0 +1,8 @@
+- [i18n t() argument order](i18n-t-wrapper.md) — `t(key,{opts},fallback)` is broken & renders the raw key; put fallback before the options object.
+- [Previewing gated pages](app-preview-gating.md) — app lives under `/app`; add `?preview=1` to bypass the not-connected redirect; CopyGate still needs a real wallet.
+- [Canvas update payload](canvas-update-payload.md) — applyCanvasActions update uses `updates:{shapeType,...}` (NOT `shape:`); shapeType is required or it errors.
+- [Mockup screenshot quirk](mockup-screenshot-quirk.md) — app_preview screenshot hits main app (port 5000), not the /__mockup/ sandbox; verify mockup renders via subagent screenshot or curl HTML.
+- [iOS glass interaction utils](glass-interaction-utils.md) — global .glass-panel sheen/depth + opt-in .glass-interactive/.tap-press/.glass-sheen in index.css; NO global MotionConfig, so gate Framer Motion with useReducedMotion per-component.
+- [Reskin data bindings](reskin-data-bindings.md) — after a delegated reskin/port, re-verify live bindings; subagents silently bake mockup placeholder literals over real data.
+- [Dual i18n systems](i18n-dual-systems.md) — react-i18next (`app/locales/*.json`) for /app vs language-context (`contexts/i18n/*.ts`, `mr.*`) for mainnet; JSON reserialize is byte-identical so scripted key pruning is diff-clean.
+- [PayEmbed dialog overflow](payembed-dialog-overflow.md) — thirdweb PayEmbed overflows max-w-sm dialogs; wrap in w-full + inner overflow-x-auto (both HL & pUSD deposit popups).

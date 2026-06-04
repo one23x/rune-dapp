@@ -3,15 +3,13 @@ import { thirdwebClient } from "./client";
 import { runeChain, runeChainKey, arbitrum } from "./chains";
 import { getRuneAddresses, ARB_NODE_DROP_ADDRESS } from "./addresses";
 import { usdtAbi } from "./abis/usdt";
-import { communityAbi } from "./abis/community";
-import { nodePresellAbi } from "./abis/nodepresell";
 
 const addr = getRuneAddresses(runeChainKey);
 
 /**
- * Pre-built contract handles for the three RUNE contracts. Using the
- * `abi` option pins the typing — `useReadContract(prepareContractCall(…))`
- * downstream gets correct argument and return types for free.
+ * Pre-built USDT contract handle. Using the `abi` option pins the typing —
+ * `useReadContract(prepareContractCall(…))` downstream gets correct argument
+ * and return types for free.
  */
 export const usdtContract: ThirdwebContract = getContract({
   client: thirdwebClient,
@@ -19,23 +17,6 @@ export const usdtContract: ThirdwebContract = getContract({
   address: addr.usdt,
   abi: usdtAbi as any,
 });
-
-export const communityContract: ThirdwebContract = getContract({
-  client: thirdwebClient,
-  chain: runeChain,
-  address: addr.community,
-  abi: communityAbi as any,
-});
-
-export const nodePresellContract: ThirdwebContract = getContract({
-  client: thirdwebClient,
-  chain: runeChain,
-  address: addr.nodePresell,
-  abi: nodePresellAbi as any,
-});
-
-/** ROOT referrer constant — a user whose referrer is this value is "at the top". */
-export const COMMUNITY_ROOT = "0x0000000000000000000000000000000000000001" as const;
 
 /** Node IDs from the spec — 101/201/301/401/501. The 501 (initial / 1000 U)
  *  tier was added at the BSC mainnet deployment per runeapi 3 §4.1. */
@@ -68,25 +49,19 @@ export const NODE_META: Record<NodeId, { level: string; nameCn: string; nameEn: 
 };
 
 // ─── Arbitrum 节点购买(thirdweb Edition Drop / DropERC1155)────────────────────
-//
-// 与上面的 BSC NodePresell 完全独立并存:这是 Arbitrum One 上一套 DropERC1155,
-// 用 thirdweb v5 `ClaimButton`(claimParams type=ERC1155)claim,USDC(Arb)结算,
-// 并开启跨链支付(PayModal 默认 buyWithCrypto/buyWithFiat 开启 → 只有 USDT@BSC 的
-// 买家也能付:thirdweb pay 自动桥成 USDC@Arbitrum 再 claim)。
-//
-// 5 档映射 token id 0–4(链上 claim conditions 已配好 price/maxClaimableSupply/
-// 每钱包),tier 编号沿用站点既有的 101/201/301/401/501 语义,只是这里走 ERC1155
-// tokenId。价格/限量为展示用快照,真实余量从链上 getActiveClaimCondition 读。
+// 与 BSC NodePresell 独立并存:Arbitrum One 上的 DropERC1155,thirdweb v5 ClaimButton
+// (ERC1155) claim,USDC(Arb) 结算,PayModal 跨链支付(USDT@BSC 自动桥成 USDC@Arb)。
+// 价格/限量为展示快照,真实余量从链上 getActiveClaimCondition 读。
 export const arbNodeDropContract: ThirdwebContract = getContract({
   client: thirdwebClient,
   chain: arbitrum,
   address: ARB_NODE_DROP_ADDRESS,
 });
 
-/** Edition Drop 的 5 档 = token id 0–4。tier = 站点既有节点语义编号。 */
 export interface ArbNodeTier {
   tokenId: bigint;
-  tier: NodeId;
+  /** 站点节点语义编号(101-501);token5=601 体验档。display 用,故 number。 */
+  tier: number;
   level: string;
   nameCn: string;
   nameEn: string;
@@ -100,11 +75,11 @@ export interface ArbNodeTier {
   perWallet: number;
 }
 
-// 顺序按价格从高到低,与 BSC PickerView 的排序习惯一致;tokenId 升序仍是 0→4。
 export const ARB_NODE_TIERS: readonly ArbNodeTier[] = [
   { tokenId: 0n, tier: 101, level: "founder",  nameCn: "符主", nameEn: "FOUNDER",  color: "text-purple-400", rgb: "192, 132, 252", priceUsdc: 50000, maxSupply:   20, perWallet: 1 },
   { tokenId: 1n, tier: 201, level: "super",    nameCn: "符魂", nameEn: "SUPER",    color: "text-amber-400",  rgb: "251, 191, 36",  priceUsdc: 10000, maxSupply:  200, perWallet: 1 },
   { tokenId: 2n, tier: 301, level: "advanced", nameCn: "符印", nameEn: "ADVANCED", color: "text-green-400",  rgb: "52, 211, 153",  priceUsdc:  5000, maxSupply:  400, perWallet: 1 },
   { tokenId: 3n, tier: 401, level: "mid",      nameCn: "符源", nameEn: "MID",      color: "text-blue-400",   rgb: "96, 165, 250",  priceUsdc:  2500, maxSupply:  800, perWallet: 1 },
   { tokenId: 4n, tier: 501, level: "initial",  nameCn: "符胚", nameEn: "INITIAL",  color: "text-slate-300",  rgb: "203, 213, 225", priceUsdc:  1000, maxSupply: 1000, perWallet: 1 },
+  { tokenId: 5n, tier: 601, level: "trial",    nameCn: "体验符", nameEn: "TRIAL",  color: "text-zinc-400",   rgb: "161, 161, 170", priceUsdc:     1, maxSupply: 5000, perWallet: 1 },
 ] as const;

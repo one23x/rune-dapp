@@ -1,34 +1,38 @@
 import "./index.css";
 import { Switch, Route, Router as WouterRouter, Link, Redirect } from "wouter";
 import { lazy, Suspense } from "react";
+import type React from "react";
 import { motion } from "framer-motion";
 import "@app/lib/i18n";
 import { DesktopSidebar } from "@app/components/desktop-sidebar";
 import { BottomNav } from "@app/components/bottom-nav";
 import LangSwitcher from "@app/components/lang-switcher";
 import { WalletConnectButton } from "@/components/rune/wallet-connect-button";
+import { useActiveAccount, useActiveWalletConnectionStatus } from "thirdweb/react";
 
 const Dashboard       = lazy(() => import("@app/pages/dashboard"));
 const Trade           = lazy(() => import("@app/pages/trade"));
 const Vault           = lazy(() => import("@app/pages/vault"));
 const StrategyPage    = lazy(() => import("@app/pages/strategy"));
+const StrategyVault   = lazy(() => import("@app/pages/strategy-vault"));
+const StrategyHub     = lazy(() => import("@app/components/strategy/hl-copy-section").then((m) => ({ default: m.HlHubPage })));
 const Market          = lazy(() => import("@app/pages/market"));
 const CopyTrading     = lazy(() => import("@app/pages/copy-trading"));
 const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
 const CopyTradingSignals   = lazy(() => import("@app/pages/copy-trading-signals"));
-const CopyTradingPositions = lazy(() => import("@app/pages/copy-trading-positions"));
-const CopyTradingEarnings  = lazy(() => import("@app/pages/copy-trading-earnings"));
 const CopyTradingHistory   = lazy(() => import("@app/pages/copy-trading-history"));
-const CopyTradingFunds     = lazy(() => import("@app/pages/copy-trading-funds"));
 const Profile         = lazy(() => import("@app/pages/profile"));
+const Nodes           = lazy(() => import("@app/pages/nodes"));
 const ProfileReferral = lazy(() => import("@app/pages/profile-referral"));
-const ProfileNodes    = lazy(() => import("@app/pages/profile-nodes"));
 const ProfileCommission = lazy(() => import("@app/pages/profile-commission"));
 const ProfileVault    = lazy(() => import("@app/pages/profile-vault"));
 const ProfileSettings = lazy(() => import("@app/pages/profile-settings"));
 const ProfileTransactions = lazy(() => import("@app/pages/profile-transactions"));
 const ProfileNotifications = lazy(() => import("@app/pages/profile-notifications"));
 const ProfileSwap = lazy(() => import("@app/pages/profile-swap"));
+const AdminFunds = lazy(() => import("@app/pages/admin-funds"));
+// 节点购买页 —— 故意不放进任何导航/菜单,仅可通过直链 /profile/nodes 访问。
+const ProfileNodes = lazy(() => import("@app/pages/profile-nodes"));
 
 /**
  * AnimatedRuneLogo — same animated halo + dual rotating arcs as mainnet's
@@ -129,9 +133,8 @@ function ShellHeader() {
       <div className="container flex h-[72px] items-center justify-between mx-auto pl-2 pr-2 md:pr-6 gap-4 md:gap-8">
         {/* Plain <a> (not wouter <Link>) so clicking the logo escapes
             the dashboard's `base="/app"` router and lands on the public
-            mainnet site root (rune-ai.io/), where the recruit + node
-            purchase flow lives. wouter Link with href="/" would resolve
-            to "/app" and trap users inside the dashboard shell. */}
+            mainnet site root (rune-ai.io/). wouter Link with href="/" would
+            resolve to "/app" and trap users inside the dashboard shell. */}
         <a href="/" className="flex items-center gap-2 group min-w-0 shrink md:shrink-0 cursor-pointer">
           <motion.div
             whileHover={{ scale: 1.05 }}
@@ -162,6 +165,75 @@ function ShellHeader() {
   );
 }
 
+function WalletRequiredGate({ children }: { children: React.ReactNode }) {
+  const account = useActiveAccount();
+  const status = useActiveWalletConnectionStatus();
+  const isResolving = status === "unknown" || status === "connecting";
+
+  // Design-preview bypass: any /app route with ?preview=1 renders without a
+  // connected wallet so member-only UIs can be reviewed in isolation.
+  const previewMode =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
+  if (previewMode) return <>{children}</>;
+
+  if (isResolving) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+            className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary"
+          />
+          <span className="text-sm">Loading…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!account) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="flex-1 flex items-center justify-center min-h-[70vh] px-6"
+      >
+        <div className="text-center max-w-sm space-y-6">
+          <div className="relative mx-auto w-20 h-20">
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/10"
+              animate={{ scale: [1, 1.15, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div className="relative w-20 h-20 rounded-full border border-primary/30 bg-card flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/70">
+                <rect width="20" height="14" x="2" y="5" rx="2" />
+                <path d="M16 12h.01" />
+                <path d="M12 5V3" />
+                <path d="M8 5V3" />
+                <path d="M16 5V3" />
+              </svg>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-foreground">连接钱包以继续</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Connect your wallet to access the dashboard, trading strategies, and portfolio management.
+            </p>
+            <p className="text-xs text-muted-foreground/70">连接钱包后即可访问仪表盘、交易策略和资产管理。</p>
+          </div>
+          <div className="flex justify-center [&_button]:!h-11 [&_button]:!px-8 [&_button]:!text-sm [&_button]:!rounded-lg">
+            <WalletConnectButton />
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function DashboardRoutes() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading…</div>}>
@@ -170,6 +242,8 @@ function DashboardRoutes() {
         <Route path="/trade" component={Trade} />
         <Route path="/vault" component={Vault} />
         <Route path="/strategy" component={StrategyPage} />
+        <Route path="/strategy/hl" component={StrategyHub} />
+        <Route path="/strategy/vault/:network/:address">{(p) => <StrategyVault network={p.network} address={p.address} />}</Route>
         {/* HL copy-trading was merged into /strategy; keep /hl as a redirect
             so old links / bookmarks land on the strategy page. */}
         <Route path="/hl">{() => <Redirect to="/strategy" />}</Route>
@@ -177,10 +251,12 @@ function DashboardRoutes() {
         <Route path="/copy-trading" component={CopyTrading} />
         <Route path="/copy-trading/auto" component={CopyTradingAuto} />
         <Route path="/copy-trading/signals" component={CopyTradingSignals} />
-        <Route path="/copy-trading/positions" component={CopyTradingPositions} />
-        <Route path="/copy-trading/earnings" component={CopyTradingEarnings} />
         <Route path="/copy-trading/history" component={CopyTradingHistory} />
-        <Route path="/copy-trading/funds" component={CopyTradingFunds} />
+        {/* Positions/Earnings/Funds were consolidated into Overview, Strategy and History. */}
+        <Route path="/copy-trading/positions">{() => <Redirect to="/copy-trading" />}</Route>
+        <Route path="/copy-trading/funds">{() => <Redirect to="/copy-trading" />}</Route>
+        <Route path="/copy-trading/earnings">{() => <Redirect to="/copy-trading/history" />}</Route>
+        <Route path="/nodes" component={Nodes} />
         <Route path="/profile" component={Profile} />
         <Route path="/profile/nodes" component={ProfileNodes} />
         <Route path="/profile/referral" component={ProfileReferral} />
@@ -190,6 +266,7 @@ function DashboardRoutes() {
         <Route path="/profile/transactions" component={ProfileTransactions} />
         <Route path="/profile/notifications" component={ProfileNotifications} />
         <Route path="/profile/swap" component={ProfileSwap} />
+        <Route path="/admin/funds" component={AdminFunds} />
       </Switch>
     </Suspense>
   );
@@ -206,15 +283,41 @@ function DashboardRoutes() {
 export default function DashboardShell() {
   return (
     <WouterRouter base="/app">
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
+        {/* Shared liquid-glass orb background — drifting champagne glows on the
+            near-black base, behind all dashboard content (z-0). */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <motion.div
+            className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full opacity-60 blur-[100px]"
+            style={{ background: "var(--orb-1)" }}
+            animate={{ x: [0, 50, -20, 0], y: [0, -30, 40, 0], scale: [1, 1.1, 0.9, 1] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute top-[20%] -right-[20%] w-[70%] h-[60%] rounded-full opacity-50 blur-[120px]"
+            style={{ background: "var(--orb-2)" }}
+            animate={{ x: [0, -40, 30, 0], y: [0, 50, -20, 0], scale: [1, 1.2, 0.8, 1] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute -bottom-[10%] left-[10%] w-[50%] h-[40%] rounded-full opacity-60 blur-[90px]"
+            style={{ background: "var(--orb-3)" }}
+            animate={{ x: [0, 30, -40, 0], y: [0, -20, 50, 0], scale: [1, 0.9, 1.1, 1] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+          />
+        </div>
+        <div className="relative z-10">
         <ShellHeader />
         <div className="flex">
           <DesktopSidebar />
-          <main className="flex-1 mx-auto max-w-lg lg:max-w-6xl xl:max-w-7xl w-full overflow-x-hidden pb-20 lg:pb-8">
-            <DashboardRoutes />
+          <main className="flex-1 mx-auto max-w-lg lg:max-w-6xl xl:max-w-7xl w-full overflow-x-hidden pb-24 lg:pb-10">
+            <WalletRequiredGate>
+              <DashboardRoutes />
+            </WalletRequiredGate>
           </main>
         </div>
         <BottomNav />
+        </div>
       </div>
     </WouterRouter>
   );

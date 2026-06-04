@@ -50,6 +50,7 @@ const short = (a: string | undefined) =>
 
 /** Copyable short-address chip — app surface styling. */
 function AddressChip({ address, accent = false }: { address: string; accent?: boolean }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   async function onCopy(e: React.MouseEvent) {
     e.stopPropagation();
@@ -66,7 +67,7 @@ function AddressChip({ address, accent = false }: { address: string; accent?: bo
       }`}
     >
       {short(address)}
-      <button type="button" onClick={onCopy} aria-label="Copy address"
+      <button type="button" onClick={onCopy} aria-label={t("common.copyAddress", "Copy address")}
         className={`shrink-0 transition-colors ${copied ? "text-emerald-400" : "opacity-60 hover:opacity-100 hover:text-amber-400"}`}>
         {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
       </button>

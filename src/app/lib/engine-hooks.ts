@@ -8,7 +8,7 @@
  * per call site as they get built out.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   users,
   funding,
@@ -17,7 +17,11 @@ import {
   copySubscriptions,
   signals,
   hyperliquid,
+  node,
+  packs,
   type HlNetwork,
+  type NodeStatus,
+  type PolymarketOrderInput,
 } from "@app/lib/engine";
 
 /**
@@ -44,6 +48,46 @@ export function useEngineUser(wallet: string | undefined) {
   });
 }
 
+/**
+ * Node-gating status for a wallet (GET /v1/node/status). Drives the 开户 gate:
+ * a trading account can only be opened by a node holder.
+ *
+ * IMPORTANT — graceful fallback while the backend is still shipping: this hook
+ * is `retry:false` and callers must only BLOCK onboarding on an *explicit*
+ * `isNode:false`. When the request fails / 404s the query is in an error state
+ * (`data` undefined) → the gate treats that as "allow" so we never brick
+ * onboarding before node gating goes live.
+ */
+export function useNodeStatus(wallet: string | undefined) {
+  return useQuery<NodeStatus>({
+    queryKey: ["engine", "node-status", wallet?.toLowerCase()],
+    queryFn: () => node.status(wallet!),
+    enabled: !!wallet,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+/**
+ * Redeem a node authorization code (POST /v1/node/redeem-code). On a successful
+ * `{ ok:true }` we invalidate the wallet's node-status so the gate re-resolves
+ * and the normal open-account flow proceeds.
+ */
+export function useRedeemCode(wallet: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => {
+      if (!wallet) throw new Error("not_connected");
+      return node.redeemCode(wallet, code);
+    },
+    onSuccess: (res) => {
+      if (res?.ok) {
+        qc.invalidateQueries({ queryKey: ["engine", "node-status", wallet?.toLowerCase()] });
+      }
+    },
+  });
+}
+
 /** Hot Polymarket markets — `{ data: [...] }`. Refreshes on a short interval. */
 export function useHotMarkets() {
   return useQuery({
@@ -51,6 +95,20 @@ export function useHotMarkets() {
     queryFn: () => signals.hotMarkets(),
     staleTime: 60_000,
     refetchInterval: 60_000,
+  });
+}
+
+/**
+ * Project's CONSOLE-curated strategy packs (GET /v1/packs, project-scoped).
+ * These replace the hardcoded HL presets when the client has configured packs;
+ * an empty list / fetch error lets the caller fall back to the built-in presets.
+ */
+export function useConsolePacks() {
+  return useQuery({
+    queryKey: ["engine", "console-packs"],
+    queryFn: () => packs.consolePacks(),
+    staleTime: 60_000,
+    retry: false,
   });
 }
 
@@ -117,6 +175,89 @@ export function usePusdBalance(userId: string | undefined) {
     queryFn: () => funding.pusdBalance(userId!),
     enabled: !!userId,
     staleTime: 30_000,
+    // Background-poll like useHlAccount: bridged funds can land after the deposit
+    // dialog's ~3min invalidation window closes; this self-heals a stale balance.
+    refetchInterval: 30_000,
+  });
+}
+
+/**
+ * Manage a user's REAL Polymarket positions — cancel an open CLOB order and
+ * redeem resolved positions back to pUSD. Both call live engine routes
+ * (engine.ts → trading.polymarket.cancelOrder / redeem, which hit
+ * `trade/polymarket/users/:userId/...` on the One-Agents Engine). On success
+ * we invalidate the open-orders + pUSD-balance queries so the dashboard
+ * reflects the new state immediately. No-ops (idle) until a userId exists.
+ */
+export function usePolymarketOrderMutations(userId: string | undefined) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
+    qc.invalidateQueries({ queryKey: ["engine", "orders", userId] });
+    qc.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
+  };
+
+  const cancel = useMutation({
+    mutationFn: ({ orderId }: { orderId: string }) =>
+      trading.polymarket.cancelOrder(userId!, orderId),
+    onSuccess: invalidate,
+  });
+
+  const redeem = useMutation({
+    mutationFn: (body?: unknown) => trading.polymarket.redeem(userId!, body),
+    onSuccess: invalidate,
+  });
+
+  return {
+    cancelOrder: (orderId: string) => cancel.mutateAsync({ orderId }),
+    redeem: (body?: unknown) => redeem.mutateAsync(body),
+    isCancelling: cancel.isPending,
+    isRedeeming: redeem.isPending,
+    cancellingId: cancel.isPending ? (cancel.variables as { orderId: string } | undefined)?.orderId : undefined,
+  };
+}
+
+/** Manual close of an HL position — reduce-only IOC market-close via the live
+ *  engine route (engine.ts → hyperliquid.close → POST trade/hyperliquid/.../close).
+ *  Invalidates the HL account query so positions/balance refresh after closing. */
+export function useHlClose(userId: string | undefined, network: HlNetwork) {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (coin: string) => hyperliquid.close(userId!, { coin, network }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["engine", "hl", "account", network] }),
+  });
+  return {
+    close: (coin: string) => m.mutateAsync(coin),
+    isClosing: m.isPending,
+    closingCoin: m.isPending ? (m.variables as string | undefined) : undefined,
+  };
+}
+
+/**
+ * Place a REAL Polymarket CLOB order for a user.
+ *
+ * Hits the live engine route (engine.ts → trading.polymarket.placeOrder →
+ * POST `trade/polymarket/users/:userId/orders`), which signs & submits to the
+ * Polymarket CLOB using the user's engine-held EOA + CLOB API key. The body
+ * needs the outcome `tokenId` (the ERC-1155 CLOB token for the chosen Yes/No
+ * leg — sourced from the market's `clobTokenIds`), `side` (BUY to enter a
+ * position), `price` (0–1 probability), and `size` (number of shares).
+ *
+ * On success we invalidate open-orders + pUSD-balance so the dashboard
+ * reflects the new state immediately. Idle (never fires) until a userId exists.
+ */
+export function usePolymarketPlaceOrder(userId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (order: PolymarketOrderInput) => {
+      if (!userId) throw new Error("not_connected");
+      return trading.polymarket.placeOrder(userId, order);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
+      qc.invalidateQueries({ queryKey: ["engine", "orders", userId] });
+      qc.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
+    },
   });
 }
 
@@ -164,4 +305,42 @@ export function useHlSubs(userId: string | undefined) {
     enabled: !!userId,
     staleTime: 30_000,
   });
+}
+
+/** F17 — AI 跟单决策流(决策卡)。每个信号经 AI 判断+调参的审计。 */
+export function useHlCopyDecisions(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["engine", "hl", "copy-decisions", userId],
+    queryFn: () => hyperliquid.copyDecisions(userId!),
+    enabled: !!userId,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+}
+
+/**
+ * Manage an existing HL copy subscription: pause / resume (PATCH) + cancel (DELETE).
+ * Routes are live (hl-read.ts :588 / :616). Invalidates the subs query on success so the
+ * ActiveSubs list reflects the new state immediately.
+ */
+export function useHlSubMutations(userId: string | undefined) {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] });
+
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "active" | "paused" }) =>
+      hyperliquid.subscriptionPatch(userId!, id, { status }),
+    onSuccess: invalidate,
+  });
+  const cancel = useMutation({
+    mutationFn: ({ id }: { id: string }) => hyperliquid.subscriptionDelete(userId!, id),
+    onSuccess: invalidate,
+  });
+
+  return {
+    pause: (id: string) => setStatus.mutateAsync({ id, status: "paused" }),
+    resume: (id: string) => setStatus.mutateAsync({ id, status: "active" }),
+    cancel: (id: string) => cancel.mutateAsync({ id }),
+    isPending: setStatus.isPending || cancel.isPending,
+  };
 }
