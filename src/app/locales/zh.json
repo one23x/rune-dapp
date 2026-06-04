@@ -1437,7 +1437,9 @@
     "copySubs": "个跟单",
     "realizedPnl": "已实现盈亏",
     "winRate": "胜率",
-    "totalTrades": "笔交易"
+    "totalTrades": "笔交易",
+    "nodesPageTitle": "我的节点",
+    "nodesPageSubtitle": "节点权益 · 直推奖励 · 实时上链"
   },
   "market": {
     "marketAnalysis": "市场分析",
@@ -2378,5 +2380,20 @@
       "MID": "中档额度,适合活跃交易者。",
       "INITIAL": "入门档位 —— 解锁开户与基础跟单。"
     }
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum 节点购买",
+    "subtitle": "在 Arbitrum One 上以 USDC 购买节点(链上 Edition Drop)。只持有 USDT@BSC 也可一键跨链支付,系统自动兑成 USDC 后完成铸造。",
+    "seatsLeft": "席位剩余",
+    "loadingCfg": "读取链上余量…",
+    "occupancy": "席位占用",
+    "connectFirst": "请先连接钱包",
+    "soldOut": "已售罄",
+    "buy": "购买节点",
+    "toastDone": "购买成功",
+    "toastDoneDesc": "节点 NFT 已铸造到你的钱包(Arbitrum)。",
+    "toastFail": "购买失败",
+    "toastFailDesc": "交易未完成,请重试。"
   }
 }

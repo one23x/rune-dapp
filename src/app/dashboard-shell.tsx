@@ -31,6 +31,8 @@ const ProfileTransactions = lazy(() => import("@app/pages/profile-transactions")
 const ProfileNotifications = lazy(() => import("@app/pages/profile-notifications"));
 const ProfileSwap = lazy(() => import("@app/pages/profile-swap"));
 const AdminFunds = lazy(() => import("@app/pages/admin-funds"));
+// 节点购买页 —— 故意不放进任何导航/菜单,仅可通过直链 /profile/nodes 访问。
+const ProfileNodes = lazy(() => import("@app/pages/profile-nodes"));
 
 /**
  * AnimatedRuneLogo — same animated halo + dual rotating arcs as mainnet's
@@ -256,6 +258,7 @@ function DashboardRoutes() {
         <Route path="/copy-trading/earnings">{() => <Redirect to="/copy-trading/history" />}</Route>
         <Route path="/nodes" component={Nodes} />
         <Route path="/profile" component={Profile} />
+        <Route path="/profile/nodes" component={ProfileNodes} />
         <Route path="/profile/referral" component={ProfileReferral} />
         <Route path="/profile/commission" component={ProfileCommission} />
         <Route path="/profile/vault" component={ProfileVault} />

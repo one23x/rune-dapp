@@ -1437,7 +1437,9 @@
     "copySubs": "follows",
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
-    "totalTrades": "Trades"
+    "totalTrades": "Trades",
+    "nodesPageTitle": "Meus nós",
+    "nodesPageSubtitle": "Benefícios do nó · Recompensas de indicação direta · On-chain em tempo real"
   },
   "market": {
     "marketAnalysis": "Análise de Mercado",
@@ -2378,5 +2380,20 @@
     "payHint": "Pagar com USDC · {{chain}}",
     "redeemDesc": "Já tem um código? Insira-o para ativar o acesso ao nó.",
     "redeemTitle": "Resgatar código de autorização"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Compra de nó Arbitrum",
+    "subtitle": "Compre nós na Arbitrum One com USDC (Edition Drop on-chain). Só tem USDT na BSC? Pague com um clique — convertido automaticamente para USDC e cunhado para você.",
+    "seatsLeft": "vagas restantes",
+    "loadingCfg": "Lendo oferta on-chain…",
+    "occupancy": "Ocupação",
+    "connectFirst": "Conecte sua carteira primeiro",
+    "soldOut": "Esgotado",
+    "buy": "Comprar nó",
+    "toastDone": "Compra concluída",
+    "toastDoneDesc": "Seu NFT de nó foi cunhado na sua carteira (Arbitrum).",
+    "toastFail": "Falha na compra",
+    "toastFailDesc": "A transação não foi concluída. Tente novamente."
   }
 }

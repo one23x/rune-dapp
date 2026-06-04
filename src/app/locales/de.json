@@ -1373,7 +1373,9 @@
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
     "totalTrades": "Trades",
-    "myNodesDesc": "Meine Node-Stufe & Team ansehen"
+    "myNodesDesc": "Meine Node-Stufe & Team ansehen",
+    "nodesPageTitle": "Meine Nodes",
+    "nodesPageSubtitle": "Node-Vorteile · Direkte Empfehlungsprämien · Echtzeit on-chain"
   },
   "market": {
     "marketAnalysis": "Marktanalyse",
@@ -2378,5 +2380,20 @@
     "payHint": "Zahlen mit USDC · {{chain}}",
     "redeemDesc": "Schon einen Code? Gib ihn ein, um den Node-Zugang zu aktivieren.",
     "redeemTitle": "Autorisierungscode einlösen"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum-Node-Kauf",
+    "subtitle": "Kaufe Nodes auf Arbitrum One mit USDC (On-Chain Edition Drop). Nur USDT auf BSC? Zahle trotzdem per Klick — wird automatisch in USDC getauscht und für dich gemintet.",
+    "seatsLeft": "Plätze übrig",
+    "loadingCfg": "On-Chain-Bestand wird gelesen…",
+    "occupancy": "Belegung",
+    "connectFirst": "Verbinde zuerst deine Wallet",
+    "soldOut": "Ausverkauft",
+    "buy": "Node kaufen",
+    "toastDone": "Kauf abgeschlossen",
+    "toastDoneDesc": "Dein Node-NFT wurde in deine Wallet (Arbitrum) gemintet.",
+    "toastFail": "Kauf fehlgeschlagen",
+    "toastFailDesc": "Die Transaktion wurde nicht abgeschlossen. Bitte erneut versuchen."
   }
 }

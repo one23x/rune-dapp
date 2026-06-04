@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Grid, X, Menu, BookOpen, LayoutDashboard } from "lucide-react";
+import { Activity, Grid, X, Menu, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -27,7 +27,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/projects",                     label: "PROJECTS",   key: "projects",   icon: Grid },
   { href: "/tools",                        label: "SIMULATORS", key: "simulators", icon: Activity },
-  { href: "https://www.rune-protocol.com", label: "PREDICTIONS", key: "library",    icon: BookOpen, external: true },
 ];
 
 /* ─── Animated Logo ──────────────────────────────────────────────── */

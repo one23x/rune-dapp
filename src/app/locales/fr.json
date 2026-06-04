@@ -1373,7 +1373,9 @@
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
     "totalTrades": "Trades",
-    "myNodesDesc": "Voir mon niveau de nœud et mon équipe"
+    "myNodesDesc": "Voir mon niveau de nœud et mon équipe",
+    "nodesPageTitle": "Mes nœuds",
+    "nodesPageSubtitle": "Avantages des nœuds · Récompenses de parrainage direct · On-chain en temps réel"
   },
   "market": {
     "marketAnalysis": "Analyse de Marché",
@@ -2378,5 +2380,20 @@
     "payHint": "Payer en USDC · {{chain}}",
     "redeemDesc": "Tu as déjà un code ? Saisis-le pour activer l'accès au nœud.",
     "redeemTitle": "Utiliser le code d'autorisation"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Achat de nœud Arbitrum",
+    "subtitle": "Achetez des nœuds sur Arbitrum One en USDC (Edition Drop on-chain). Vous n'avez que de l'USDT sur BSC ? Payez en un clic — converti automatiquement en USDC et minté pour vous.",
+    "seatsLeft": "places restantes",
+    "loadingCfg": "Lecture de l'offre on-chain…",
+    "occupancy": "Occupation",
+    "connectFirst": "Connectez d'abord votre portefeuille",
+    "soldOut": "Épuisé",
+    "buy": "Acheter un nœud",
+    "toastDone": "Achat terminé",
+    "toastDoneDesc": "Votre NFT de nœud a été minté dans votre portefeuille (Arbitrum).",
+    "toastFail": "Échec de l'achat",
+    "toastFailDesc": "La transaction n'a pas abouti. Veuillez réessayer."
   }
 }

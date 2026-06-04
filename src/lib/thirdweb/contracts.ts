@@ -1,7 +1,7 @@
 import { getContract, type ThirdwebContract } from "thirdweb";
 import { thirdwebClient } from "./client";
-import { runeChain, runeChainKey } from "./chains";
-import { getRuneAddresses } from "./addresses";
+import { runeChain, runeChainKey, arbitrum } from "./chains";
+import { getRuneAddresses, ARB_NODE_DROP_ADDRESS } from "./addresses";
 import { usdtAbi } from "./abis/usdt";
 
 const addr = getRuneAddresses(runeChainKey);
@@ -47,3 +47,39 @@ export const NODE_META: Record<NodeId, { level: string; nameCn: string; nameEn: 
   401: { level: "mid",      nameCn: "符源", nameEn: "MID",      color: "text-blue-400",   rgb: "96, 165, 250",  priceUsdt:  2500 },
   501: { level: "initial",  nameCn: "符胚", nameEn: "INITIAL",  color: "text-slate-300",  rgb: "203, 213, 225", priceUsdt:  1000 },
 };
+
+// ─── Arbitrum 节点购买(thirdweb Edition Drop / DropERC1155)────────────────────
+// 与 BSC NodePresell 独立并存:Arbitrum One 上的 DropERC1155,thirdweb v5 ClaimButton
+// (ERC1155) claim,USDC(Arb) 结算,PayModal 跨链支付(USDT@BSC 自动桥成 USDC@Arb)。
+// 价格/限量为展示快照,真实余量从链上 getActiveClaimCondition 读。
+export const arbNodeDropContract: ThirdwebContract = getContract({
+  client: thirdwebClient,
+  chain: arbitrum,
+  address: ARB_NODE_DROP_ADDRESS,
+});
+
+export interface ArbNodeTier {
+  tokenId: bigint;
+  /** 站点节点语义编号(101-501);token5=601 体验档。display 用,故 number。 */
+  tier: number;
+  level: string;
+  nameCn: string;
+  nameEn: string;
+  color: string;
+  rgb: string;
+  /** 展示用价格(USDC,整数)。真实价格以链上 claim condition 为准。 */
+  priceUsdc: number;
+  /** 展示用限量。真实余量以链上 supplyClaimed/maxClaimableSupply 为准。 */
+  maxSupply: number;
+  /** 每钱包限购。 */
+  perWallet: number;
+}
+
+export const ARB_NODE_TIERS: readonly ArbNodeTier[] = [
+  { tokenId: 0n, tier: 101, level: "founder",  nameCn: "符主", nameEn: "FOUNDER",  color: "text-purple-400", rgb: "192, 132, 252", priceUsdc: 50000, maxSupply:   20, perWallet: 1 },
+  { tokenId: 1n, tier: 201, level: "super",    nameCn: "符魂", nameEn: "SUPER",    color: "text-amber-400",  rgb: "251, 191, 36",  priceUsdc: 10000, maxSupply:  200, perWallet: 1 },
+  { tokenId: 2n, tier: 301, level: "advanced", nameCn: "符印", nameEn: "ADVANCED", color: "text-green-400",  rgb: "52, 211, 153",  priceUsdc:  5000, maxSupply:  400, perWallet: 1 },
+  { tokenId: 3n, tier: 401, level: "mid",      nameCn: "符源", nameEn: "MID",      color: "text-blue-400",   rgb: "96, 165, 250",  priceUsdc:  2500, maxSupply:  800, perWallet: 1 },
+  { tokenId: 4n, tier: 501, level: "initial",  nameCn: "符胚", nameEn: "INITIAL",  color: "text-slate-300",  rgb: "203, 213, 225", priceUsdc:  1000, maxSupply: 1000, perWallet: 1 },
+  { tokenId: 5n, tier: 601, level: "trial",    nameCn: "体验符", nameEn: "TRIAL",  color: "text-zinc-400",   rgb: "161, 161, 170", priceUsdc:     1, maxSupply: 5000, perWallet: 1 },
+] as const;

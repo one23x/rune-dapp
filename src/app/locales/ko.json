@@ -1373,7 +1373,9 @@
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
     "totalTrades": "Trades",
-    "myNodesDesc": "내 노드 등급 및 팀 보기"
+    "myNodesDesc": "내 노드 등급 및 팀 보기",
+    "nodesPageTitle": "내 노드",
+    "nodesPageSubtitle": "노드 혜택 · 직접 추천 보상 · 실시간 온체인"
   },
   "market": {
     "marketAnalysis": "시장 분석",
@@ -2378,5 +2380,20 @@
     "payHint": "USDC로 결제 · {{chain}}",
     "redeemDesc": "이미 코드가 있으신가요? 입력하여 노드 접근을 활성화하세요.",
     "redeemTitle": "인증 코드 사용"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum 노드 구매",
+    "subtitle": "Arbitrum One에서 USDC로 노드 구매(온체인 Edition Drop). BSC USDT만 있어도 원클릭 결제 — 자동으로 USDC로 스왑되어 민팅됩니다.",
+    "seatsLeft": "남은 자리",
+    "loadingCfg": "온체인 수량 읽는 중…",
+    "occupancy": "점유율",
+    "connectFirst": "먼저 지갑을 연결하세요",
+    "soldOut": "매진",
+    "buy": "노드 구매",
+    "toastDone": "구매 완료",
+    "toastDoneDesc": "노드 NFT가 지갑(Arbitrum)에 민팅되었습니다.",
+    "toastFail": "구매 실패",
+    "toastFailDesc": "거래가 완료되지 않았습니다. 다시 시도하세요."
   }
 }

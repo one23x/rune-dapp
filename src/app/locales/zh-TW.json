@@ -1373,7 +1373,9 @@
     "copySubs": "個跟單",
     "realizedPnl": "已實現盈虧",
     "winRate": "勝率",
-    "totalTrades": "筆交易"
+    "totalTrades": "筆交易",
+    "nodesPageTitle": "我的節點",
+    "nodesPageSubtitle": "節點權益 · 直推獎勵 · 即時上鏈"
   },
   "market": {
     "marketAnalysis": "市場分析",
@@ -2378,5 +2380,20 @@
     "payHint": "USDC 支付 · {{chain}}",
     "redeemDesc": "已有授權碼？輸入即可開通節點權限。",
     "redeemTitle": "授權碼兌換"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum 節點購買",
+    "subtitle": "在 Arbitrum One 上以 USDC 購買節點(鏈上 Edition Drop)。只持有 USDT@BSC 也可一鍵跨鏈支付,系統自動兌成 USDC 後完成鑄造。",
+    "seatsLeft": "席位剩餘",
+    "loadingCfg": "讀取鏈上餘量…",
+    "occupancy": "席位佔用",
+    "connectFirst": "請先連接錢包",
+    "soldOut": "已售罄",
+    "buy": "購買節點",
+    "toastDone": "購買成功",
+    "toastDoneDesc": "節點 NFT 已鑄造到你的錢包(Arbitrum)。",
+    "toastFail": "購買失敗",
+    "toastFailDesc": "交易未完成,請重試。"
   }
 }

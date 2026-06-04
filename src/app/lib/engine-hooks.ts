@@ -17,8 +17,10 @@ import {
   copySubscriptions,
   signals,
   hyperliquid,
+  node,
   packs,
   type HlNetwork,
+  type NodeStatus,
   type PolymarketOrderInput,
 } from "@app/lib/engine";
 
@@ -43,6 +45,46 @@ export function useEngineUser(wallet: string | undefined) {
     },
     enabled: !!wallet,
     retry: false,
+  });
+}
+
+/**
+ * Node-gating status for a wallet (GET /v1/node/status). Drives the 开户 gate:
+ * a trading account can only be opened by a node holder.
+ *
+ * IMPORTANT — graceful fallback while the backend is still shipping: this hook
+ * is `retry:false` and callers must only BLOCK onboarding on an *explicit*
+ * `isNode:false`. When the request fails / 404s the query is in an error state
+ * (`data` undefined) → the gate treats that as "allow" so we never brick
+ * onboarding before node gating goes live.
+ */
+export function useNodeStatus(wallet: string | undefined) {
+  return useQuery<NodeStatus>({
+    queryKey: ["engine", "node-status", wallet?.toLowerCase()],
+    queryFn: () => node.status(wallet!),
+    enabled: !!wallet,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+/**
+ * Redeem a node authorization code (POST /v1/node/redeem-code). On a successful
+ * `{ ok:true }` we invalidate the wallet's node-status so the gate re-resolves
+ * and the normal open-account flow proceeds.
+ */
+export function useRedeemCode(wallet: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => {
+      if (!wallet) throw new Error("not_connected");
+      return node.redeemCode(wallet, code);
+    },
+    onSuccess: (res) => {
+      if (res?.ok) {
+        qc.invalidateQueries({ queryKey: ["engine", "node-status", wallet?.toLowerCase()] });
+      }
+    },
   });
 }
 
@@ -133,6 +175,9 @@ export function usePusdBalance(userId: string | undefined) {
     queryFn: () => funding.pusdBalance(userId!),
     enabled: !!userId,
     staleTime: 30_000,
+    // Background-poll like useHlAccount: bridged funds can land after the deposit
+    // dialog's ~3min invalidation window closes; this self-heals a stale balance.
+    refetchInterval: 30_000,
   });
 }
 

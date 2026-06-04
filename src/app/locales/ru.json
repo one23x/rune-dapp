@@ -1373,7 +1373,9 @@
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
     "totalTrades": "Trades",
-    "myNodesDesc": "Посмотреть уровень моей ноды и команду"
+    "myNodesDesc": "Посмотреть уровень моей ноды и команду",
+    "nodesPageTitle": "Мои ноды",
+    "nodesPageSubtitle": "Преимущества ноды · Награды за прямых рефералов · Ончейн в реальном времени"
   },
   "market": {
     "marketAnalysis": "Анализ Рынка",
@@ -2378,5 +2380,20 @@
     "payHint": "Оплата в USDC · {{chain}}",
     "redeemDesc": "Уже есть код? Введите его, чтобы активировать доступ к ноде.",
     "redeemTitle": "Активировать код авторизации"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Покупка ноды Arbitrum",
+    "subtitle": "Покупайте ноды в Arbitrum One за USDC (ончейн Edition Drop). Есть только USDT в BSC? Оплата в один клик — автоматически меняется на USDC и минтится для вас.",
+    "seatsLeft": "мест осталось",
+    "loadingCfg": "Чтение ончейн-предложения…",
+    "occupancy": "Занятость",
+    "connectFirst": "Сначала подключите кошелёк",
+    "soldOut": "Распродано",
+    "buy": "Купить ноду",
+    "toastDone": "Покупка завершена",
+    "toastDoneDesc": "Ваш NFT ноды отчеканен в ваш кошелёк (Arbitrum).",
+    "toastFail": "Покупка не удалась",
+    "toastFailDesc": "Транзакция не завершена. Повторите попытку."
   }
 }

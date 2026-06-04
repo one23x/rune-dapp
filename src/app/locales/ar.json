@@ -1373,7 +1373,9 @@
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
     "totalTrades": "Trades",
-    "myNodesDesc": "عرض مستوى عقدتي وفريقي"
+    "myNodesDesc": "عرض مستوى عقدتي وفريقي",
+    "nodesPageTitle": "عُقدي",
+    "nodesPageSubtitle": "مزايا العقدة · مكافآت الإحالة المباشرة · على السلسلة فوريًا"
   },
   "market": {
     "marketAnalysis": "تحليل السوق",
@@ -2378,5 +2380,20 @@
     "payHint": "الدفع بـ USDC · {{chain}}",
     "redeemDesc": "لديك رمز بالفعل؟ أدخله لتفعيل وصول العقدة.",
     "redeemTitle": "استبدال رمز التفويض"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "شراء عقدة Arbitrum",
+    "subtitle": "اشترِ العقد على Arbitrum One بعملة USDC (Edition Drop على السلسلة). تملك USDT على BSC فقط؟ يمكنك الدفع بنقرة — يُحوّل تلقائيًا إلى USDC ويُسكّ لك.",
+    "seatsLeft": "المقاعد المتبقية",
+    "loadingCfg": "قراءة المعروض على السلسلة…",
+    "occupancy": "الإشغال",
+    "connectFirst": "اربط محفظتك أولاً",
+    "soldOut": "نفدت الكمية",
+    "buy": "شراء عقدة",
+    "toastDone": "اكتمل الشراء",
+    "toastDoneDesc": "تم سكّ NFT العقدة في محفظتك (Arbitrum).",
+    "toastFail": "فشل الشراء",
+    "toastFailDesc": "لم تكتمل المعاملة. حاول مرة أخرى."
   }
 }

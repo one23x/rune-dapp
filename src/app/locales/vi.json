@@ -1373,7 +1373,9 @@
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
     "totalTrades": "Trades",
-    "myNodesDesc": "Xem cấp node và đội nhóm của tôi"
+    "myNodesDesc": "Xem cấp node và đội nhóm của tôi",
+    "nodesPageTitle": "Nút của tôi",
+    "nodesPageSubtitle": "Quyền lợi nút · Thưởng giới thiệu trực tiếp · On-chain thời gian thực"
   },
   "market": {
     "marketAnalysis": "Phân tích thị trường",
@@ -2378,5 +2380,20 @@
     "payHint": "Thanh toán bằng USDC · {{chain}}",
     "redeemDesc": "Đã có mã? Nhập để kích hoạt quyền truy cập node.",
     "redeemTitle": "Đổi mã uỷ quyền"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Mua nút Arbitrum",
+    "subtitle": "Mua nút trên Arbitrum One bằng USDC (Edition Drop on-chain). Chỉ có USDT trên BSC? Vẫn thanh toán một chạm — tự động hoán đổi sang USDC và đúc cho bạn.",
+    "seatsLeft": "chỗ còn lại",
+    "loadingCfg": "Đang đọc nguồn cung on-chain…",
+    "occupancy": "Mức lấp đầy",
+    "connectFirst": "Hãy kết nối ví trước",
+    "soldOut": "Đã bán hết",
+    "buy": "Mua nút",
+    "toastDone": "Mua thành công",
+    "toastDoneDesc": "NFT nút đã được đúc vào ví của bạn (Arbitrum).",
+    "toastFail": "Mua thất bại",
+    "toastFailDesc": "Giao dịch chưa hoàn tất. Vui lòng thử lại."
   }
 }

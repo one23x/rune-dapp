@@ -65,6 +65,16 @@ const STRATEGIES: StrategyDef[] = [
   },
 ];
 
+// Frontend strategy keys → backend risk-preset keys. The backend onboard-preset
+// route only accepts conservative|steady|aggressive (risk-presets.ts ALL_PRESET_KEYS);
+// the UI's "balanced" maps to backend "steady" (same 0.05 notionalRatio). Sending a
+// raw "balanced" was the cause of the copy-trade 400 invalid_body.
+const BACKEND_PRESET: Record<StrategyDef["key"], string> = {
+  conservative: "conservative",
+  balanced: "steady",
+  aggressive: "aggressive",
+};
+
 function deriveActiveStrategy(subs: any[]): StrategyDef["key"] | null {
   for (const s of subs) {
     const status = String(s?.status ?? "active").toLowerCase();
@@ -128,14 +138,17 @@ function AutoCopyInner({ userId }: { userId: string }) {
   const activate = useMutation({
     mutationFn: async (key: StrategyDef["key"]) => {
       const strat = STRATEGIES.find((t) => t.key === key)!;
+      const backendKey = BACKEND_PRESET[strat.key];
+      // Prefer the exact id the engine advertises for this preset, else the mapped
+      // backend key — never the raw UI key (which the backend enum rejects → 400).
       const match = enginePresets.find((p: any) => {
         const id = String(p?.id ?? p?.key ?? p?.preset ?? p?.name ?? "").toLowerCase();
-        return id.includes(strat.key);
+        return id === backendKey || id.includes(backendKey);
       });
-      const presetId = String((match as any)?.id ?? (match as any)?.key ?? strat.key);
+      const presetId = String((match as any)?.id ?? (match as any)?.key ?? backendKey);
       const body = {
         preset: presetId,
-        riskPreset: strat.key,
+        riskPreset: backendKey,
         notionalRatio: strat.notionalRatio,
         notionalCapUsd: strat.notionalCapUsd,
         autoExecute: autoCopy,

@@ -203,7 +203,24 @@ export interface HlAccount {
   realizedPnl: number;
   /** 当日盈亏 — today's realized closedPnl since UTC day-start (optional; backend buildAccount). */
   todayPnl?: number;
+  /** 当前占用保证金(totalMarginUsed)。展示"保证金占用",避免净值被仓位占用被误读为亏损。 */
+  marginUsed?: number;
   positions: HlPosition[];
+  /** 本账户真实成交历史(最近 50 条,该 follower 地址的 HL fills;开/平仓都含)。 */
+  recentFills?: HlFillRow[];
+}
+
+/** 一条真实成交(来自 /v1/hl/account 的 recentFills)。 */
+export interface HlFillRow {
+  coin: string;
+  dir: string;            // "Open Long" / "Close Short" 等
+  side: string;           // "BUY" | "SELL"
+  sz: number;
+  px: number;
+  closedPnl: number;
+  isClose: boolean;
+  time: number;           // ms epoch
+  hash: string | null;
 }
 
 /** One HL copy subscription row (+ mirrored positions) from GET /v1/users/:id/hl/subscriptions. */
@@ -349,6 +366,43 @@ export interface HlCopyDecision {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// node gating — Bearer. A trading account can only be opened by a NODE holder.
+//   GET  /v1/node/status?wallet=0x..   → NodeStatus
+//   POST /v1/node/redeem-code { wallet, code } → RedeemCodeResult
+// The backend is still being built; callers FALL BACK to allowing onboarding
+// when the status call fails / 404s (only an explicit isNode:false blocks).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Per-level trading limits the engine enforces for a node (L1–L5). */
+export interface NodeLimits {
+  perTradeUsd: number;
+  dailyUsd: number;
+  maxTradesPerDay: number;
+  maxLeverage: number;
+}
+
+export interface NodeStatus {
+  isNode: boolean;
+  /** 0 = not a node; 1–5 = node tier. */
+  level: number;
+  limits: NodeLimits | null;
+}
+
+export interface RedeemCodeResult {
+  ok: boolean;
+  level?: number;
+  error?: string;
+}
+
+export const node = {
+  /** Node gating status for a wallet (level + per-tier limits). */
+  status: (wallet: string) => get<NodeStatus>(`v1/node/status${qs({ wallet })}`),
+  /** Redeem an authorization code → grants / raises node level. */
+  redeemCode: (wallet: string, code: string) =>
+    post<RedeemCodeResult>("v1/node/redeem-code", { wallet, code }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // strategies (Trigger-AST) — Bearer
 // ─────────────────────────────────────────────────────────────────────────────
 export const strategies = {
@@ -466,6 +520,7 @@ export default {
   funding,
   trading,
   hyperliquid,
+  node,
   strategies,
   copySubscriptions,
   signals,

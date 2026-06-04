@@ -1437,7 +1437,9 @@
     "copySubs": "follows",
     "realizedPnl": "Realized PnL",
     "winRate": "Win Rate",
-    "totalTrades": "Trades"
+    "totalTrades": "Trades",
+    "nodesPageTitle": "マイノード",
+    "nodesPageSubtitle": "ノード特典 · 直接紹介報酬 · リアルタイムオンチェーン"
   },
   "market": {
     "marketAnalysis": "市場分析",
@@ -2378,5 +2380,20 @@
     "payHint": "USDC で支払う · {{chain}}",
     "redeemDesc": "コードをお持ちですか？入力してノードアクセスを有効化します。",
     "redeemTitle": "認証コードを引き換える"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum ノード購入",
+    "subtitle": "Arbitrum One 上で USDC でノードを購入(オンチェーン Edition Drop)。BSC の USDT だけでもワンクリックで支払い可能 — 自動で USDC にスワップしてミントします。",
+    "seatsLeft": "残り枠",
+    "loadingCfg": "オンチェーン在庫を読み込み中…",
+    "occupancy": "占有率",
+    "connectFirst": "先にウォレットを接続してください",
+    "soldOut": "完売",
+    "buy": "ノードを購入",
+    "toastDone": "購入完了",
+    "toastDoneDesc": "ノード NFT がウォレット(Arbitrum)にミントされました。",
+    "toastFail": "購入失敗",
+    "toastFailDesc": "取引が完了しませんでした。再試行してください。"
   }
 }
