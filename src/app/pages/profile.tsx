@@ -418,7 +418,7 @@ export default function ProfilePage() {
                       <span className="text-amber-300 font-semibold">{stats.directCount}</span>
                       <span className="text-white/40"> {t("profile.direct", "direct")} · </span>
                       <span className="text-amber-300 font-semibold">{stats.totalDownstreamCount}</span>
-                      <span className="text-white/40"> {t("profile.team", "team")}</span>
+                      <span className="text-white/40"> {t("profile.teamRate", "team")}</span>
                     </>
                   ) : "—"}
                 </div>

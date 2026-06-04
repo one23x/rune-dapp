@@ -213,7 +213,14 @@
     "preparingAccount": "جارٍ تجهيز حساب التداول…",
     "realBetUnavailable": "هذا السوق لا يدعم الأوامر الحقيقية بعد",
     "sampleData": "بيانات تجريبية / Sample",
-    "sortBy": "ترتيب الأسواق"
+    "sortBy": "ترتيب الأسواق",
+    "heroTitle1": "دع الذكاء الاصطناعي",
+    "heroTitle2": "تداول أسواق التنبؤ بذكاء",
+    "heroSubtitle": "يحلّل محرك One-Agents كبار المتداولين فوريًا وينفّذ مراكز YES / NO تلقائيًا",
+    "heroStatFollowers": "المتابعون",
+    "heroStatWinRate": "معدل الفوز",
+    "heroStatMonthly": "شهري",
+    "heroCta": "ابدأ التداول الذكي"
   },
   "vault": {
     "title": "الخزنة",

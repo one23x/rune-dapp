@@ -213,7 +213,14 @@
     "preparingAccount": "거래 계정을 준비하는 중…",
     "realBetUnavailable": "이 마켓은 아직 실제 주문을 지원하지 않습니다",
     "sampleData": "샘플 데이터 / 샘플",
-    "sortBy": "마켓 정렬"
+    "sortBy": "마켓 정렬",
+    "heroTitle1": "AI에게 맡겨",
+    "heroTitle2": "예측 시장을 스마트하게 거래",
+    "heroSubtitle": "One-Agents 엔진이 톱 트레이더 전략을 실시간 분석하고 YES / NO 포지션을 자동 실행",
+    "heroStatFollowers": "팔로워",
+    "heroStatWinRate": "승률",
+    "heroStatMonthly": "월 수익",
+    "heroCta": "스마트 트레이딩 시작"
   },
   "vault": {
     "title": "볼트",

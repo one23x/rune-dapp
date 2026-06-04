@@ -213,7 +213,14 @@
     "preparingAccount": "Đang chuẩn bị tài khoản giao dịch…",
     "realBetUnavailable": "Thị trường này chưa hỗ trợ đặt lệnh thật",
     "sampleData": "Dữ liệu mẫu / Mẫu",
-    "sortBy": "Sắp xếp thị trường"
+    "sortBy": "Sắp xếp thị trường",
+    "heroTitle1": "Để AI",
+    "heroTitle2": "giao dịch thị trường dự đoán thông minh",
+    "heroSubtitle": "Công cụ One-Agents phân tích các trader hàng đầu theo thời gian thực và tự động thực thi vị thế YES / NO",
+    "heroStatFollowers": "Người theo dõi",
+    "heroStatWinRate": "Tỷ lệ thắng",
+    "heroStatMonthly": "Hàng tháng",
+    "heroCta": "Vào giao dịch thông minh"
   },
   "vault": {
     "title": "Kho bạc",

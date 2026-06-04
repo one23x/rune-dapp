@@ -213,7 +213,14 @@
     "preparingAccount": "正在准備交易帳戶…",
     "realBetUnavailable": "該市場暫不支持真實下單",
     "sampleData": "示例數據 / Sample",
-    "sortBy": "市場排序"
+    "sortBy": "市場排序",
+    "heroTitle1": "讓 AI 幫你",
+    "heroTitle2": "智能交易預測市場",
+    "heroSubtitle": "One-Agents 引擎即時分析頂級交易員策略，自動執行 YES / NO 倉位",
+    "heroStatFollowers": "跟隨者",
+    "heroStatWinRate": "勝率",
+    "heroStatMonthly": "月收益",
+    "heroCta": "進入智能交易"
   },
   "vault": {
     "title": "金庫",

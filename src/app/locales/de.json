@@ -213,7 +213,14 @@
     "preparingAccount": "Handelskonto wird vorbereitet…",
     "realBetUnavailable": "Dieser Markt unterstützt noch keine echten Orders",
     "sampleData": "Beispieldaten / Sample",
-    "sortBy": "Märkte sortieren"
+    "sortBy": "Märkte sortieren",
+    "heroTitle1": "Lass die KI",
+    "heroTitle2": "Prognosemärkte intelligent handeln",
+    "heroSubtitle": "Die One-Agents-Engine analysiert Top-Trader in Echtzeit und führt YES / NO-Positionen automatisch aus",
+    "heroStatFollowers": "Follower",
+    "heroStatWinRate": "Gewinnrate",
+    "heroStatMonthly": "Monatlich",
+    "heroCta": "Smart Trading starten"
   },
   "vault": {
     "title": "Tresor",

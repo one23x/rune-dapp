@@ -213,7 +213,14 @@
     "preparingAccount": "Preparando la cuenta de trading…",
     "realBetUnavailable": "Este mercado aún no admite órdenes reales",
     "sampleData": "Datos de muestra / Sample",
-    "sortBy": "Ordenar mercados"
+    "sortBy": "Ordenar mercados",
+    "heroTitle1": "Deja que la IA",
+    "heroTitle2": "operar mercados de predicción de forma inteligente",
+    "heroSubtitle": "El motor One-Agents analiza a los mejores traders en tiempo real y ejecuta posiciones YES / NO automáticamente",
+    "heroStatFollowers": "Seguidores",
+    "heroStatWinRate": "Tasa de acierto",
+    "heroStatMonthly": "Mensual",
+    "heroCta": "Entrar a trading inteligente"
   },
   "vault": {
     "title": "Bóveda",

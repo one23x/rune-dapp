@@ -213,7 +213,14 @@
     "preparingAccount": "Préparation du compte de trading…",
     "realBetUnavailable": "Ce marché ne prend pas encore en charge les ordres réels",
     "sampleData": "Données d’exemple / Sample",
-    "sortBy": "Trier les marchés"
+    "sortBy": "Trier les marchés",
+    "heroTitle1": "Laissez l'IA",
+    "heroTitle2": "trader les marchés de prédiction intelligemment",
+    "heroSubtitle": "Le moteur One-Agents analyse les meilleurs traders en temps réel et exécute automatiquement les positions YES / NO",
+    "heroStatFollowers": "Abonnés",
+    "heroStatWinRate": "Taux de réussite",
+    "heroStatMonthly": "Mensuel",
+    "heroCta": "Accéder au trading intelligent"
   },
   "vault": {
     "title": "Coffre",

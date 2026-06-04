@@ -1029,13 +1029,13 @@ export default function Trade() {
 
             {/* Headline */}
             <h2 className="text-[22px] font-bold text-white leading-tight tracking-tight mb-1">
-              让 AI 帮你<br />
+              {t("trade.heroTitle1", "让 AI 帮你")}<br />
               <span className="bg-gradient-to-r from-[#f59e0b] via-amber-300 to-[#f59e0b] bg-clip-text text-transparent">
-                智能交易预测市场
+                {t("trade.heroTitle2", "智能交易预测市场")}
               </span>
             </h2>
             <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-              One-Agents 引擎实时分析顶级交易员策略，自动执行 YES / NO 仓位
+              {t("trade.heroSubtitle", "One-Agents 引擎实时分析顶级交易员策略，自动执行 YES / NO 仓位")}
             </p>
 
             {/* Stats row — illustrative figures only. These are not derived from
@@ -1046,21 +1046,21 @@ export default function Trade() {
                 <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
                   <div className="flex items-center gap-1 mb-1">
                     <Users size={10} className="text-zinc-500" />
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">跟随者</span>
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">{t("trade.heroStatFollowers","跟随者")}</span>
                   </div>
                   <p className="text-sm font-bold text-white/70">2,847</p>
                 </div>
                 <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
                   <div className="flex items-center gap-1 mb-1">
                     <BarChart2 size={10} className="text-zinc-500" />
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">胜率</span>
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">{t("trade.heroStatWinRate","胜率")}</span>
                   </div>
                   <p className="text-sm font-bold text-[#10b981]/70">68.4%</p>
                 </div>
                 <div className="bg-black/20 rounded-xl p-2.5 border border-white/5">
                   <div className="flex items-center gap-1 mb-1">
                     <TrendingUp size={10} className="text-zinc-500" />
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">月收益</span>
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-wide">{t("trade.heroStatMonthly","月收益")}</span>
                   </div>
                   <p className="text-sm font-bold text-[#f59e0b]/70">+24.1%</p>
                 </div>
@@ -1076,7 +1076,7 @@ export default function Trade() {
                 style={{ boxShadow: "0 4px 20px rgba(245,158,11,0.35)" }}>
                 <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
                 <Zap size={15} strokeWidth={2.5} className="relative z-10" />
-                <span className="relative z-10">进入智能交易</span>
+                <span className="relative z-10">{t("trade.heroCta","进入智能交易")}</span>
                 <ChevronRight size={15} strokeWidth={2.5} className="relative z-10 ml-0.5" />
               </button>
             </Link>

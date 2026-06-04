@@ -213,7 +213,14 @@
     "preparingAccount": "取引アカウントを準備しています…",
     "realBetUnavailable": "このマーケットはまだ実注文に対応していません",
     "sampleData": "サンプルデータ / サンプル",
-    "sortBy": "マーケットを並べ替え"
+    "sortBy": "マーケットを並べ替え",
+    "heroTitle1": "AI に任せて",
+    "heroTitle2": "予測市場をスマートに取引",
+    "heroSubtitle": "One-Agents エンジンがトップトレーダーの戦略をリアルタイム分析し、YES / NO ポジションを自動執行",
+    "heroStatFollowers": "フォロワー",
+    "heroStatWinRate": "勝率",
+    "heroStatMonthly": "月間収益",
+    "heroCta": "スマート取引を始める"
   },
   "vault": {
     "title": "ボールト",

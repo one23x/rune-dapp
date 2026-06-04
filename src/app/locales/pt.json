@@ -213,7 +213,14 @@
     "preparingAccount": "Preparando conta de negociação…",
     "realBetUnavailable": "Este mercado ainda não suporta ordens reais",
     "sampleData": "Dados de amostra / Amostra",
-    "sortBy": "Ordenar mercados"
+    "sortBy": "Ordenar mercados",
+    "heroTitle1": "Deixe a IA",
+    "heroTitle2": "negociar mercados de previsão de forma inteligente",
+    "heroSubtitle": "O motor One-Agents analisa os melhores traders em tempo real e executa posições YES / NO automaticamente",
+    "heroStatFollowers": "Seguidores",
+    "heroStatWinRate": "Taxa de acerto",
+    "heroStatMonthly": "Mensal",
+    "heroCta": "Entrar no trading inteligente"
   },
   "vault": {
     "title": "Cofre",

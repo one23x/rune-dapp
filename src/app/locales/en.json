@@ -213,7 +213,14 @@
     "preparingAccount": "Preparing trading account…",
     "realBetUnavailable": "This market does not support real orders yet",
     "sampleData": "Sample data / Sample",
-    "sortBy": "Sort markets"
+    "sortBy": "Sort markets",
+    "heroTitle1": "Let AI",
+    "heroTitle2": "trade prediction markets smartly",
+    "heroSubtitle": "The One-Agents engine analyzes top traders in real time and auto-executes YES / NO positions",
+    "heroStatFollowers": "Followers",
+    "heroStatWinRate": "Win rate",
+    "heroStatMonthly": "Monthly",
+    "heroCta": "Enter Smart Trading"
   },
   "vault": {
     "title": "Vault",
