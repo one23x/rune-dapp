@@ -81,5 +81,5 @@ export const ARB_NODE_TIERS: readonly ArbNodeTier[] = [
   { tokenId: 2n, tier: 301, level: "advanced", nameCn: "符印", nameEn: "ADVANCED", color: "text-green-400",  rgb: "52, 211, 153",  priceUsdc:  5000, maxSupply:  400, perWallet: 1 },
   { tokenId: 3n, tier: 401, level: "mid",      nameCn: "符源", nameEn: "MID",      color: "text-blue-400",   rgb: "96, 165, 250",  priceUsdc:  2500, maxSupply:  800, perWallet: 1 },
   { tokenId: 4n, tier: 501, level: "initial",  nameCn: "符胚", nameEn: "INITIAL",  color: "text-slate-300",  rgb: "203, 213, 225", priceUsdc:  1000, maxSupply: 1000, perWallet: 1 },
-  { tokenId: 5n, tier: 601, level: "trial",    nameCn: "体验符", nameEn: "TRIAL",  color: "text-zinc-400",   rgb: "161, 161, 170", priceUsdc:     1, maxSupply: 5000, perWallet: 1 },
+  { tokenId: 5n, tier: 601, level: "entry",    nameCn: "符引", nameEn: "ENTRY",    color: "text-zinc-400",   rgb: "161, 161, 170", priceUsdc:    10, maxSupply: 5000, perWallet: 1 },
 ] as const;
