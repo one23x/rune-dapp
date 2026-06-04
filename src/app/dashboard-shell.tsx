@@ -22,6 +22,7 @@ const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
 const CopyTradingSignals   = lazy(() => import("@app/pages/copy-trading-signals"));
 const CopyTradingHistory   = lazy(() => import("@app/pages/copy-trading-history"));
 const Profile         = lazy(() => import("@app/pages/profile"));
+const Nodes           = lazy(() => import("@app/pages/nodes"));
 const ProfileReferral = lazy(() => import("@app/pages/profile-referral"));
 const ProfileCommission = lazy(() => import("@app/pages/profile-commission"));
 const ProfileVault    = lazy(() => import("@app/pages/profile-vault"));
@@ -29,6 +30,7 @@ const ProfileSettings = lazy(() => import("@app/pages/profile-settings"));
 const ProfileTransactions = lazy(() => import("@app/pages/profile-transactions"));
 const ProfileNotifications = lazy(() => import("@app/pages/profile-notifications"));
 const ProfileSwap = lazy(() => import("@app/pages/profile-swap"));
+const AdminFunds = lazy(() => import("@app/pages/admin-funds"));
 
 /**
  * AnimatedRuneLogo — same animated halo + dual rotating arcs as mainnet's
@@ -252,6 +254,7 @@ function DashboardRoutes() {
         <Route path="/copy-trading/positions">{() => <Redirect to="/copy-trading" />}</Route>
         <Route path="/copy-trading/funds">{() => <Redirect to="/copy-trading" />}</Route>
         <Route path="/copy-trading/earnings">{() => <Redirect to="/copy-trading/history" />}</Route>
+        <Route path="/nodes" component={Nodes} />
         <Route path="/profile" component={Profile} />
         <Route path="/profile/referral" component={ProfileReferral} />
         <Route path="/profile/commission" component={ProfileCommission} />
@@ -260,6 +263,7 @@ function DashboardRoutes() {
         <Route path="/profile/transactions" component={ProfileTransactions} />
         <Route path="/profile/notifications" component={ProfileNotifications} />
         <Route path="/profile/swap" component={ProfileSwap} />
+        <Route path="/admin/funds" component={AdminFunds} />
       </Switch>
     </Suspense>
   );

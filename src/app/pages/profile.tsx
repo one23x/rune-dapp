@@ -23,6 +23,7 @@ import { Activity, Layers } from "lucide-react";
 // it again here would just duplicate. Re-add only if the prominent CTA
 // is removed.
 const MENU_ITEMS = [
+  { labelKey: "profile.myNodes",           icon: Layers,         path: "/nodes",                descKey: "profile.myNodesDesc" },
   { labelKey: "profile.myVaultPositions",  icon: Vault,          path: "/profile/vault",        descKey: "profile.myVaultPositionsDesc" },
   { labelKey: "profile.swap",              icon: ArrowLeftRight, path: "/profile/swap",         descKey: "profile.swapDesc" },
   { labelKey: "profile.notifications",     icon: Bell,           path: "/profile/notifications", descKey: "profile.notificationsDesc" },
