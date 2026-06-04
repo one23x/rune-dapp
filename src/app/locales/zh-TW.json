@@ -222,7 +222,11 @@
     "heroStatFollowers": "跟隨者",
     "heroStatWinRate": "勝率",
     "heroStatMonthly": "月收益",
-    "heroCta": "進入智能交易"
+    "heroCta": "進入智能交易",
+    "checkingAccount": "正在檢查交易帳戶…",
+    "noAccountTitle": "您還未開通交易帳戶",
+    "noAccountDesc": "下單前需先開通交易帳戶(需持有節點或輸入授權碼)。開通後即可連接 Polymarket 按真實價位下單與平倉。",
+    "goOpenAccount": "去開通交易帳戶"
   },
   "vault": {
     "title": "金庫",
@@ -2152,7 +2156,18 @@
     "alreadyFollowing": "已在跟單",
     "vaultNotFound": "未找到金庫",
     "vaultNotFoundDesc": "該金庫不存在或不在當前網絡。",
-    "deposit": "充值",
+    "deposit": {
+      "titleNonCustodial": "Hyperliquid 充值(非託管)",
+      "accountLabel": "你的 HL 帳戶(= 你連接的錢包)",
+      "accountTag": "HL 帳戶",
+      "connectFirst": "請先連接錢包",
+      "step1": "在 Arbitrum One 上準備 USDC(從交易所提幣到 Arbitrum,或用橋/支付服務跨鏈到你自己錢包)。",
+      "step2": "從你的錢包把 USDC 轉給 HL Bridge2 合約(下方地址)。HL 會把發送地址(= 你的錢包)記為 HL 永續帳戶。",
+      "step3": "約 <1 分鐘到帳(最低 5 USDC,低於會被拒)。到帳後即可開始跟單。",
+      "note": "這筆轉帳由你自己錢包發出、付一點 Arbitrum ETH 當 gas(幾分錢,和在任何地方充 HL 一樣)。非託管:資金始終在你自己的 HL 帳戶裡,平台只代下單、無法提現你的資金。",
+      "testnetTitle": "Hyperliquid 測試網充值",
+      "testnetDesc": "測試網請用官方入金口領取/充入測試 USDC:"
+    },
     "withdraw": "提現",
     "depositTitle": "充值到 HL 交易帳戶",
     "depositDesc": "把 USDC 充值到你的託管交易帳戶",

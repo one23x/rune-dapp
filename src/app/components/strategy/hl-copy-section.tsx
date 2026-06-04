@@ -59,6 +59,7 @@ import {
   type HlFollowConfig,
 } from "@app/components/hl/shared";
 import { useOnboardFlow, DepositBuyPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
+import { HlDepositGuide } from "@app/components/hl/hl-deposit-guide";
 
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
@@ -246,6 +247,9 @@ function HlFunding({
           </DialogHeader>
 
           <div className="space-y-3 mt-1">
+            {/* 非托管 agent 模式:展示「直充 Bridge2」完整引导(你钱包=HL账户 → 发 USDC 到 Bridge2)。
+                下方 DepositBuyPanel 仍可帮你先把 USDC 买/桥到自己钱包(第 1 步),再按引导发去 Bridge2。 */}
+            {agentMode && <HlDepositGuide network={network} />}
             {/* GAS 门禁(仅托管主网):读托管 EOA 的 Arbitrum ETH 余额。
                 - 加载中 → 中性 spinner,不提前阻断;
                 - 不足(< MIN_GAS_WEI) → 红色阻断卡,隐藏所有充值路径(买币 + 转账),

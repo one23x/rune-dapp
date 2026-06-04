@@ -222,7 +222,11 @@
     "heroStatFollowers": "Follower",
     "heroStatWinRate": "Gewinnrate",
     "heroStatMonthly": "Monatlich",
-    "heroCta": "Smart Trading starten"
+    "heroCta": "Smart Trading starten",
+    "checkingAccount": "Handelskonto wird geprüft…",
+    "noAccountTitle": "Sie haben noch kein Handelskonto eröffnet",
+    "noAccountDesc": "Vor dem Platzieren von Orders müssen Sie ein Handelskonto eröffnen (erfordert eine Node oder einen Auth-Code). Danach können Sie auf Polymarket zu Echtpreisen handeln und Positionen schließen.",
+    "goOpenAccount": "Handelskonto eröffnen"
   },
   "vault": {
     "title": "Tresor",
@@ -2109,7 +2113,18 @@
     "alreadyFollowing": "Folgen Sie bereits",
     "vaultNotFound": "Vault nicht gefunden",
     "vaultNotFoundDesc": "Dieser Vault existiert nicht oder befindet sich nicht im aktuellen Netzwerk.",
-    "deposit": "Einzahlen",
+    "deposit": {
+      "titleNonCustodial": "Einzahlung bei Hyperliquid (nicht verwahrt)",
+      "accountLabel": "Dein HL-Konto (= deine verbundene Wallet)",
+      "accountTag": "HL-Konto",
+      "connectFirst": "Bitte zuerst die Wallet verbinden",
+      "step1": "Besorge USDC auf Arbitrum One (von einer Börse nach Arbitrum abheben oder per Bridge/On-Ramp in deine eigene Wallet).",
+      "step2": "Sende USDC von deiner Wallet an den HL-Bridge2-Vertrag (Adresse unten). HL erfasst die Absenderadresse (= deine Wallet) als dein Perps-Konto.",
+      "step3": "Ankunft in unter ~1 Minute (mindestens 5 USDC, weniger wird abgelehnt). Sobald es eingegangen ist, kannst du mit dem Copy-Trading beginnen.",
+      "note": "Diese Überweisung erfolgt von deiner eigenen Wallet und kostet etwas Arbitrum-ETH als Gas (ein paar Cent, wie bei jeder HL-Einzahlung). Nicht verwahrt: Die Gelder bleiben immer auf deinem eigenen HL-Konto — die Plattform platziert nur Orders und kann deine Gelder nicht abheben.",
+      "testnetTitle": "Hyperliquid-Testnet-Einzahlung",
+      "testnetDesc": "Verwende im Testnet den offiziellen Faucet, um Test-USDC zu erhalten/einzuzahlen:"
+    },
     "withdraw": "Auszahlen",
     "depositTitle": "Auf das HL-Handelskonto einzahlen",
     "depositDesc": "Zahlen Sie USDC auf Ihr verwahrtes Handelskonto ein",

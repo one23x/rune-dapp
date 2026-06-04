@@ -222,7 +222,11 @@
     "heroStatFollowers": "Abonnés",
     "heroStatWinRate": "Taux de réussite",
     "heroStatMonthly": "Mensuel",
-    "heroCta": "Accéder au trading intelligent"
+    "heroCta": "Accéder au trading intelligent",
+    "checkingAccount": "Vérification du compte de trading…",
+    "noAccountTitle": "Vous n'avez pas ouvert de compte de trading",
+    "noAccountDesc": "Vous devez ouvrir un compte de trading avant de passer des ordres (nécessite un nœud ou un code d'autorisation). Une fois ouvert, vous pourrez passer des ordres au prix réel et clôturer des positions sur Polymarket.",
+    "goOpenAccount": "Ouvrir un compte de trading"
   },
   "vault": {
     "title": "Coffre",
@@ -2109,7 +2113,18 @@
     "alreadyFollowing": "Déjà suivi",
     "vaultNotFound": "Coffre introuvable",
     "vaultNotFoundDesc": "Ce coffre n'existe pas ou n'est pas sur le réseau actuel.",
-    "deposit": "Déposer",
+    "deposit": {
+      "titleNonCustodial": "Dépôt sur Hyperliquid (non dépositaire)",
+      "accountLabel": "Votre compte HL (= votre portefeuille connecté)",
+      "accountTag": "Compte HL",
+      "connectFirst": "Veuillez d'abord connecter votre portefeuille",
+      "step1": "Obtenez des USDC sur Arbitrum One (retirez depuis un exchange vers Arbitrum, ou utilisez un pont/on-ramp vers votre propre portefeuille).",
+      "step2": "Envoyez des USDC depuis votre portefeuille vers le contrat HL Bridge2 (adresse ci-dessous). HL enregistre l'adresse de l'expéditeur (= votre portefeuille) comme votre compte perpétuels.",
+      "step3": "Arrive en moins d'~1 minute (minimum 5 USDC ; en dessous, c'est rejeté). Une fois reçu, vous pouvez commencer le copy-trading.",
+      "note": "Ce transfert est envoyé depuis votre propre portefeuille et paie un peu d'ETH Arbitrum en gas (quelques centimes, comme tout dépôt sur HL). Non dépositaire : les fonds restent toujours sur votre propre compte HL — la plateforme passe seulement des ordres et ne peut pas retirer vos fonds.",
+      "testnetTitle": "Dépôt sur le testnet Hyperliquid",
+      "testnetDesc": "Sur le testnet, utilisez le faucet officiel pour obtenir/ajouter des USDC de test :"
+    },
     "withdraw": "Retirer",
     "depositTitle": "Déposer sur le compte de trading HL",
     "depositDesc": "Déposez des USDC sur votre compte de trading en conservation",

@@ -222,7 +222,11 @@
     "heroStatFollowers": "Người theo dõi",
     "heroStatWinRate": "Tỷ lệ thắng",
     "heroStatMonthly": "Hàng tháng",
-    "heroCta": "Vào giao dịch thông minh"
+    "heroCta": "Vào giao dịch thông minh",
+    "checkingAccount": "Đang kiểm tra tài khoản giao dịch…",
+    "noAccountTitle": "Bạn chưa mở tài khoản giao dịch",
+    "noAccountDesc": "Bạn cần mở tài khoản giao dịch trước khi đặt lệnh (cần node hoặc mã ủy quyền). Sau khi mở, bạn có thể đặt lệnh theo giá thực và đóng vị thế trên Polymarket.",
+    "goOpenAccount": "Mở tài khoản giao dịch"
   },
   "vault": {
     "title": "Kho bạc",
@@ -2109,7 +2113,18 @@
     "alreadyFollowing": "Đang sao chép",
     "vaultNotFound": "Không tìm thấy kho quỹ",
     "vaultNotFoundDesc": "Kho quỹ này không tồn tại hoặc không nằm trên mạng hiện tại.",
-    "deposit": "Nạp tiền",
+    "deposit": {
+      "titleNonCustodial": "Nạp vào Hyperliquid (không lưu ký)",
+      "accountLabel": "Tài khoản HL của bạn (= ví đang kết nối)",
+      "accountTag": "Tài khoản HL",
+      "connectFirst": "Vui lòng kết nối ví trước",
+      "step1": "Chuẩn bị USDC trên Arbitrum One (rút từ sàn về Arbitrum, hoặc dùng cầu nối/on-ramp về ví của bạn).",
+      "step2": "Gửi USDC từ ví của bạn đến hợp đồng HL Bridge2 (địa chỉ bên dưới). HL sẽ ghi nhận địa chỉ người gửi (= ví của bạn) làm tài khoản hợp đồng vĩnh cửu.",
+      "step3": "Đến trong khoảng <1 phút (tối thiểu 5 USDC, ít hơn sẽ bị từ chối). Sau khi nhận được, bạn có thể bắt đầu sao chép giao dịch.",
+      "note": "Giao dịch này được gửi từ chính ví của bạn và trả một ít ETH Arbitrum làm gas (vài xu, giống như nạp HL ở bất kỳ đâu). Không lưu ký: tiền luôn nằm trong tài khoản HL của riêng bạn — nền tảng chỉ đặt lệnh và không thể rút tiền của bạn.",
+      "testnetTitle": "Nạp testnet Hyperliquid",
+      "testnetDesc": "Trên testnet, hãy dùng faucet chính thức để nhận/nạp USDC thử nghiệm:"
+    },
     "withdraw": "Rút tiền",
     "depositTitle": "Nạp vào tài khoản giao dịch HL",
     "depositDesc": "Nạp USDC vào tài khoản giao dịch lưu ký của bạn",
