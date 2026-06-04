@@ -40,8 +40,18 @@ export function useEngineUser(wallet: string | undefined) {
     queryFn: async () => {
       const existing = await users.findOrNull(wallet!);
       if (existing) return existing;
-      const onboarded = (await users.onboard(wallet!)) as Record<string, unknown>;
-      return { ...onboarded, id: onboarded.id ?? onboarded.userId };
+      try {
+        const onboarded = (await users.onboard(wallet!)) as Record<string, unknown>;
+        return { ...onboarded, id: onboarded.id ?? onboarded.userId };
+      } catch (e) {
+        // 节点门控:非节点钱包 onboard 会被后端拒(403 node_required)。这不是"连接失败",
+        // 而是"还没开通(需要节点/授权码)"。返回 null → 调用方走 !userId 分支 →
+        // useNodeStatus 解析出 isNode:false → 显示 NodeGateCard(买节点/输入授权码),
+        // 而不是误报"连接引擎失败"。真正的网络/5xx 错误仍然抛出。
+        const msg = String((e as Error)?.message ?? e).toLowerCase();
+        if (msg.includes("node_required") || msg.includes("not a node")) return null;
+        throw e;
+      }
     },
     enabled: !!wallet,
     retry: false,
