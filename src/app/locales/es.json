@@ -2175,18 +2175,6 @@
     "alreadyFollowing": "Ya lo sigues",
     "vaultNotFound": "Bóveda no encontrada",
     "vaultNotFoundDesc": "Esta bóveda no existe o no está en la red actual.",
-    "deposit": {
-      "titleNonCustodial": "Depósito en Hyperliquid (sin custodia)",
-      "accountLabel": "Tu cuenta de HL (= tu billetera conectada)",
-      "accountTag": "Cuenta HL",
-      "connectFirst": "Primero conecta tu billetera",
-      "step1": "Consigue USDC en Arbitrum One (retira desde un exchange a Arbitrum, o usa un puente/on-ramp hacia tu propia billetera).",
-      "step2": "Envía USDC desde tu billetera al contrato HL Bridge2 (dirección abajo). HL registra la dirección remitente (= tu billetera) como tu cuenta de perpetuos.",
-      "step3": "Llega en aproximadamente <1 minuto (mínimo 5 USDC; menos se rechaza). Una vez que llegue, puedes empezar a copiar operaciones.",
-      "note": "Esta transferencia se envía desde tu propia billetera y paga un poco de ETH de Arbitrum como gas (unos centavos, igual que depositar en HL desde cualquier lugar). Sin custodia: los fondos siempre permanecen en tu propia cuenta de HL; la plataforma solo coloca órdenes y no puede retirar tus fondos.",
-      "testnetTitle": "Depósito en la testnet de Hyperliquid",
-      "testnetDesc": "En la testnet, usa el faucet oficial para obtener/añadir USDC de prueba:"
-    },
     "withdraw": "Retirar",
     "depositTitle": "Depositar en la cuenta de trading de HL",
     "depositDesc": "Deposita USDC en tu cuenta de trading custodiada",
@@ -2349,7 +2337,20 @@
     "statTodayRealized": "PnL realizado hoy",
     "noClosedToday": "Sin cierres hoy",
     "noClosedTodayDesc": "Aún no hay operaciones cerradas hoy; aparecerán aquí cuando cierres una posición.",
-    "viewOnChain": "Ver en cadena"
+    "viewOnChain": "Ver en cadena",
+    "depositGuide": {
+      "titleNonCustodial": "Depósito en Hyperliquid (sin custodia)",
+      "accountLabel": "Tu cuenta de HL (= tu billetera conectada)",
+      "accountTag": "Cuenta HL",
+      "connectFirst": "Primero conecta tu billetera",
+      "step1": "Consigue USDC en Arbitrum One (retira desde un exchange a Arbitrum, o usa un puente/on-ramp hacia tu propia billetera).",
+      "step2": "Envía USDC desde tu billetera al contrato HL Bridge2 (dirección abajo). HL registra la dirección remitente (= tu billetera) como tu cuenta de perpetuos.",
+      "step3": "Llega en aproximadamente <1 minuto (mínimo 5 USDC; menos se rechaza). Una vez que llegue, puedes empezar a copiar operaciones.",
+      "note": "Esta transferencia se envía desde tu propia billetera y paga un poco de ETH de Arbitrum como gas (unos centavos, igual que depositar en HL desde cualquier lugar). Sin custodia: los fondos siempre permanecen en tu propia cuenta de HL; la plataforma solo coloca órdenes y no puede retirar tus fondos.",
+      "testnetTitle": "Depósito en la testnet de Hyperliquid",
+      "testnetDesc": "En la testnet, usa el faucet oficial para obtener/añadir USDC de prueba:"
+    },
+    "deposit": "Depositar"
   },
   "pmLab": {
     "title": "Laboratorio de IA de Predicción",

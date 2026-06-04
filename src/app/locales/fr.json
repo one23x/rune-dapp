@@ -2141,18 +2141,6 @@
     "alreadyFollowing": "Déjà suivi",
     "vaultNotFound": "Coffre introuvable",
     "vaultNotFoundDesc": "Ce coffre n'existe pas ou n'est pas sur le réseau actuel.",
-    "deposit": {
-      "titleNonCustodial": "Dépôt sur Hyperliquid (non dépositaire)",
-      "accountLabel": "Votre compte HL (= votre portefeuille connecté)",
-      "accountTag": "Compte HL",
-      "connectFirst": "Veuillez d'abord connecter votre portefeuille",
-      "step1": "Obtenez des USDC sur Arbitrum One (retirez depuis un exchange vers Arbitrum, ou utilisez un pont/on-ramp vers votre propre portefeuille).",
-      "step2": "Envoyez des USDC depuis votre portefeuille vers le contrat HL Bridge2 (adresse ci-dessous). HL enregistre l'adresse de l'expéditeur (= votre portefeuille) comme votre compte perpétuels.",
-      "step3": "Arrive en moins d'~1 minute (minimum 5 USDC ; en dessous, c'est rejeté). Une fois reçu, vous pouvez commencer le copy-trading.",
-      "note": "Ce transfert est envoyé depuis votre propre portefeuille et paie un peu d'ETH Arbitrum en gas (quelques centimes, comme tout dépôt sur HL). Non dépositaire : les fonds restent toujours sur votre propre compte HL — la plateforme passe seulement des ordres et ne peut pas retirer vos fonds.",
-      "testnetTitle": "Dépôt sur le testnet Hyperliquid",
-      "testnetDesc": "Sur le testnet, utilisez le faucet officiel pour obtenir/ajouter des USDC de test :"
-    },
     "withdraw": "Retirer",
     "depositTitle": "Déposer sur le compte de trading HL",
     "depositDesc": "Déposez des USDC sur votre compte de trading en conservation",
@@ -2315,7 +2303,20 @@
     "statTodayRealized": "PnL réalisé du jour",
     "noClosedToday": "Aucune clôture aujourd'hui",
     "noClosedTodayDesc": "Aucune transaction clôturée aujourd'hui ; elles apparaîtront ici une fois que vous aurez clôturé une position.",
-    "viewOnChain": "Voir on-chain"
+    "viewOnChain": "Voir on-chain",
+    "depositGuide": {
+      "titleNonCustodial": "Dépôt sur Hyperliquid (non dépositaire)",
+      "accountLabel": "Votre compte HL (= votre portefeuille connecté)",
+      "accountTag": "Compte HL",
+      "connectFirst": "Veuillez d'abord connecter votre portefeuille",
+      "step1": "Obtenez des USDC sur Arbitrum One (retirez depuis un exchange vers Arbitrum, ou utilisez un pont/on-ramp vers votre propre portefeuille).",
+      "step2": "Envoyez des USDC depuis votre portefeuille vers le contrat HL Bridge2 (adresse ci-dessous). HL enregistre l'adresse de l'expéditeur (= votre portefeuille) comme votre compte perpétuels.",
+      "step3": "Arrive en moins d'~1 minute (minimum 5 USDC ; en dessous, c'est rejeté). Une fois reçu, vous pouvez commencer le copy-trading.",
+      "note": "Ce transfert est envoyé depuis votre propre portefeuille et paie un peu d'ETH Arbitrum en gas (quelques centimes, comme tout dépôt sur HL). Non dépositaire : les fonds restent toujours sur votre propre compte HL — la plateforme passe seulement des ordres et ne peut pas retirer vos fonds.",
+      "testnetTitle": "Dépôt sur le testnet Hyperliquid",
+      "testnetDesc": "Sur le testnet, utilisez le faucet officiel pour obtenir/ajouter des USDC de test :"
+    },
+    "deposit": "Déposer"
   },
   "profileVault": {
     "claimed": "Réclamé !",
