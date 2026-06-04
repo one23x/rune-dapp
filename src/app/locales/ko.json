@@ -222,7 +222,11 @@
     "heroStatFollowers": "팔로워",
     "heroStatWinRate": "승률",
     "heroStatMonthly": "월 수익",
-    "heroCta": "스마트 트레이딩 시작"
+    "heroCta": "스마트 트레이딩 시작",
+    "checkingAccount": "거래 계정 확인 중…",
+    "noAccountTitle": "거래 계정을 아직 개설하지 않았습니다",
+    "noAccountDesc": "주문 전에 거래 계정을 개설해야 합니다(노드 보유 또는 인증 코드 필요). 개설 후 Polymarket에서 실시간 가격으로 주문 및 청산이 가능합니다.",
+    "goOpenAccount": "거래 계정 개설하기"
   },
   "vault": {
     "title": "볼트",

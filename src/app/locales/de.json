@@ -222,7 +222,11 @@
     "heroStatFollowers": "Follower",
     "heroStatWinRate": "Gewinnrate",
     "heroStatMonthly": "Monatlich",
-    "heroCta": "Smart Trading starten"
+    "heroCta": "Smart Trading starten",
+    "checkingAccount": "Handelskonto wird geprüft…",
+    "noAccountTitle": "Sie haben noch kein Handelskonto eröffnet",
+    "noAccountDesc": "Vor dem Platzieren von Orders müssen Sie ein Handelskonto eröffnen (erfordert eine Node oder einen Auth-Code). Danach können Sie auf Polymarket zu Echtpreisen handeln und Positionen schließen.",
+    "goOpenAccount": "Handelskonto eröffnen"
   },
   "vault": {
     "title": "Tresor",

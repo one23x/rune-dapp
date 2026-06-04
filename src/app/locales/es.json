@@ -222,7 +222,11 @@
     "heroStatFollowers": "Seguidores",
     "heroStatWinRate": "Tasa de acierto",
     "heroStatMonthly": "Mensual",
-    "heroCta": "Entrar a trading inteligente"
+    "heroCta": "Entrar a trading inteligente",
+    "checkingAccount": "Comprobando la cuenta de trading…",
+    "noAccountTitle": "Aún no has abierto una cuenta de trading",
+    "noAccountDesc": "Debes abrir una cuenta de trading antes de operar (requiere un nodo o un código de autorización). Una vez abierta, podrás operar a precio real y cerrar posiciones en Polymarket.",
+    "goOpenAccount": "Abrir cuenta de trading"
   },
   "vault": {
     "title": "Bóveda",

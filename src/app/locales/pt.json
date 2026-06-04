@@ -222,7 +222,11 @@
     "heroStatFollowers": "Seguidores",
     "heroStatWinRate": "Taxa de acerto",
     "heroStatMonthly": "Mensal",
-    "heroCta": "Entrar no trading inteligente"
+    "heroCta": "Entrar no trading inteligente",
+    "checkingAccount": "Verificando a conta de trading…",
+    "noAccountTitle": "Você ainda não abriu uma conta de trading",
+    "noAccountDesc": "Você precisa abrir uma conta de trading antes de operar (requer um node ou um código de autorização). Depois de aberta, poderá operar a preço real e encerrar posições na Polymarket.",
+    "goOpenAccount": "Abrir conta de trading"
   },
   "vault": {
     "title": "Cofre",

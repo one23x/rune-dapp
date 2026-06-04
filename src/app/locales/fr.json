@@ -222,7 +222,11 @@
     "heroStatFollowers": "Abonnés",
     "heroStatWinRate": "Taux de réussite",
     "heroStatMonthly": "Mensuel",
-    "heroCta": "Accéder au trading intelligent"
+    "heroCta": "Accéder au trading intelligent",
+    "checkingAccount": "Vérification du compte de trading…",
+    "noAccountTitle": "Vous n'avez pas ouvert de compte de trading",
+    "noAccountDesc": "Vous devez ouvrir un compte de trading avant de passer des ordres (nécessite un nœud ou un code d'autorisation). Une fois ouvert, vous pourrez passer des ordres au prix réel et clôturer des positions sur Polymarket.",
+    "goOpenAccount": "Ouvrir un compte de trading"
   },
   "vault": {
     "title": "Coffre",

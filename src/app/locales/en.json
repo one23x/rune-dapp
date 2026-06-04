@@ -222,7 +222,11 @@
     "heroStatFollowers": "Followers",
     "heroStatWinRate": "Win rate",
     "heroStatMonthly": "Monthly",
-    "heroCta": "Enter Smart Trading"
+    "heroCta": "Enter Smart Trading",
+    "checkingAccount": "Checking trading account…",
+    "noAccountTitle": "You haven't opened a trading account",
+    "noAccountDesc": "You must open a trading account before placing orders (requires a node or an auth code). Once opened you can place real-price orders and close positions on Polymarket.",
+    "goOpenAccount": "Open a trading account"
   },
   "vault": {
     "title": "Vault",

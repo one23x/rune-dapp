@@ -222,7 +222,11 @@
     "heroStatFollowers": "フォロワー",
     "heroStatWinRate": "勝率",
     "heroStatMonthly": "月間収益",
-    "heroCta": "スマート取引を始める"
+    "heroCta": "スマート取引を始める",
+    "checkingAccount": "取引アカウントを確認中…",
+    "noAccountTitle": "取引アカウントが未開設です",
+    "noAccountDesc": "注文の前に取引アカウントの開設が必要です(ノード保有または認証コードが必要)。開設後、Polymarket で実価格の発注・決済が可能になります。",
+    "goOpenAccount": "取引アカウントを開設"
   },
   "vault": {
     "title": "ボールト",

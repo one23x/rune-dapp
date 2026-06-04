@@ -222,7 +222,11 @@
     "heroStatFollowers": "跟随者",
     "heroStatWinRate": "胜率",
     "heroStatMonthly": "月收益",
-    "heroCta": "进入智能交易"
+    "heroCta": "进入智能交易",
+    "checkingAccount": "正在检查交易账户…",
+    "noAccountTitle": "您还未开通交易账户",
+    "noAccountDesc": "下单前需先开通交易账户(需持有节点或输入授权码)。开通后即可连接 Polymarket 按真实价位下单与平仓。",
+    "goOpenAccount": "去开通交易账户"
   },
   "vault": {
     "title": "金库",

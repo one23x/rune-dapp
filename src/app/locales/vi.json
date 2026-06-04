@@ -222,7 +222,11 @@
     "heroStatFollowers": "Người theo dõi",
     "heroStatWinRate": "Tỷ lệ thắng",
     "heroStatMonthly": "Hàng tháng",
-    "heroCta": "Vào giao dịch thông minh"
+    "heroCta": "Vào giao dịch thông minh",
+    "checkingAccount": "Đang kiểm tra tài khoản giao dịch…",
+    "noAccountTitle": "Bạn chưa mở tài khoản giao dịch",
+    "noAccountDesc": "Bạn cần mở tài khoản giao dịch trước khi đặt lệnh (cần node hoặc mã ủy quyền). Sau khi mở, bạn có thể đặt lệnh theo giá thực và đóng vị thế trên Polymarket.",
+    "goOpenAccount": "Mở tài khoản giao dịch"
   },
   "vault": {
     "title": "Kho bạc",

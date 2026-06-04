@@ -222,7 +222,11 @@
     "heroStatFollowers": "المتابعون",
     "heroStatWinRate": "معدل الفوز",
     "heroStatMonthly": "شهري",
-    "heroCta": "ابدأ التداول الذكي"
+    "heroCta": "ابدأ التداول الذكي",
+    "checkingAccount": "جارٍ التحقق من حساب التداول…",
+    "noAccountTitle": "لم تفتح حساب تداول بعد",
+    "noAccountDesc": "يجب فتح حساب تداول قبل تقديم الأوامر (يتطلب عقدة أو رمز تفويض). بعد الفتح يمكنك التداول بالسعر الحقيقي وإغلاق المراكز على Polymarket.",
+    "goOpenAccount": "افتح حساب تداول"
   },
   "vault": {
     "title": "الخزنة",
