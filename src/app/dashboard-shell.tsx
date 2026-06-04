@@ -31,6 +31,7 @@ const ProfileTransactions = lazy(() => import("@app/pages/profile-transactions")
 const ProfileNotifications = lazy(() => import("@app/pages/profile-notifications"));
 const ProfileSwap = lazy(() => import("@app/pages/profile-swap"));
 const AdminFunds = lazy(() => import("@app/pages/admin-funds"));
+const AdminCodes = lazy(() => import("@app/pages/admin-codes"));
 // 节点购买页 —— 故意不放进任何导航/菜单,仅可通过直链 /profile/nodes 访问。
 const ProfileNodes = lazy(() => import("@app/pages/profile-nodes"));
 
@@ -267,6 +268,7 @@ function DashboardRoutes() {
         <Route path="/profile/notifications" component={ProfileNotifications} />
         <Route path="/profile/swap" component={ProfileSwap} />
         <Route path="/admin/funds" component={AdminFunds} />
+        <Route path="/admin/codes" component={AdminCodes} />
       </Switch>
     </Suspense>
   );
