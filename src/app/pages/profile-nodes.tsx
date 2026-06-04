@@ -4,16 +4,19 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { NodeOverviewPanel } from "@app/components/profile/node-overview";
 import { RewardsPanel } from "@app/components/profile/team-detail";
-import { Server, Gift } from "lucide-react";
+import { ArbNodePurchase } from "@app/components/nodes/arb-node-purchase";
+import { Server, Gift, Layers } from "lucide-react";
 import { DashboardSubTabs, type SubTabItem } from "@app/components/dashboard-sub-tabs";
 import { PageEnter, SubTabSwitch } from "@app/components/page-enter";
 import { GoldCard } from "@app/components/premium-card";
 
-type Sub = "overview" | "rewards";
+type Sub = "overview" | "rewards" | "arb";
 
 const TABS: SubTabItem<Sub>[] = [
   { key: "overview", icon: Server, labelKey: "profile.nodeOverview",      fallback: "Overview" },
   { key: "rewards",  icon: Gift,   labelKey: "profile.nodeRewards.title", fallback: "Rewards" },
+  // Arbitrum 节点购买 —— 与 BSC NodePresell 并存的新增通道(USDC@Arbitrum, 跨链可付)。
+  { key: "arb",      icon: Layers, labelKey: "arbNode.tab",               fallback: "Arbitrum" },
 ];
 
 /**
@@ -125,7 +128,9 @@ export default function ProfileNodes() {
           <GoldCard className="p-2.5 sm:p-4 lg:p-5">
             <div className="relative z-[2]">
               <SubTabSwitch tabKey={sub}>
-                {sub === "overview" ? <NodeOverviewPanel address={address} /> : <RewardsPanel address={address} />}
+                {sub === "overview" ? <NodeOverviewPanel address={address} />
+                  : sub === "rewards" ? <RewardsPanel address={address} />
+                  : <ArbNodePurchase />}
               </SubTabSwitch>
             </div>
           </GoldCard>

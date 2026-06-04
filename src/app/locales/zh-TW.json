@@ -1800,5 +1800,20 @@
     "minAgo": "{{n}}分钟前",
     "hourAgo": "{{n}}小时前",
     "dayAgo": "{{n}}天前"
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum 節點購買",
+    "subtitle": "在 Arbitrum One 上以 USDC 購買節點(鏈上 Edition Drop)。僅持有 USDT@BSC 也可一鍵跨鏈支付,系統自動兌成 USDC 後完成鑄造。",
+    "seatsLeft": "席位剩餘",
+    "loadingCfg": "讀取鏈上餘量…",
+    "occupancy": "席位佔用",
+    "connectFirst": "請先連接錢包",
+    "soldOut": "已售罄",
+    "buy": "購買節點",
+    "toastDone": "購買成功",
+    "toastDoneDesc": "節點 NFT 已鑄造到你的錢包(Arbitrum)。",
+    "toastFail": "購買失敗",
+    "toastFailDesc": "交易未完成,請重試。"
   }
 }

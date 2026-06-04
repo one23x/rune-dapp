@@ -1,7 +1,7 @@
 import { getContract, type ThirdwebContract } from "thirdweb";
 import { thirdwebClient } from "./client";
-import { runeChain, runeChainKey } from "./chains";
-import { getRuneAddresses } from "./addresses";
+import { runeChain, runeChainKey, arbitrum } from "./chains";
+import { getRuneAddresses, ARB_NODE_DROP_ADDRESS } from "./addresses";
 import { usdtAbi } from "./abis/usdt";
 import { communityAbi } from "./abis/community";
 import { nodePresellAbi } from "./abis/nodepresell";
@@ -66,3 +66,45 @@ export const NODE_META: Record<NodeId, { level: string; nameCn: string; nameEn: 
   401: { level: "mid",      nameCn: "符源", nameEn: "MID",      color: "text-blue-400",   rgb: "96, 165, 250",  priceUsdt:  2500 },
   501: { level: "initial",  nameCn: "符胚", nameEn: "INITIAL",  color: "text-slate-300",  rgb: "203, 213, 225", priceUsdt:  1000 },
 };
+
+// ─── Arbitrum 节点购买(thirdweb Edition Drop / DropERC1155)────────────────────
+//
+// 与上面的 BSC NodePresell 完全独立并存:这是 Arbitrum One 上一套 DropERC1155,
+// 用 thirdweb v5 `ClaimButton`(claimParams type=ERC1155)claim,USDC(Arb)结算,
+// 并开启跨链支付(PayModal 默认 buyWithCrypto/buyWithFiat 开启 → 只有 USDT@BSC 的
+// 买家也能付:thirdweb pay 自动桥成 USDC@Arbitrum 再 claim)。
+//
+// 5 档映射 token id 0–4(链上 claim conditions 已配好 price/maxClaimableSupply/
+// 每钱包),tier 编号沿用站点既有的 101/201/301/401/501 语义,只是这里走 ERC1155
+// tokenId。价格/限量为展示用快照,真实余量从链上 getActiveClaimCondition 读。
+export const arbNodeDropContract: ThirdwebContract = getContract({
+  client: thirdwebClient,
+  chain: arbitrum,
+  address: ARB_NODE_DROP_ADDRESS,
+});
+
+/** Edition Drop 的 5 档 = token id 0–4。tier = 站点既有节点语义编号。 */
+export interface ArbNodeTier {
+  tokenId: bigint;
+  tier: NodeId;
+  level: string;
+  nameCn: string;
+  nameEn: string;
+  color: string;
+  rgb: string;
+  /** 展示用价格(USDC,整数)。真实价格以链上 claim condition 为准。 */
+  priceUsdc: number;
+  /** 展示用限量。真实余量以链上 supplyClaimed/maxClaimableSupply 为准。 */
+  maxSupply: number;
+  /** 每钱包限购。 */
+  perWallet: number;
+}
+
+// 顺序按价格从高到低,与 BSC PickerView 的排序习惯一致;tokenId 升序仍是 0→4。
+export const ARB_NODE_TIERS: readonly ArbNodeTier[] = [
+  { tokenId: 0n, tier: 101, level: "founder",  nameCn: "符主", nameEn: "FOUNDER",  color: "text-purple-400", rgb: "192, 132, 252", priceUsdc: 50000, maxSupply:   20, perWallet: 1 },
+  { tokenId: 1n, tier: 201, level: "super",    nameCn: "符魂", nameEn: "SUPER",    color: "text-amber-400",  rgb: "251, 191, 36",  priceUsdc: 10000, maxSupply:  200, perWallet: 1 },
+  { tokenId: 2n, tier: 301, level: "advanced", nameCn: "符印", nameEn: "ADVANCED", color: "text-green-400",  rgb: "52, 211, 153",  priceUsdc:  5000, maxSupply:  400, perWallet: 1 },
+  { tokenId: 3n, tier: 401, level: "mid",      nameCn: "符源", nameEn: "MID",      color: "text-blue-400",   rgb: "96, 165, 250",  priceUsdc:  2500, maxSupply:  800, perWallet: 1 },
+  { tokenId: 4n, tier: 501, level: "initial",  nameCn: "符胚", nameEn: "INITIAL",  color: "text-slate-300",  rgb: "203, 213, 225", priceUsdc:  1000, maxSupply: 1000, perWallet: 1 },
+] as const;

@@ -1925,5 +1925,20 @@
     "openErrorDesc": "Failed to reach the engine. Check your connection and retry.",
     "needOnboard": "Open a trading account first",
     "needOnboardDesc": "Tap “Open trading account” above, then follow with one click."
+  },
+  "arbNode": {
+    "tab": "Arbitrum",
+    "sectionTitle": "Arbitrum Node Purchase",
+    "subtitle": "Buy nodes on Arbitrum One with USDC (on-chain Edition Drop). Only hold USDT on BSC? You can still pay in one click — it is auto-swapped to USDC and minted for you.",
+    "seatsLeft": "seats left",
+    "loadingCfg": "Reading on-chain supply…",
+    "occupancy": "Occupancy",
+    "connectFirst": "Connect your wallet first",
+    "soldOut": "Sold out",
+    "buy": "Buy Node",
+    "toastDone": "Purchase complete",
+    "toastDoneDesc": "Your node NFT has been minted to your wallet (Arbitrum).",
+    "toastFail": "Purchase failed",
+    "toastFailDesc": "The transaction did not complete. Please retry."
   }
 }

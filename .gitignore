@@ -7,3 +7,27 @@ dist
 *.log
 
 supabase/.temp/
+
+# Claude Code 本地配置(含敏感 token/webhook,勿提交)
+.claude/settings.local.json
+.claude/hooks/.slack-webhook
+.claude/hooks/.slack-last-sent
+.claude/hooks/.slack-bot-token
+.claude/hooks/.slack-user-token
+
+# Slack agent secrets
+slack-agent/.env
+slack-agent/.venv/
+slack-agent/__pycache__/
+
+# Local-only components — separate repos / not part of this SPA, and several
+# contain secrets (infra/ has rune-prod.pem + terraform.tfstate). NEVER commit.
+infra/
+contracts/
+one-agents/
+admin-panel/
+slack-agent/
+*.pem
+*.tfstate
+*.tfstate.*
+*.pdf
