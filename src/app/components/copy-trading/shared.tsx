@@ -794,9 +794,16 @@ export function WithdrawDialog({
 }: { open: boolean; onOpenChange: (v: boolean) => void; userId: string; available: number }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const account = useActiveAccount();
   const [amount, setAmount] = useState("");
   const [dest, setDest] = useState("");
   const [confirming, setConfirming] = useState(false);
+
+  // 默认把提现目标地址填成「当前连接的钱包」——最常见就是提回自己钱包(仍可改)。
+  // reset() 在关闭时清空,所以每次重新打开都会重新预填最新连接地址。
+  useEffect(() => {
+    if (open && !dest && account?.address) setDest(account.address);
+  }, [open, account?.address]);
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && amt <= available;
@@ -864,6 +871,11 @@ export function WithdrawDialog({
             {dest !== "" && !destValid && (
               <p className="mt-1 text-[11px] text-red-400">{t("copyTrading.withdrawInvalidDest")}</p>
             )}
+            {/* 链提醒:pUSD 提现只发 Polygon —— 目标地址必须支持 Polygon,否则资金会丢。 */}
+            <p className="mt-1.5 text-[11px] text-amber-300/85 flex items-start gap-1 leading-snug">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>{t("copyTrading.withdrawChainNotePm", "仅提现到 Polygon 网络(pUSD)。请确认目标地址支持 Polygon,否则资金可能丢失。默认已填入你当前连接的钱包地址。")}</span>
+            </p>
           </div>
 
           {confirming && amountValid && destValid && (
@@ -872,6 +884,7 @@ export function WithdrawDialog({
                 <AlertTriangle className="h-3.5 w-3.5" /> {t("copyTrading.withdrawReviewTitle")}
               </div>
               <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">{t("copyTrading.withdrawAmountLabel")}</span><span className="font-bold tabular-nums">{fmtUsd(amt)}</span></div>
+              <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">{t("copyTrading.withdrawNetwork", "网络")}</span><span className="font-semibold text-amber-200">Polygon · pUSD</span></div>
               <div className="text-[11px] font-mono text-foreground/70 break-all">{dest}</div>
             </div>
           )}

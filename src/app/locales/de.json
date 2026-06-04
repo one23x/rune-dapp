@@ -1726,7 +1726,9 @@
     "updatedAt": "Aktualisiert {{time}}",
     "viewAll": "Alle anzeigen",
     "volume": "Volumen",
-    "weeklyRank": "Wochenrang"
+    "weeklyRank": "Wochenrang",
+    "withdrawNetwork": "Netzwerk",
+    "withdrawChainNotePm": "Auszahlungen erfolgen nur über Polygon (pUSD). Stellen Sie sicher, dass die Zieladresse Polygon unterstützt, sonst können Gelder verloren gehen. Ihre verbundene Wallet ist standardmäßig vorausgefüllt."
   },
   "exchange": {
     "account": "Konto",
@@ -2247,7 +2249,8 @@
       "advanced": "Fortgeschritten",
       "pro": "Profi"
     },
-    "depositOnchainWait": "Einzahlungen brauchen eine On-Chain-Bestätigung (ca. 2–5 Min.); das Guthaben aktualisiert sich automatisch nach Eingang — bitte warten."
+    "depositOnchainWait": "Einzahlungen brauchen eine On-Chain-Bestätigung (ca. 2–5 Min.); das Guthaben aktualisiert sich automatisch nach Eingang — bitte warten.",
+    "withdrawChainNote": "Auszahlungen erfolgen nur über Arbitrum (USDC). Stellen Sie sicher, dass die Zieladresse Arbitrum unterstützt, sonst können Gelder verloren gehen. Ihre verbundene Wallet ist standardmäßig vorausgefüllt."
   },
   "profileVault": {
     "claimed": "Beansprucht!",

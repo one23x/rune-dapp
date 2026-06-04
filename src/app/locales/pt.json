@@ -1790,7 +1790,9 @@
     "updatedAt": "Atualizado {{time}}",
     "viewAll": "Ver tudo",
     "volume": "Volume",
-    "weeklyRank": "Ranking semanal"
+    "weeklyRank": "Ranking semanal",
+    "withdrawNetwork": "Rede",
+    "withdrawChainNotePm": "Os saques são enviados apenas na Polygon (pUSD). Confirme que o endereço de destino suporta Polygon, caso contrário os fundos podem ser perdidos. Sua carteira conectada é preenchida por padrão."
   },
   "exchange": {
     "account": "Conta",
@@ -2281,7 +2283,8 @@
       "advanced": "Avançado",
       "pro": "Pro"
     },
-    "depositOnchainWait": "Depósitos precisam de confirmação on-chain (~2–5 min); o saldo é atualizado automaticamente ao chegar — aguarde."
+    "depositOnchainWait": "Depósitos precisam de confirmação on-chain (~2–5 min); o saldo é atualizado automaticamente ao chegar — aguarde.",
+    "withdrawChainNote": "Os saques são enviados apenas na Arbitrum (USDC). Confirme que o endereço de destino suporta Arbitrum, caso contrário os fundos podem ser perdidos. Sua carteira conectada é preenchida por padrão."
   },
   "pmLab": {
     "title": "Laboratório de IA de Previsão",

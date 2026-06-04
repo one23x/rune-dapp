@@ -1790,7 +1790,9 @@
     "updatedAt": "Updated {{time}}",
     "viewAll": "View All",
     "volume": "Volume",
-    "weeklyRank": "Weekly rank"
+    "weeklyRank": "Weekly rank",
+    "withdrawNetwork": "Network",
+    "withdrawChainNotePm": "Withdrawals are sent only on Polygon (pUSD). Make sure the destination supports Polygon or funds may be lost. Your connected wallet is pre-filled by default."
   },
   "exchange": {
     "account": "Account",
@@ -2281,7 +2283,8 @@
       "entry": "Entry",
       "advanced": "Advanced",
       "pro": "Pro"
-    }
+    },
+    "withdrawChainNote": "Withdrawals are sent only on Arbitrum (USDC). Make sure the destination supports Arbitrum or funds may be lost. Your connected wallet is pre-filled by default."
   },
   "pmLab": {
     "title": "Prediction AI Lab",

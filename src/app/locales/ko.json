@@ -1726,7 +1726,9 @@
     "updatedAt": "{{time}} 업데이트",
     "viewAll": "전체 보기",
     "volume": "거래량",
-    "weeklyRank": "주간 순위"
+    "weeklyRank": "주간 순위",
+    "withdrawNetwork": "네트워크",
+    "withdrawChainNotePm": "출금은 Polygon 네트워크(pUSD)로만 전송됩니다. 대상 주소가 Polygon을 지원하는지 확인하세요. 그렇지 않으면 자금이 손실될 수 있습니다. 연결된 지갑이 기본으로 입력됩니다."
   },
   "exchange": {
     "account": "계정",
@@ -2247,7 +2249,8 @@
       "advanced": "고급",
       "pro": "프로"
     },
-    "depositOnchainWait": "입금은 온체인 확인(약 2~5분)이 필요하며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요."
+    "depositOnchainWait": "입금은 온체인 확인(약 2~5분)이 필요하며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요.",
+    "withdrawChainNote": "출금은 Arbitrum 네트워크(USDC)로만 전송됩니다. 대상 주소가 Arbitrum을 지원하는지 확인하세요. 그렇지 않으면 자금이 손실될 수 있습니다. 연결된 지갑이 기본으로 입력됩니다."
   },
   "profileVault": {
     "claimed": "수령 완료!",

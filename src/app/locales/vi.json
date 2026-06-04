@@ -1726,7 +1726,9 @@
     "updatedAt": "Cập nhật {{time}}",
     "viewAll": "Xem tất cả",
     "volume": "Khối lượng",
-    "weeklyRank": "Xếp hạng tuần"
+    "weeklyRank": "Xếp hạng tuần",
+    "withdrawNetwork": "Mạng",
+    "withdrawChainNotePm": "Rút tiền chỉ được gửi trên mạng Polygon (pUSD). Hãy đảm bảo địa chỉ nhận hỗ trợ Polygon, nếu không tiền có thể bị mất. Ví đang kết nối được điền sẵn theo mặc định."
   },
   "exchange": {
     "account": "Tài Khoản",
@@ -2247,7 +2249,8 @@
       "advanced": "Nâng cao",
       "pro": "Chuyên nghiệp"
     },
-    "depositOnchainWait": "Nạp tiền cần xác nhận on-chain (~2–5 phút); số dư tự động làm mới khi nhận được — vui lòng đợi."
+    "depositOnchainWait": "Nạp tiền cần xác nhận on-chain (~2–5 phút); số dư tự động làm mới khi nhận được — vui lòng đợi.",
+    "withdrawChainNote": "Rút tiền chỉ được gửi trên mạng Arbitrum (USDC). Hãy đảm bảo địa chỉ nhận hỗ trợ Arbitrum, nếu không tiền có thể bị mất. Ví đang kết nối được điền sẵn theo mặc định."
   },
   "profileVault": {
     "claimed": "Đã nhận!",

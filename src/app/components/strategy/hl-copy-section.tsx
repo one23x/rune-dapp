@@ -371,6 +371,11 @@ function HlFunding({
               {dest !== "" && !destValid && (
                 <p className="mt-1 text-[11px] text-red-400">{t("hl.withdrawInvalidDest", "请输入有效的 Arbitrum 地址")}</p>
               )}
+              {/* 链提醒:HL withdraw3 只经官方桥提到 Arbitrum —— 目标地址必须支持 Arbitrum。 */}
+              <p className="mt-1.5 text-[11px] text-amber-300/85 flex items-start gap-1 leading-snug">
+                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                <span>{t("hl.withdrawChainNote", "仅提现到 Arbitrum 网络(USDC)。请确认目标地址支持 Arbitrum,否则资金可能丢失。默认已填入你当前连接的钱包地址。")}</span>
+              </p>
             </div>
 
             {confirming && amountValid && destValid && (

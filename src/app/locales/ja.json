@@ -1790,7 +1790,9 @@
     "updatedAt": "{{time}} に更新",
     "viewAll": "すべて表示",
     "volume": "出来高",
-    "weeklyRank": "週間ランキング"
+    "weeklyRank": "週間ランキング",
+    "withdrawNetwork": "ネットワーク",
+    "withdrawChainNotePm": "出金は Polygon ネットワーク(pUSD)のみです。送金先が Polygon に対応していることを確認してください。対応していないと資金が失われる可能性があります。接続中のウォレットが既定で入力されています。"
   },
   "exchange": {
     "account": "アカウント",
@@ -2281,7 +2283,8 @@
       "advanced": "アドバンス",
       "pro": "プロ"
     },
-    "depositOnchainWait": "入金にはオンチェーン確認（約 2〜5 分）が必要です。着金後に残高が自動更新されます。お待ちください。"
+    "depositOnchainWait": "入金にはオンチェーン確認（約 2〜5 分）が必要です。着金後に残高が自動更新されます。お待ちください。",
+    "withdrawChainNote": "出金は Arbitrum ネットワーク(USDC)のみです。送金先が Arbitrum に対応していることを確認してください。対応していないと資金が失われる可能性があります。接続中のウォレットが既定で入力されています。"
   },
   "pmLab": {
     "title": "予測 AI ラボ",

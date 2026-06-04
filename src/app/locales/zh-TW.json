@@ -1726,7 +1726,9 @@
     "updatedAt": "更新於 {{time}}",
     "viewAll": "查看全部",
     "volume": "成交量",
-    "weeklyRank": "本周排行"
+    "weeklyRank": "本周排行",
+    "withdrawNetwork": "網路",
+    "withdrawChainNotePm": "僅提現到 Polygon 網路(pUSD)。請確認目標地址支援 Polygon,否則資金可能遺失。預設已填入你目前連接的錢包地址。"
   },
   "exchange": {
     "account": "帳戶",
@@ -2247,7 +2249,8 @@
       "advanced": "進階",
       "pro": "專業"
     },
-    "depositOnchainWait": "充值需等鏈上確認，約 2–5 分鐘到帳；到帳後餘額自動刷新，請耐心等待。"
+    "depositOnchainWait": "充值需等鏈上確認，約 2–5 分鐘到帳；到帳後餘額自動刷新，請耐心等待。",
+    "withdrawChainNote": "僅提現到 Arbitrum 網路(USDC)。請確認目標地址支援 Arbitrum,否則資金可能遺失。預設已填入你目前連接的錢包地址。"
   },
   "hlVaults": {
     "title": "推薦金庫",

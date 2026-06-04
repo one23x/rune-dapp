@@ -1726,7 +1726,9 @@
     "updatedAt": "Mis à jour {{time}}",
     "viewAll": "Tout voir",
     "volume": "Volume",
-    "weeklyRank": "Classement hebdomadaire"
+    "weeklyRank": "Classement hebdomadaire",
+    "withdrawNetwork": "Réseau",
+    "withdrawChainNotePm": "Les retraits sont envoyés uniquement sur Polygon (pUSD). Assurez-vous que l'adresse de destination prend en charge Polygon, sinon les fonds pourraient être perdus. Votre portefeuille connecté est pré-rempli par défaut."
   },
   "exchange": {
     "account": "Compte",
@@ -2247,7 +2249,8 @@
       "advanced": "Avancé",
       "pro": "Pro"
     },
-    "depositOnchainWait": "Les dépôts nécessitent une confirmation on-chain (~2–5 min) ; le solde se met à jour automatiquement à l'arrivée — patiente."
+    "depositOnchainWait": "Les dépôts nécessitent une confirmation on-chain (~2–5 min) ; le solde se met à jour automatiquement à l'arrivée — patiente.",
+    "withdrawChainNote": "Les retraits sont envoyés uniquement sur Arbitrum (USDC). Assurez-vous que l'adresse de destination prend en charge Arbitrum, sinon les fonds pourraient être perdus. Votre portefeuille connecté est pré-rempli par défaut."
   },
   "profileVault": {
     "claimed": "Réclamé !",
