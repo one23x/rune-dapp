@@ -523,7 +523,8 @@
     "buyTitle": "One-click buy with card / cross-chain",
     "customAmount": "Custom amount",
     "enterAmount": "Enter or select an amount",
-    "manualTransfer": "Or transfer to address"
+    "manualTransfer": "Or transfer to address",
+    "onchainWaitPm": "Polygon USDC only. On-chain confirmation takes ~2–5 min; your balance auto-refreshes once it arrives — please wait."
   },
   "ma": {
     "chartArea": "Area",
@@ -2247,7 +2248,8 @@
     "tradingAccountLabelAgent": "Trading account address (your wallet)",
     "underfundedDesc": "HL requires at least ${{min}} to copy trade; current account equity {{val}}. Tap here to return to your wallet to deposit.",
     "viewOnExplorer": "View on block explorer",
-    "walletLabel": "Wallet address"
+    "walletLabel": "Wallet address",
+    "depositOnchainWait": "Deposits need on-chain confirmation (~2–5 min); balance auto-refreshes once it arrives — please wait."
   },
   "pmLab": {
     "title": "Prediction AI Lab",

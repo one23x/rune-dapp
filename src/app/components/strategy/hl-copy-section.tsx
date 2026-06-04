@@ -30,7 +30,9 @@ import {
   Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X, ExternalLink,
   KeyRound, Server,
 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { getRpcClient, eth_getBalance } from "thirdweb/rpc";
+import { thirdwebClient } from "@/lib/thirdweb/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,18 +49,43 @@ import {
   useConsolePacks,
 } from "@app/lib/engine-hooks";
 import { hyperliquid, users } from "@app/lib/engine";
-import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal } from "@app/lib/engine";
+import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
 import { AiDecisionCards } from "./ai-decision-cards";
+import { HlVaultsPanel } from "./hl-vaults-panel";
+import { AiLab } from "./ai-lab";
 import {
   NetworkToggle, HlEmpty, useHlCopy, TIER_META, tierOf,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
   type HlFollowConfig,
 } from "@app/components/hl/shared";
-import { useOnboardFlow, DepositBuyPanel } from "@app/components/copy-trading/shared";
+import { useOnboardFlow, DepositBuyPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
 
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
 const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
+
+// GAS GATE —— 托管 EOA 必须持有最低限度的 Arbitrum ETH,否则它无法把充进来的 USDC
+// 转入 HL bridge2,资金会卡在链上的 EOA 上、永远进不了 HL 账户。0.0002 ETH 足够一笔
+// Arbitrum 上的 ERC20 transfer。低于此阈值时,custodial 主网的充值路径必须被硬阻断。
+const MIN_GAS_WEI = 200000000000000n; // 0.0002 ETH
+
+// 读取某地址在 Arbitrum One 上的原生 ETH 余额(用于 gas 门禁)。
+// 用 thirdweb RPC(直接依赖,viem 仅为传递依赖、应用层无法解析)走与 chains.ts 相同的
+// Arbitrum RPC(VITE_ARBITRUM_RPC ?? https://arb1.arbitrum.io/rpc),等价于
+// viem 的 createPublicClient({ chain: arbitrum }).getBalance({ address })。
+function useArbGasBalance(address: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["arb", "gas-balance", address?.toLowerCase()],
+    enabled: enabled && !!address && /^0x[a-fA-F0-9]{40}$/.test(address ?? ""),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const rpc = getRpcClient({ client: thirdwebClient, chain: arbitrum });
+      const wei = await eth_getBalance(rpc, { address: address as `0x${string}` });
+      return wei; // bigint
+    },
+  });
+}
 
 // 非托管 agent 模式开关 —— 默认 OFF,生产只显示托管流程;待测网验证订单归属后
 // 设 VITE_HL_AGENT_MODE_ENABLED=1 才放出「自托管」选项。flag off 时 mode 恒为 custodial。
@@ -74,6 +101,11 @@ const HL_MIN = 10;
 function hlExplorerAddress(addr: string, network: HlNetwork): string {
   const base = network === "testnet" ? "https://app.hyperliquid-testnet.xyz" : "https://app.hyperliquid.xyz";
   return `${base}/explorer/address/${addr}`;
+}
+// 单笔成交的链上记录(tx hash)。无 hash 时退回账户地址页。
+function hlExplorerTx(hash: string, network: HlNetwork): string {
+  const base = network === "testnet" ? "https://app.hyperliquid-testnet.xyz" : "https://app.hyperliquid.xyz";
+  return `${base}/explorer/tx/${hash}`;
 }
 
 // 完整钱包地址行 — 不截断;整行可点复制,复制后图标变 ✓ + gold-pop 反馈。
@@ -134,6 +166,15 @@ function HlFunding({
 
   // agent 模式下 HL 账户 = 用户自己的连接钱包(master),充值就充进它;custodial 充进托管 EOA。
   const depositTarget = agentMode ? (account?.address ?? "") : depositAddress;
+
+  // GAS 门禁:仅托管 + 主网 + 有托管地址时,读托管 EOA 的 Arbitrum ETH 余额。
+  // agent 模式不门禁(资金进用户自己的钱包,由用户自行付 gas)。测试网不门禁。
+  const gasGateApplies = !agentMode && network === "mainnet" && !!depositTarget;
+  const gasBalance = useArbGasBalance(depositTarget, gasGateApplies);
+  // 加载中(且尚无任何已知值)→ 中性状态,不提前阻断。已知余额低于阈值 → 阻断。
+  const gasLoading = gasGateApplies && gasBalance.isLoading && gasBalance.data === undefined;
+  const gasInsufficient =
+    gasGateApplies && gasBalance.data !== undefined && gasBalance.data < MIN_GAS_WEI;
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && (withdrawable <= 0 || amt <= withdrawable);
@@ -205,12 +246,61 @@ function HlFunding({
           </DialogHeader>
 
           <div className="space-y-3 mt-1">
-            {/* 主路径:用卡 / 跨链一键买入 USDC 直充(custodial→托管 EOA;agent→自己钱包)(仅主网且有地址) */}
-            {network === "mainnet" && depositTarget && (
-              <DepositBuyPanel chain={arbitrum} token={USDC_ARBITRUM} seller={depositTarget} assetLabel="USDC" />
+            {/* GAS 门禁(仅托管主网):读托管 EOA 的 Arbitrum ETH 余额。
+                - 加载中 → 中性 spinner,不提前阻断;
+                - 不足(< MIN_GAS_WEI) → 红色阻断卡,隐藏所有充值路径(买币 + 转账),
+                  因为不论哪条路径,USDC 都会卡在没有 gas 的 EOA 上、进不了 HL 账户;
+                - 充足 → 照常显示充值路径(无吓人提示)。 */}
+            {gasLoading && (
+              <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-[11.5px] text-foreground/55">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-300/80" />
+                <span>{t("hl.gasGateChecking", "正在检查托管地址的 gas 余额…")}</span>
+              </div>
             )}
 
-            {/* 次路径:转账到地址 */}
+            {gasInsufficient ? (
+              /* 阻断卡:gas 不足 → 不显示任何充值路径,只给客服补 gas 的地址 + 复制。 */
+              <div className="rounded-2xl border border-red-500/40 bg-red-500/[0.07] p-3.5 space-y-2.5" data-testid="card-hl-gas-blocked">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-red-400" />
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-bold text-red-200">{t("hl.gasGateBlockedTitle", "暂时无法充值")}</div>
+                    <p className="mt-1 text-[11.5px] leading-snug text-red-100/80">
+                      {t("hl.gasGateBlockedMsg", "托管交易地址的 gas(Arbitrum ETH)不足,现在充值资金会卡在链上无法进入 HL 账户。请联系客服为该地址补充少量 Arbitrum ETH 后再充值。")}
+                    </p>
+                  </div>
+                </div>
+                {/* 给客服补 gas 用的托管地址 + 复制(复用本组件的 copyAddr 模式)。 */}
+                <div className="rounded-xl p-2.5 bg-black/20 border border-red-500/20">
+                  <div className="text-[10px] uppercase tracking-wide text-red-300/70 mb-1">{t("hl.gasGateFundLabel", "需补 gas 的托管地址 · ARBITRUM ETH")}</div>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-gas-blocked-address">{depositTarget}</code>
+                    <button onClick={copyAddr} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-red-200 hover:bg-white/5 transition-colors" data-testid="button-hl-gas-blocked-copy">
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+            {/* 主路径:用卡 / 跨链一键买入 USDC 直充(custodial→托管 EOA;agent→自己钱包)
+                (仅主网且有地址;门禁加载中或不足时不渲染) */}
+            {network === "mainnet" && depositTarget && !gasLoading && (
+              <DepositBuyPanel
+                chain={arbitrum}
+                token={USDC_ARBITRUM}
+                seller={depositTarget}
+                assetLabel="USDC"
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
+                  // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),HL 账户余额已失效→重读。
+                  window.setTimeout(() => setDepOpen(false), 1500);
+                }}
+              />
+            )}
+
+            {/* 次路径:转账到地址(门禁加载中时也先不展示,避免用户在判定前手动转账) */}
+            {!gasLoading && (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
               <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
                 <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
@@ -236,7 +326,13 @@ function HlFunding({
                   ? t("hl.depositNoteAgent", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请直接在 Hyperliquid 上操作。")
                   : t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
               </p>
+              <p className="text-[11px] leading-snug text-amber-300/80">
+                {t("hl.depositOnchainWait", "充值需等链上确认,约 2–5 分钟到账;到账后余额自动刷新,请耐心等待。")}
+              </p>
             </div>
+            )}
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -433,6 +529,9 @@ function HlAccountStrip({
   // 托管(custodial,默认,行为不变)/ 自托管(agent)。仅影响 !userId 开通分支。
   const [mode, setMode] = useState<"custodial" | "agent">("custodial");
   const agent = useAgentOnboardFlow(network);
+  // 节点门禁:开户前置(非节点 → 买节点 / 授权码;节点持有者 → 显等级徽章 + 正常开户)。
+  // 后端未上线时 useNodeGate 出错 → 回退放行(blocked 仅在显式 isNode:false 时为 true)。
+  const nodeGate = useNodeGate(wallet);
 
   // Not connected → 开户 CTA (connect wallet to enable HL copy-trading).
   if (!wallet) {
@@ -503,6 +602,24 @@ function HlAccountStrip({
 
   // Wallet connected but no engine user yet → explicit 开通 action.
   if (!userId) {
+    // 节点门禁前置:仍在解析 → 骨架;显式非节点 → 门禁卡(买节点 / 授权码);
+    // 节点持有者 or 后端未上线(回退放行)→ 继续下面的正常开户 UI。
+    if (nodeGate.loading) {
+      return (
+        <div className="glass-panel p-3.5">
+          <div className="flex items-center gap-3">
+            <Skeleton className="shrink-0 h-10 w-10 rounded-xl" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-28 rounded" />
+              <Skeleton className="h-2.5 w-40 rounded" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (nodeGate.blocked) {
+      return <NodeGateCard wallet={wallet} grantedLevel={nodeGate.level} />;
+    }
     // 托管:3 步(创建签名账户 → 链上授权 → 启用交易)。CUSTODIAL 行为不变。
     const stepLabels = [
       t("hl.openStep1", "创建引擎签名账户"),
@@ -646,6 +763,8 @@ function HlAccountStrip({
           </div>
         </div>
       </div>
+      {/* 节点等级 + 限额徽章 —— 已开户用户随时可见自己的 L1–L5 限额。 */}
+      {nodeGate.level > 0 && <NodeBadge level={nodeGate.level} limits={nodeGate.limits} />}
       {/* HL 交易账户地址:custodial = 引擎托管 EOA(下单/充值都在它上面);
           agent = 用户主账户(自己钱包,资金/下单都在它上面,引擎仅持只读不能提现的 agent key)。 */}
       {engineEoaAddress ? (
@@ -740,21 +859,26 @@ function SectionHeader({
   );
 }
 
-// ── Stats grid — 3-up live account context (账户净值 / 未实现盈亏 / 跟单中) ─────
+// ── 统计台 — 4-up live account context + 每日盈亏 (账户净值 / 当日盈亏 / 未实现 / 跟单中) ─
+// Reuses the hero/stats glass-panel-strong shell verbatim so the design stays
+// unified across hero → 统计台 → 金库 cards (same shimmer + amber glow + cells).
 
-function StatsGrid({
-  wallet, loading, accountValue, unrealizedPnl, followCount, reduce,
+function HubStatsBar({
+  wallet, loading, accountValue, todayPnl, unrealizedPnl, followCount, reduce,
 }: {
-  wallet?: string; loading: boolean; accountValue: number; unrealizedPnl: number; followCount: number; reduce: boolean;
+  wallet?: string; loading: boolean; accountValue: number; todayPnl: number; unrealizedPnl: number; followCount: number; reduce: boolean;
 }) {
   const { t } = useTranslation();
-  const pnlPos = unrealizedPnl >= 0;
   const cell = (label: string, node: React.ReactNode) => (
     <div className="min-w-0">
       <p className="text-[10px] text-foreground/55 uppercase tracking-wider mb-1 truncate">{label}</p>
       {node}
     </div>
   );
+  const pnlNode = (v: number) =>
+    loading
+      ? <Skeleton className="h-5 w-16 rounded" />
+      : <p className={cn("text-sm font-bold tabular-nums truncate", v >= 0 ? "text-emerald-400" : "text-red-400")}>{wallet ? `${v >= 0 ? "+" : ""}${fmtUsd(v)}` : "—"}</p>;
   return (
     <motion.div
       {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { type: "spring", stiffness: 220, damping: 26 } })}
@@ -762,19 +886,15 @@ function StatsGrid({
     >
       <div className="shimmer-sweep" />
       <div className="absolute -top-8 -right-8 w-32 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="grid grid-cols-3 gap-2 relative z-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
         {cell(
           t("hl.accountValue", "账户净值"),
           loading
             ? <Skeleton className="h-5 w-16 rounded" />
-            : <p className="text-sm font-bold text-foreground tabular-nums truncate">{wallet ? fmtUsd(accountValue) : "—"}</p>,
+            : <p className="text-sm font-bold text-foreground tabular-nums truncate num-gold">{wallet ? fmtUsd(accountValue) : "—"}</p>,
         )}
-        {cell(
-          t("hl.unrealized", "未实现盈亏"),
-          loading
-            ? <Skeleton className="h-5 w-16 rounded" />
-            : <p className={cn("text-sm font-bold tabular-nums truncate", pnlPos ? "text-emerald-400" : "text-red-400")}>{wallet ? `${pnlPos ? "+" : ""}${fmtUsd(unrealizedPnl)}` : "—"}</p>,
-        )}
+        {cell(t("hl.todayPnl", "当日盈亏"), pnlNode(todayPnl))}
+        {cell(t("hl.unrealized", "未实现盈亏"), pnlNode(unrealizedPnl))}
         {cell(
           t("hl.copying", "跟单中"),
           <p className="text-sm font-bold text-foreground tabular-nums">{followCount}</p>,
@@ -968,95 +1088,6 @@ function HlHero({
   );
 }
 
-// ── 热门金库 — leader card that navigates to a full detail page ───────────────
-
-function VaultCard({ leader, network, subscribed }: { leader: HlLeader; network: HlNetwork; subscribed: boolean }) {
-  const { t } = useTranslation();
-  const meta = TIER_META[tierOf(leader)];
-  const Icon = meta.icon;
-  return (
-    <Link href={`/strategy/vault/${network}/${leader.address}`} data-testid={`link-vault-${leader.address}`}>
-      <div className="glass-panel p-4 transition-all cursor-pointer hover:border-white/20 active:scale-[0.99]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, color: meta.color }}
-            >
-              <Icon className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold text-foreground truncate">{leader.label || shortAddr(leader.address)}</span>
-                {leader.isHft && <Badge className="text-[8px] px-1 py-0 border-0 bg-red-500/20 text-red-300 no-default-hover-elevate no-default-active-elevate">HFT</Badge>}
-              </div>
-              <div className="text-[10px] text-foreground/50 mt-1 flex items-center gap-2">
-                <Badge className="text-[8px] px-1.5 py-0 border-0 no-default-hover-elevate no-default-active-elevate" style={{ background: `${meta.color}1f`, color: meta.color }}>{t(meta.labelKey)}</Badge>
-                <code className="font-mono truncate">{shortAddr(leader.address)}</code>
-              </div>
-            </div>
-          </div>
-          {subscribed ? (
-            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-[11px] font-medium">
-              <CheckCircle2 className="w-3 h-3" />{t("hl.copying", "跟单中")}
-            </span>
-          ) : (
-            <span className="shrink-0 flex items-center gap-0.5 text-[11px] text-amber-300/90 font-medium">
-              {t("hl.viewDetail", "查看详情")}<ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          )}
-        </div>
-
-        {/* Real leader metrics */}
-        <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-white/10">
-          <div className="bg-black/20 rounded-lg p-2 border border-white/5">
-            <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.score", "评分")}</p>
-            <p className="text-xs font-bold text-foreground tabular-nums">{fmtScore(leader.score)}</p>
-          </div>
-          <div className="bg-black/20 rounded-lg p-2 border border-white/5">
-            <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.medHold", "中位持仓")}</p>
-            <p className="text-xs font-bold text-foreground tabular-nums">{fmtHold(leader.medianHoldingS)}</p>
-          </div>
-          <div className="bg-black/20 rounded-lg p-2 border border-white/5">
-            <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.style", "风格")}</p>
-            <p className="text-xs font-bold text-foreground">{leader.isHft ? t("hl.styleHft", "高频") : t("hl.styleSwing", "波段")}</p>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function VaultsList({
-  leaders, loading, network, subscribedLeaders,
-}: {
-  leaders: HlLeader[]; loading: boolean; network: HlNetwork; subscribedLeaders: Set<string>;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
-          <h3 className="text-sm font-medium text-foreground/90 truncate">{t("hl.hotVaults", "热门金库")}</h3>
-        </div>
-        <span className="text-[10px] text-foreground/50 truncate ml-2">{t("hl.hotVaultsDesc", "点击金库查看详情并一键跟单")}</span>
-      </div>
-
-      {loading ? (
-        <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}</div>
-      ) : leaders.length === 0 ? (
-        <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
-      ) : (
-        <div className="space-y-3">
-          {leaders.map((l) => (
-            <VaultCard key={l.address} leader={l} network={network} subscribed={subscribedLeaders.has(l.address.toLowerCase())} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── 数据源 tab — live leader signal feed ─────────────────────────────────────
 
@@ -1165,23 +1196,32 @@ function PositionRow({ p, network, address, onClose, closing }: { p: HlPosition;
   );
 }
 
-function HistoryRow({ s, network }: { s: HlSignal; network: HlNetwork }) {
+// 本账户真实成交一行(来源 = /v1/hl/account 的 recentFills = 该 follower 地址自己的 HL fills)。
+function HistoryRow({ f, network, address }: { f: HlFillRow; network: HlNetwork; address?: string }) {
   const { t } = useTranslation();
   const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
-  const long = s.side === "LONG";
+  const long = /long/i.test(f.dir);
+  const pnlPos = (f.closedPnl ?? 0) >= 0;
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
       <div className="flex items-center gap-2 min-w-0">
-        <span className={cn("font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>{s.side}</span>
-        <span className="text-[12px] font-bold text-foreground/85">{s.coin}</span>
-        <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{s.isClose ? t("hl.close") : t("hl.open")}</Badge>
+        <span className={cn("font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>{long ? "LONG" : "SHORT"}</span>
+        <span className="text-[12px] font-bold text-foreground/85">{f.coin}</span>
+        <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{f.isClose ? t("hl.close") : t("hl.open")}</Badge>
       </div>
       <div className="flex items-center gap-2.5 shrink-0">
-        <span className="text-[11px] tabular-nums num-gold">{fmtUsd(s.notionalUsd)}</span>
-        <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(s.happenedAt, tAgo)}</span>
-        {/* 区块链浏览器:在 HL 浏览器查看该 leader 地址的真实成交 */}
+        <span className="text-[11px] tabular-nums num-gold">{fmtUsd((f.sz ?? 0) * (f.px ?? 0))}</span>
+        {f.isClose && (() => {
+          const notional = (f.sz ?? 0) * (f.px ?? 0);
+          const pct = notional > 0 ? ((f.closedPnl ?? 0) / notional) * 100 : 0;
+          return (
+            <span className={cn("text-[11px] tabular-nums", pnlPos ? "text-emerald-400" : "text-red-400")}>{pnlPos ? "+" : ""}{fmtUsd(f.closedPnl ?? 0)}<span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span></span>
+          );
+        })()}
+        <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(f.time).toISOString(), tAgo)}</span>
+        {/* 链上记录跳转:优先跳该笔成交的 tx,无 hash 时退回本账户地址页 */}
         <a
-          href={hlExplorerAddress(s.leaderAddress, network)}
+          href={f.hash ? hlExplorerTx(f.hash, network) : hlExplorerAddress(address ?? "", network)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
@@ -1213,22 +1253,30 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
     try {
       await close(coin);
       toast({ title: t("hl.closeOk", "已平仓"), description: t("hl.closeOkDesc", "已提交市价平仓(reduce-only),稍后刷新持仓。") });
+      acctQ.refetch();
     } catch (e) {
-      toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" });
+      const msg = String((e as { message?: string })?.message ?? e);
+      // 仓位已不在(被 leader 镜像平仓 / TP-SL 自动平仓 / 重复点击)→ 当作已平仓,刷新而非报错。
+      if (/no_open_position/i.test(msg)) {
+        toast({ title: t("hl.closeAlready", "该仓位已平仓"), description: t("hl.closeAlreadyDesc", "持仓已不存在(可能已被自动平仓),已刷新。") });
+        acctQ.refetch();
+        return;
+      }
+      toast({ title: t("common.error", "出错了"), description: msg, variant: "destructive" });
     }
   }
-  // History = recent close fills across leaders on this network (the engine
-  // doesn't expose a per-follower fill history on the Bearer plane, so we use
-  // the leader signal close-feed as the network activity record).
-  const sigQ = useHlSignals(network, { limit: 40 });
-
   if (!wallet) {
     return <HlEmpty icon={Wallet} title={t("hl.connectTitle")} desc={t("hl.connectDesc")} />;
   }
 
   const acct = acctQ.data;
   const positions = acct?.positions ?? [];
-  const history = (sigQ.data?.signals ?? []).filter((s) => s.isClose);
+  // 历史 = **本账户**真实成交(recentFills 来自该 follower 地址的 HL userFills),
+  // 不再用全网 leader 信号。只显示这个账户自己的开/平仓。
+  const history = acct?.recentFills ?? [];
+  // 盈亏%(相对账户净值);净值=0 时不显示 %。每个盈亏金额旁标 %,避免客户误读。
+  const av = acct?.accountValue ?? 0;
+  const pctTxt = (v: number) => (av > 0 ? ` (${v >= 0 ? "+" : ""}${((v / av) * 100).toFixed(2)}%)` : "");
 
   return (
     <Tabs defaultValue="open" className="w-full">
@@ -1240,11 +1288,13 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
       <TabsContent value="open" className="space-y-2 mt-0">
         {acct && (
           <div className="glass-panel p-3">
-            <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="grid grid-cols-3 gap-2 text-center">
               <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.accountValue", "账户净值")}</div><div className="text-[13px] font-bold num-gold tabular-nums">{fmtUsd(acct.accountValue)}</div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.todayPnl", "当日盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", (acct.todayPnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400")}>{(acct.todayPnl ?? 0) >= 0 ? "+" : ""}{fmtUsd(acct.todayPnl ?? 0)}</div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.unrealized", "未实现盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", acct.unrealizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.unrealizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.unrealizedPnl)}</div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.realized", "已实现盈亏")}</div><div className={cn("text-[13px] font-bold tabular-nums", acct.realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.realizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.realizedPnl)}</div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.marginUsed", "保证金占用")}</div><div className="text-[13px] font-bold text-foreground/80 tabular-nums">{fmtUsd(acct.marginUsed ?? 0)}</div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.available", "可用")}</div><div className="text-[13px] font-bold text-foreground/80 tabular-nums">{fmtUsd(acct.withdrawable)}</div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.todayPnl", "当日盈亏")}</div><div className={cn("text-[12px] font-bold tabular-nums", (acct.todayPnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400")}>{(acct.todayPnl ?? 0) >= 0 ? "+" : ""}{fmtUsd(acct.todayPnl ?? 0)}<span className="text-[9px] opacity-70">{pctTxt(acct.todayPnl ?? 0)}</span></div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.unrealized", "未实现盈亏")}</div><div className={cn("text-[12px] font-bold tabular-nums", acct.unrealizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.unrealizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.unrealizedPnl)}<span className="text-[9px] opacity-70">{pctTxt(acct.unrealizedPnl)}</span></div></div>
+              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.realized", "已实现盈亏")}</div><div className={cn("text-[12px] font-bold tabular-nums", acct.realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.realizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.realizedPnl)}<span className="text-[9px] opacity-70">{pctTxt(acct.realizedPnl)}</span></div></div>
             </div>
           </div>
         )}
@@ -1260,12 +1310,12 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
       </TabsContent>
 
       <TabsContent value="history" className="space-y-1.5 mt-0">
-        {sigQ.isLoading ? (
+        {acctQ.isLoading ? (
           <div className="space-y-1.5">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
         ) : history.length === 0 ? (
           <HlEmpty icon={HistoryIcon} title={t("hl.noHistory")} desc={t("hl.noHistoryDesc")} />
         ) : (
-          history.map((s) => <HistoryRow key={s.id} s={s} network={network} />)
+          history.map((f, i) => <HistoryRow key={`${f.coin}-${f.time}-${i}`} f={f} network={network} address={acct?.address} />)
         )}
       </TabsContent>
     </Tabs>
@@ -1344,45 +1394,6 @@ function ActiveSubs({ userId }: { userId?: string }) {
   );
 }
 
-// ── 持仓 / 数据源 secondary section (kept functionality, restyled control) ────
-
-function SecondaryPanels({ network }: { network: HlNetwork }) {
-  const { t } = useTranslation();
-  const [tab, setTab] = useState<"positions" | "data">("positions");
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
-        {([
-          { id: "positions", labelKey: "hl.tabPositions", icon: Layers },
-          { id: "data", labelKey: "hl.tabData", icon: Activity },
-        ] as const).map((x) => {
-          const Icon = x.icon;
-          const active = tab === x.id;
-          return (
-            <button
-              key={x.id}
-              onClick={() => setTab(x.id)}
-              className={cn(
-                "flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[12px] font-bold tracking-wide transition-all",
-                active
-                  ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
-                  : "text-white/55 hover:text-white/90 hover:bg-white/5",
-              )}
-            >
-              <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-black" : "text-white/55")} />
-              <span className="truncate">{t(x.labelKey)}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
-        {tab === "positions" && <MyPositionsTab network={network} />}
-        {tab === "data" && <DataSourceTab network={network} />}
-      </div>
-    </div>
-  );
-}
-
 // ── Section ──────────────────────────────────────────────────────────────────
 
 /**
@@ -1421,13 +1432,13 @@ export function HlCopySection() {
   }, [subsQ.data]);
 
   const acct = acctQ.data;
-  const leaders = leadersQ.data?.leaders ?? [];
 
   return (
     <div className="space-y-5" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
       <NetworkToggle value={network} onChange={setNetwork} />
 
-      {/* Hero 入口 → 智能跟单HL 整页 (数据台/策略包/一键跟单/信号/持仓/历史订单) */}
+      {/* Hero 入口 → 智能跟单 hub (统计台 / 总览 / 智能跟单 / 信号源 / 持仓·平仓)。
+          钱包(开户/充值/提现)已移入 hub 的「总览」tab,与交易所一致。 */}
       <Link href="/strategy/hl" data-testid="link-hl-hub">
         <div className="cursor-pointer active:scale-[0.99] transition-transform">
           <HlHero
@@ -1442,36 +1453,55 @@ export function HlCopySection() {
         </div>
       </Link>
 
-      {/* 钱包面板 — 开户 + 充值 / 提现 全部在这一张卡里 (engine-user onboarding + custodial EOA / agent) */}
-      <HlAccountStrip
-        wallet={wallet}
-        userLoading={!!wallet && userQ.isLoading}
-        userError={!!wallet && userQ.isError}
-        userId={userId}
-        network={network}
-        agentMode={agentMode}
-        /* agent 模式下交易账户地址 = master(自己钱包);custodial = 托管 EOA。 */
-        engineEoaAddress={(agentMode ? hlAddress : engineEoa) ?? ""}
-        onRetryUser={() => userQ.refetch()}
-        followCount={subscribedLeaders.size}
-        funding={userId ? (
-          <HlFunding
-            userId={userId}
-            network={network}
-            agentMode={agentMode}
-            depositAddress={engineEoa ?? ""}
-            withdrawable={acct?.withdrawable ?? 0}
-          />
-        ) : undefined}
-      />
+      {/* 底部两 tab:金库(推荐金库,实时链上数据,纯展示)/ AI 实验室。
+          一次只显示一个,移动端等宽按钮、无横向溢出。 */}
+      <BottomTabs network={network} />
+    </div>
+  );
+}
 
-      {/* 热门金库 — 点击金库进入各自的详情页 */}
-      <VaultsList
-        leaders={leaders}
-        loading={leadersQ.isLoading}
-        network={network}
-        subscribedLeaders={subscribedLeaders}
-      />
+// ── 底部 tab 切换 — 金库 / AI 实验室 ──────────────────────────────────────────
+//
+// Splits the previously-stacked 推荐金库 panel and AI 实验室 into two mutually-
+// exclusive tabs, reusing the hub's amber pill UI. Mobile-first: tab bar is a
+// full-width flex with equal-width (flex-1) touch targets, content has no fixed
+// widths so it never overflows a 360px viewport.
+function BottomTabs({ network }: { network: HlNetwork }) {
+  const { t } = useTranslation();
+  const [tab, setTab] = useState<"vaults" | "ailab">("vaults");
+  const tabs = [
+    { id: "vaults" as const, label: t("hl.bottomTabVaults", "金库") },
+    { id: "ailab" as const, label: t("hl.bottomTabAiLab", "AI 实验室") },
+  ];
+  return (
+    <div className="space-y-5">
+      <div className="flex w-full gap-1 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
+        {tabs.map((tb) => (
+          <button
+            key={tb.id}
+            type="button"
+            onClick={() => setTab(tb.id)}
+            className={cn(
+              "flex-1 min-w-0 py-2.5 px-2 rounded-xl text-[12px] sm:text-[13px] font-bold tracking-tight whitespace-nowrap truncate transition-all",
+              tab === tb.id
+                ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                : "text-white/55 hover:text-white/90 hover:bg-white/5",
+            )}
+            data-testid={`bottom-tab-${tb.id}`}
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="min-w-0" style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
+        {tab === "vaults" && <HlVaultsPanel network={network} />}
+        {tab === "ailab" && (
+          <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 overflow-hidden [&>div]:px-3 [&>div]:pt-3">
+            <AiLab />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1834,10 +1864,11 @@ function ConsolePackCard({
   );
 }
 
-// ── 智能跟单HL — full hub page reached from the 跟单 tab hero ──────────────────
+// ── 智能跟单HL — full hub page reached from the Strategy hero ─────────────────
 //
-// 数据台 (StatsGrid) · 参数配置 · 策略包 + 一键跟单 (PackRow) · 跟单中 (ActiveSubs)
-// · 信号 / 持仓列表 / 历史订单列表 (SecondaryPanels). Honest live engine data only.
+// 统计台 (HubStatsBar:每日盈亏) always on top, then 4 exchange-style tabs:
+//   总览 (钱包:开户/充值/提现 + 跟单中) · 智能跟单 (策略包 + 一键跟单 + AI 决策)
+//   · 信号源 (DataSourceTab) · 持仓·平仓 (MyPositionsTab). Honest live engine data only.
 export function HlHubPage() {
   const { t } = useTranslation();
   const reduce = !!useReducedMotion();
@@ -1883,8 +1914,8 @@ export function HlHubPage() {
 
   // 选一个策略包 → 一键跟单(copyMany 批量订阅该 pack 的 top-N leader)。每张卡独立 busy。
   const [busyPack, setBusyPack] = useState<string | null>(null);
-  // 顶部 tab:跟单(数据台+策略包+跟单中)/ 数据(持仓·信号·历史)。一屏内切换,免去再跳转。
-  const [hubTab, setHubTab] = useState<"follow" | "data">("follow");
+  // 交易所式四 tab:总览(账户/钱包/跟单中)· 智能跟单(策略包)· 信号源 · 持仓·平仓。
+  const [hubTab, setHubTab] = useState<"overview" | "copy" | "signals" | "positions">("overview");
   async function onEnablePack(picks: HlLeader[], pack: HlPack) {
     if (busyPack) return;
     setBusyPack(pack.key);
@@ -1929,18 +1960,31 @@ export function HlHubPage() {
       <div className="px-4 py-5 space-y-5 max-w-2xl mx-auto" style={{ animation: "fadeSlideIn 0.4s ease-out" }}>
         <SectionHeader network={network} onNetwork={setNetwork} reduce={reduce} health={engineHealth} />
 
-        {/* 顶部 tab:跟单 / 持仓·信号·历史 —— 一屏内切换 */}
-        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
+        {/* 统计台 — 每日盈亏 + 账户概览,始终置顶(交易所式)。 */}
+        <HubStatsBar
+          wallet={wallet}
+          loading={!!wallet && acctQ.isLoading}
+          accountValue={acct?.accountValue ?? 0}
+          todayPnl={acct?.todayPnl ?? 0}
+          unrealizedPnl={acct?.unrealizedPnl ?? 0}
+          followCount={subscribedLeaders.size}
+          reduce={reduce}
+        />
+
+        {/* 四 tab:总览 / 智能跟单 / 信号源 / 持仓·平仓 */}
+        <div className="flex gap-1 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md p-1">
           {([
-            { id: "follow" as const, label: t("hl.hubTabFollow", "跟单") },
-            { id: "data" as const, label: t("hl.hubTabData", "持仓·信号·历史") },
+            { id: "overview" as const, label: t("hl.hubTabOverview", "总览") },
+            { id: "copy" as const, label: t("hl.hubTabCopy", "智能跟单") },
+            { id: "signals" as const, label: t("hl.hubTabSignals", "信号源") },
+            { id: "positions" as const, label: t("hl.hubTabPositions", "持仓·平仓") },
           ]).map((tb) => (
             <button
               key={tb.id}
               type="button"
               onClick={() => setHubTab(tb.id)}
               className={cn(
-                "flex-1 py-2.5 px-2 rounded-xl text-[12px] font-bold tracking-wide transition-all",
+                "flex-1 min-w-0 py-2.5 px-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold tracking-tight whitespace-nowrap truncate transition-all",
                 hubTab === tb.id ? "bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.3)]" : "text-white/55 hover:text-white/90 hover:bg-white/5",
               )}
               data-testid={`hub-tab-${tb.id}`}
@@ -1950,89 +1994,110 @@ export function HlHubPage() {
           ))}
         </div>
 
-        {hubTab === "follow" && (<>
-        {/* 数据台 */}
-        <StatsGrid
-          wallet={wallet}
-          loading={!!wallet && acctQ.isLoading}
-          accountValue={acct?.accountValue ?? 0}
-          unrealizedPnl={acct?.unrealizedPnl ?? 0}
-          followCount={subscribedLeaders.size}
-          reduce={reduce}
-        />
+        <div style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
+          {/* ── 总览 — 钱包(开户/充值/提现)+ 跟单中 ─────────────────────────── */}
+          {hubTab === "overview" && (
+            <div className="space-y-5">
+              <HlAccountStrip
+                wallet={wallet}
+                userLoading={!!wallet && userQ.isLoading}
+                userError={!!wallet && userQ.isError}
+                userId={userId}
+                network={network}
+                agentMode={agentMode}
+                engineEoaAddress={(agentMode ? hlAddress : engineEoa) ?? ""}
+                onRetryUser={() => userQ.refetch()}
+                followCount={subscribedLeaders.size}
+                funding={userId ? (
+                  <HlFunding
+                    userId={userId}
+                    network={network}
+                    agentMode={agentMode}
+                    depositAddress={engineEoa ?? ""}
+                    withdrawable={acct?.withdrawable ?? 0}
+                  />
+                ) : undefined}
+              />
+              <ActiveSubs userId={userId} />
+            </div>
+          )}
 
-        {/* 策略包 — 选一个、一键跟单(风险参数已内置,无需手动调参) */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Layers className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
-            <span className="text-[11px] text-foreground/40">· {t("hl.packHint", "选一个,一键跟单")}</span>
-          </div>
+          {/* ── 智能跟单 — 策略包 + 一键跟单 + AI 决策 ──────────────────────── */}
+          {hubTab === "copy" && (
+            <div className="space-y-5">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Layers className="h-4 w-4 text-amber-400" />
+                  <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
+                  <span className="text-[11px] text-foreground/40">· {t("hl.packHint", "选一个,一键跟单")}</span>
+                </div>
 
-          {/* 余额不足 → 醒目横幅,指回钱包面板充值(deposit 在外层 /strategy 页,UIUX Rec #2)。 */}
-          {underfunded && (
-            <Link href="/strategy" data-testid="link-fund-banner">
-              <div className="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-3.5 py-3 transition active:scale-[0.99] hover:border-amber-400/50">
-                <div className="shrink-0 grid h-9 w-9 place-items-center rounded-lg bg-amber-500/15 border border-amber-500/30">
-                  <Wallet className="h-4 w-4 text-amber-300" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-bold text-amber-200">{t("hl.underfundedTitle", "余额不足,请先在「钱包」充值")}</div>
-                  <p className="mt-0.5 text-[11px] leading-snug text-foreground/55">
-                    {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(acct?.accountValue ?? 0) })}
-                  </p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-amber-300/80" />
+                {/* 余额不足 → 醒目横幅,切到「总览」tab 充值。 */}
+                {underfunded && (
+                  <button
+                    type="button"
+                    onClick={() => setHubTab("overview")}
+                    className="mb-3 w-full flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-3.5 py-3 text-left transition active:scale-[0.99] hover:border-amber-400/50"
+                    data-testid="button-fund-banner"
+                  >
+                    <div className="shrink-0 grid h-9 w-9 place-items-center rounded-lg bg-amber-500/15 border border-amber-500/30">
+                      <Wallet className="h-4 w-4 text-amber-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-bold text-amber-200">{t("hl.underfundedTitle2", "余额不足,去「总览」充值")}</div>
+                      <p className="mt-0.5 text-[11px] leading-snug text-foreground/55">
+                        {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(acct?.accountValue ?? 0) })}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-amber-300/80" />
+                  </button>
+                )}
+
+                {useConsole ? (
+                  <div className="space-y-3">
+                    {consolePacks.map((p) => (
+                      <ConsolePackCard
+                        key={p.slug}
+                        pack={p}
+                        subscribed={subscribedLeaders}
+                        busy={busyPack === p.slug}
+                        onEnable={onEnableConsolePack}
+                        underfunded={underfunded}
+                      />
+                    ))}
+                  </div>
+                ) : packsQ.isLoading || leadersQ.isLoading ? (
+                  <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}</div>
+                ) : leaders.length === 0 ? (
+                  <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
+                ) : (
+                  <div className="space-y-3">
+                    {HL_PACKS.map((p) => (
+                      <PackCard
+                        key={p.key}
+                        pack={p}
+                        leaders={leaders}
+                        subscribed={subscribedLeaders}
+                        busy={busyPack === p.key}
+                        onEnable={onEnablePack}
+                        underfunded={underfunded}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </Link>
+
+              {/* F17 — AI 跟单决策卡 */}
+              <AiDecisionCards userId={userId} />
+            </div>
           )}
 
-          {/* CONSOLE packs (project-curated) drive the list when configured;
-              otherwise fall back to the hardcoded HL_PACKS presets so projects
-              that haven't set up packs keep the existing top-N-leader behavior. */}
-          {useConsole ? (
-            <div className="space-y-3">
-              {consolePacks.map((p) => (
-                <ConsolePackCard
-                  key={p.slug}
-                  pack={p}
-                  subscribed={subscribedLeaders}
-                  busy={busyPack === p.slug}
-                  onEnable={onEnableConsolePack}
-                  underfunded={underfunded}
-                />
-              ))}
-            </div>
-          ) : packsQ.isLoading || leadersQ.isLoading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}</div>
-          ) : leaders.length === 0 ? (
-            <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
-          ) : (
-            <div className="space-y-3">
-              {HL_PACKS.map((p) => (
-                <PackCard
-                  key={p.key}
-                  pack={p}
-                  leaders={leaders}
-                  subscribed={subscribedLeaders}
-                  busy={busyPack === p.key}
-                  onEnable={onEnablePack}
-                  underfunded={underfunded}
-                />
-              ))}
-            </div>
-          )}
+          {/* ── 信号源 — leader 实时信号 feed ──────────────────────────────── */}
+          {hubTab === "signals" && <DataSourceTab network={network} />}
+
+          {/* ── 持仓·平仓 — 持仓 + 平仓记录 ───────────────────────────────── */}
+          {hubTab === "positions" && <MyPositionsTab network={network} />}
         </div>
-
-        {/* 跟单中 */}
-        <ActiveSubs userId={userId} />
-
-        {/* F17 — AI 跟单决策卡(开启 AI 决策后显示每个信号的判断+调参) */}
-        <AiDecisionCards userId={userId} />
-        </>)}
-
-        {/* 持仓·信号·历史(SecondaryPanels 内含 持仓/数据 子 tab) */}
-        {hubTab === "data" && <SecondaryPanels network={network} />}
       </div>
     </div>
   );

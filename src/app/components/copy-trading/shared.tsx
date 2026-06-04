@@ -598,6 +598,9 @@ export function DepositDialog({
               <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
               {t("deposit.manualTransfer", "或转账到地址")}
             </div>
+            <p className="text-[10px] leading-snug text-amber-300/80">
+              {t("deposit.onchainWaitPm", "仅支持 Polygon 网络 USDC。链上确认约需 2–5 分钟到账,到账后余额会自动刷新,请耐心等待。")}
+            </p>
             {load.isPending ? (
               <div className="py-5 text-center"><Loader2 className="h-5 w-5 text-amber-300 animate-spin mx-auto" /></div>
             ) : addresses.length > 0 ? (
