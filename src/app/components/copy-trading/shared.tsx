@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { useToast } from "@app/hooks/use-toast";
@@ -78,6 +79,8 @@ export interface NormOrder {
   status: string;
   pnl: number | null;
   createdAt: number;
+  /** 链上交易哈希(PM 撮合订单常缺失)→ 用于「查看链上记录」,缺失时降级到地址页。 */
+  txHash: string | null;
 }
 
 export function normalizeOrder(raw: any, i: number): NormOrder {
@@ -87,6 +90,8 @@ export function normalizeOrder(raw: any, i: number): NormOrder {
   const notional = notionalRaw != null ? asNumber(notionalRaw) : price * size;
   const pnlRaw = raw?.pnl ?? raw?.realizedPnl ?? raw?.profit;
   const ts = raw?.createdAt ?? raw?.created_at ?? raw?.timestamp ?? raw?.ts;
+  const txRaw = raw?.txHash ?? raw?.transactionHash ?? raw?.tx_hash ?? raw?.txid ?? raw?.hash;
+  const txHash = typeof txRaw === "string" && /^0x[a-fA-F0-9]{6,}$/.test(txRaw) ? txRaw : null;
   return {
     id: String(raw?.id ?? raw?.orderId ?? raw?.orderID ?? raw?.hash ?? `ord-${i}`),
     market: String(raw?.market ?? raw?.question ?? raw?.marketId ?? raw?.tokenId ?? raw?.title ?? "—"),
@@ -97,6 +102,7 @@ export function normalizeOrder(raw: any, i: number): NormOrder {
     status: String(raw?.status ?? raw?.state ?? "").toUpperCase(),
     pnl: pnlRaw != null ? asNumber(pnlRaw) : null,
     createdAt: ts ? new Date(ts).getTime() || 0 : 0,
+    txHash,
   };
 }
 
@@ -106,6 +112,29 @@ export function isClosed(o: NormOrder) { return CLOSED_STATES.has(o.status); }
 export function fmtUsd(n: number, digits = 2): string {
   const sign = n < 0 ? "-" : "";
   return `${sign}$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+}
+
+/** Signed percent — 盈绿带+ / 亏红带-，与 fmtUsd 的符号规范一致。 */
+export function fmtPct(n: number, digits = 1): string {
+  if (!Number.isFinite(n)) return "0.0%";
+  const sign = n > 0 ? "+" : n < 0 ? "-" : "";
+  return `${sign}${Math.abs(n).toFixed(digits)}%`;
+}
+
+/** PnL → color (emerald/red/neutral)。0 视为非亏(绿),严格亏损才红。 */
+export function pnlColor(n: number | null | undefined): string {
+  if (n == null) return "hsl(var(--foreground))";
+  return n >= 0 ? "#10b981" : "#f87171";
+}
+
+// ─── Polygonscan helpers ─────────────────────────────────────────────────────
+// PM 在 Polygon 上结算。订单常无 txHash(CLOB 撮合/聚合),所以「查看链上记录」
+// 优先用 txHash 跳交易详情,缺失时降级到用户 deposit/交易钱包的地址页。
+export function polygonscanTx(hash: string): string {
+  return `https://polygonscan.com/tx/${hash}`;
+}
+export function polygonscanAddress(addr: string): string {
+  return `https://polygonscan.com/address/${addr}`;
 }
 
 // ─── Sub-tab nav (mirrors DashboardSubTabs, route-aware) ─────────────────────
@@ -911,6 +940,157 @@ export function WithdrawDialog({
               {withdraw.isPending ? t("copyTrading.withdrawSubmitting") : t("copyTrading.withdrawSubmit")}
             </Button>
           )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── 跟单前风险提示弹窗(PM)───────────────────────────────────────────────────
+//
+// 在确认跟单前展示策略关键参数 + 红色风险文案。激进档(镜像≥10% 或 日上限较高)
+// 强制勾选「我已知悉高风险并自愿承担」才放行;保守/稳健档只需普通确认。
+// 观感对齐 HL 侧的二次确认(packRiskLine):金黄边框 + 红色风险行。
+
+export interface CopyRiskParams {
+  /** 跟单档:用于决定是否强制勾选高风险确认。 */
+  tier: "conservative" | "balanced" | "aggressive";
+  /** 镜像比例(整数百分比,如 8 表示 8%)。 */
+  ratioPct: number;
+  /** 单笔上限(USD)。 */
+  perTradeCapUsd: number;
+  /** 日上限(USD)。null = 随单/不限。 */
+  dailyCapUsd?: number | null;
+  /** 最少资金要求(USD)。null = 无门槛。 */
+  minBalanceUsd?: number | null;
+}
+
+/**
+ * 判定是否「激进档」:显式 tier=aggressive,或可见参数偏激进(镜像≥10% 或日上限较高)。
+ * 阈值据可见参数自洽判断,真实限额由后端执行。
+ */
+export function isAggressiveRisk(p: CopyRiskParams): boolean {
+  if (p.tier === "aggressive") return true;
+  if (p.ratioPct >= 10) return true;
+  if ((p.dailyCapUsd ?? 0) >= 1000) return true;
+  return false;
+}
+
+export function CopyRiskDialog({
+  open, onOpenChange, params, onConfirm, busy = false,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  params: CopyRiskParams;
+  /** 用户勾选(若激进)并点确认后触发——调用方在此真正启用跟单/跳转。 */
+  onConfirm: () => void;
+  busy?: boolean;
+}) {
+  const { t } = useTranslation();
+  const aggressive = isAggressiveRisk(params);
+  const [acked, setAcked] = useState(false);
+
+  // 每次重新打开都重置勾选,避免上一次的「已勾选」残留放行。
+  useEffect(() => { if (!open) setAcked(false); }, [open]);
+
+  const canConfirm = (!aggressive || acked) && !busy;
+
+  const row = (k: string, v: React.ReactNode) => (
+    <div className="flex items-center justify-between gap-2 text-[12px]">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-bold text-foreground/85 tabular-nums">{v}</span>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card border-border w-[calc(100vw-1.5rem)] max-w-md p-4 rounded-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-4 w-4 text-black" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-[15px] font-bold leading-tight">
+                {t("copyTrading.riskDialogTitle", "跟单前风险提示")}
+              </DialogTitle>
+              <DialogDescription className="text-[12px] leading-tight">
+                {aggressive
+                  ? t("copyTrading.riskDialogDescAggressive", "激进策略波动较大,请确认你已了解风险。")
+                  : t("copyTrading.riskDialogDesc", "请确认以下跟单参数后再继续。")}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-3 mt-1">
+          {/* 关键参数 */}
+          <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.20)" }}>
+            {row(t("copyTrading.riskParamRatio", "镜像比例"), `${params.ratioPct}%`)}
+            {row(t("copyTrading.riskParamCap", "单笔上限"), fmtUsd(params.perTradeCapUsd, 0))}
+            {row(
+              t("copyTrading.riskParamDaily", "日上限"),
+              params.dailyCapUsd != null && params.dailyCapUsd > 0
+                ? fmtUsd(params.dailyCapUsd, 0)
+                : t("copyTrading.riskParamAuto", "随单"),
+            )}
+            {row(
+              t("copyTrading.riskParamMinBal", "最少资金要求"),
+              params.minBalanceUsd != null && params.minBalanceUsd > 0
+                ? fmtUsd(params.minBalanceUsd, 0)
+                : t("copyTrading.riskParamNone", "无门槛"),
+            )}
+          </div>
+
+          {/* 满仓保护提示(真实限额后端执行) */}
+          <div className="flex items-start gap-1.5 rounded-lg px-3 py-2 text-[11px] leading-snug text-foreground/65"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-emerald-400/80" />
+            <span>{t("copyTrading.riskMaxExposure", "满仓保护:单笔下单最多使用账户可用余额的 20%。")}</span>
+          </div>
+
+          {/* 红色风险文案 */}
+          <div className="rounded-xl p-3 space-y-1" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.22)" }}>
+            <div className="flex items-center gap-1.5 text-[12px] font-bold text-red-300">
+              <AlertTriangle className="h-3.5 w-3.5" />{t("copyTrading.riskWarnTitle", "风险提示")}
+            </div>
+            <p className="text-[11px] leading-relaxed text-red-300/90">
+              {t("copyTrading.riskWarnLine", "预测市场存在亏损风险,行情不利时可能损失全部本金。跟单不保证盈利,请理性参与、量力而行。")}
+            </p>
+          </div>
+
+          {/* 激进档:强制勾选 */}
+          {aggressive && (
+            <label className="flex items-start gap-2 cursor-pointer rounded-lg px-3 py-2.5"
+              style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)" }}>
+              <Checkbox
+                checked={acked}
+                onCheckedChange={(v) => setAcked(v === true)}
+                className="mt-0.5 shrink-0"
+                data-testid="checkbox-risk-ack"
+              />
+              <span className="text-[12px] leading-snug text-foreground/85">
+                {t("copyTrading.riskAck", "我已知悉高风险并自愿承担")}
+              </span>
+            </label>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 mt-1">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            {t("common.cancel", "取消")}
+          </Button>
+          <Button
+            size="sm"
+            disabled={!canConfirm}
+            onClick={onConfirm}
+            className="bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+            data-testid="button-risk-confirm"
+          >
+            {busy
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : t("copyTrading.riskConfirm", "我已知悉,继续跟单")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
