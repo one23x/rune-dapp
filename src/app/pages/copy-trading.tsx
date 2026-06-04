@@ -356,7 +356,10 @@ export default function CopyTradingPage() {
         <span>{t("copyTrading.fundsFooter", "充值/提现通过 Polygon 网络 pUSD · 即时到账")}</span>
       </div>
 
-      <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} />
+      {/* 充值目标必须 = 后端读余额/执行器交易的钱包。per-user 模式后端 pusd-balance 返回的
+          smartWallet 是派生 deposit-wallet(非用户智能钱包),用它做 PayEmbed seller + 充值地址,
+          否则会"充到 A、余额读 B"导致充值不见。回退到用户 smartWalletAddress。 */}
+      <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} smartWalletAddress={(balanceQ.data as { smartWallet?: string } | undefined)?.smartWallet ?? (userQ.data as { smartWalletAddress?: string } | undefined)?.smartWalletAddress} />
       <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} />
 
       {/* Confirm: close / cancel a single live position. */}

@@ -22,6 +22,7 @@ type SideFilter = "ALL" | "BUY" | "SELL";
 type StatusFilter = "ALL" | "WON" | "LOST";
 
 function HistoryOrderCard({ o }: { o: NormOrder }) {
+  const { t } = useTranslation();
   const isWin = (o.pnl ?? 0) >= 0;
   const isBuy = o.side === "BUY" || o.side === "YES" || o.side === "LONG";
   const dateStr = o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
@@ -43,15 +44,15 @@ function HistoryOrderCard({ o }: { o: NormOrder }) {
 
         <div className="grid grid-cols-3 gap-1 mb-3 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.04)" }}>
           <div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Price</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">{t("copyTrading.colPrice", "Price")}</div>
             <div className="text-[11px] font-mono text-foreground/80">{o.price > 0 ? `$${o.price.toFixed(2)}` : "—"}</div>
           </div>
           <div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Size</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">{t("copyTrading.colSize", "Size")}</div>
             <div className="text-[11px] font-mono text-foreground/80">{o.size > 0 ? o.size.toLocaleString() : "—"}</div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">Value</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5">{t("copyTrading.colValue", "Value")}</div>
             <div className="text-[11px] font-mono text-foreground/80">{o.notional > 0 ? fmtUsd(o.notional) : "—"}</div>
           </div>
         </div>
@@ -64,7 +65,7 @@ function HistoryOrderCard({ o }: { o: NormOrder }) {
                 ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                 : <XCircle className="h-3.5 w-3.5 text-red-400" />}
               <span className={`text-[11px] font-bold ${isWin ? "text-emerald-400" : "text-red-400"}`}>
-                {isWin ? "WON" : "LOST"}
+                {isWin ? t("copyTrading.statusWon", "WON") : t("copyTrading.statusLost", "LOST")}
               </span>
             </div>
             {o.pnl != null && (

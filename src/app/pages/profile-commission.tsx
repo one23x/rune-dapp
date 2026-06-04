@@ -1,4 +1,5 @@
 import { useActiveAccount } from "thirdweb/react";
+import { useTranslation } from "react-i18next";
 import { RewardsPanel } from "@app/components/profile/team-detail";
 
 /**
@@ -7,12 +8,13 @@ import { RewardsPanel } from "@app/components/profile/team-detail";
  * No separate UI to maintain.
  */
 export default function ProfileCommission() {
+  const { t } = useTranslation();
   const account = useActiveAccount();
   const address = account?.address;
   if (!address) {
     return (
       <div className="container mx-auto px-4 py-12 text-center text-muted-foreground">
-        请先连接钱包
+        {t("common.connectWallet", "请先连接钱包")}
       </div>
     );
   }

@@ -52,11 +52,11 @@ const TIMEFRAMES: { key: ChartTimeframe; label: string }[] = [
   { key: "1W", label: "1W" },
 ];
 
-const CHART_TYPES: { key: ChartType; icon: any; label: string }[] = [
-  { key: "candle", icon: CandlestickChart, label: "Candlestick" },
-  { key: "line", icon: LineChart, label: "Line" },
-  { key: "area", icon: AreaChart, label: "Area" },
-  { key: "bar", icon: BarChart3, label: "Bar" },
+const CHART_TYPES: { key: ChartType; icon: any; labelKey: string; labelDefault: string }[] = [
+  { key: "candle", icon: CandlestickChart, labelKey: "ma.chartCandle", labelDefault: "Candlestick" },
+  { key: "line", icon: LineChart, labelKey: "ma.chartLine", labelDefault: "Line" },
+  { key: "area", icon: AreaChart, labelKey: "ma.chartArea", labelDefault: "Area" },
+  { key: "bar", icon: BarChart3, labelKey: "ma.chartBar", labelDefault: "Bar" },
 ];
 
 function getVisibleBars(tf?: ChartTimeframe): number {
@@ -516,7 +516,7 @@ export function PriceChart({
                       : "text-[rgba(180,195,190,0.35)] hover:text-[rgba(180,195,190,0.65)] hover:bg-white/[0.03]"
                   }`}
                   onClick={() => setChartType(ct.key)}
-                  title={ct.label}
+                  title={t(ct.labelKey, ct.labelDefault)}
                 >
                   <Icon className="h-3 w-3" />
                 </button>
