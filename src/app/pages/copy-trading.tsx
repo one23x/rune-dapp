@@ -357,9 +357,11 @@ export default function CopyTradingPage() {
       </div>
 
       {/* 充值目标必须 = 后端读余额/执行器交易的钱包。per-user 模式后端 pusd-balance 返回的
-          smartWallet 是派生 deposit-wallet(非用户智能钱包),用它做 PayEmbed seller + 充值地址,
-          否则会"充到 A、余额读 B"导致充值不见。回退到用户 smartWalletAddress。 */}
-      <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} smartWalletAddress={(balanceQ.data as { smartWallet?: string } | undefined)?.smartWallet ?? (userQ.data as { smartWalletAddress?: string } | undefined)?.smartWalletAddress} />
+          smartWallet 是派生 deposit-wallet(= deriveDepositWallet(engineEoa) 的 Polymarket 钱包,
+          非用户 thirdweb 智能钱包),用它做 PayEmbed seller + 充值地址,否则"充到 A、余额读 B"=
+          充值不到账。**绝不回退到 userQ.smartWalletAddress**(那是错的地址,正是历史不到账的根因);
+          未就绪时下游 DepositBuyPanel 会显示"地址准备中"并禁充,而不是打到错地址。 */}
+      <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} wallet={wallet} deposited={balance} smartWalletAddress={(balanceQ.data as { smartWallet?: string } | undefined)?.smartWallet} />
       <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} />
 
       {/* Confirm: close / cancel a single live position. */}

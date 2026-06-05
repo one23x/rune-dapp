@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "구매 확인",
     "buyCta": "노드 구매",
-    "buyDialogDesc": "등급을 선택하고 USDC로 결제하세요.",
+    "buyDialogDesc": "등급을 선택하고 USDT로 결제하세요.",
     "buyGridTitle": "노드 구매",
     "buySuccess": "구매 성공",
     "buySuccessDesc": "노드를 구매했습니다 — 온체인 확인 후 활성화됩니다.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "내가 보유한 노드",
     "pageSubtitle": "노드를 보유하여 계좌 개설과 카피트레이딩 권한을 잠금 해제",
     "pageTitle": "내 노드",
-    "payHint": "USDC로 결제 · {{chain}}",
+    "payHint": "USDT로 결제 · {{chain}}",
     "redeemDesc": "이미 코드가 있으신가요? 입력하여 노드 접근을 활성화하세요.",
     "redeemTitle": "인증 코드 사용"
   },

@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "確認購買",
     "buyCta": "購買節點",
-    "buyDialogDesc": "選擇檔位，使用 USDC 支付。",
+    "buyDialogDesc": "選擇檔位，使用 USDT 支付。",
     "buyGridTitle": "購買節點",
     "buySuccess": "購買成功",
     "buySuccessDesc": "節點已購買，鏈上確認後即生效。",
@@ -2377,7 +2377,7 @@
     "heldTitle": "我持有的節點",
     "pageSubtitle": "持有節點解鎖開戶與跟單權限",
     "pageTitle": "我的節點",
-    "payHint": "USDC 支付 · {{chain}}",
+    "payHint": "USDT 支付 · {{chain}}",
     "redeemDesc": "已有授權碼？輸入即可開通節點權限。",
     "redeemTitle": "授權碼兌換"
   },

@@ -18,6 +18,36 @@ export const usdtContract: ThirdwebContract = getContract({
   abi: usdtAbi as any,
 });
 
+/**
+ * NodePresell contract handle (BSC mainnet `0xF327…` per addresses.ts).
+ * This is the legacy presell contract the QuickNode indexer subscribes to:
+ * `nodePresell(uint256)` emits `EventNodePresell`, which the indexer writes
+ * into `rune_purchases` so the dapp/admin see the buy with no manual backfill.
+ * Methods are resolved from string signatures at call sites (thirdweb v5),
+ * so no abi is pinned here.
+ */
+export const nodePresellContract: ThirdwebContract = getContract({
+  client: thirdwebClient,
+  chain: runeChain,
+  address: addr.nodePresell,
+});
+
+/**
+ * Community contract handle (referral tree). `referrerOf(address)` returns the
+ * caller's upstream referrer; the top of the tree resolves to COMMUNITY_ROOT.
+ * Referenced by use-community.ts (useReferrerOf) — was accidentally dropped in
+ * the "prune dead code" pass, which crashed node-overview (COMMUNITY_ROOT
+ * undefined → .toLowerCase() throw) and broke referral display/binding.
+ */
+export const communityContract: ThirdwebContract = getContract({
+  client: thirdwebClient,
+  chain: runeChain,
+  address: addr.community,
+});
+
+/** Top of the referral tree — `referrerOf` returns this for root accounts. */
+export const COMMUNITY_ROOT = "0x0000000000000000000000000000000000000001" as const;
+
 /** Node IDs from the spec — 101/201/301/401/501. The 501 (initial / 1000 U)
  *  tier was added at the BSC mainnet deployment per runeapi 3 §4.1. */
 export const NODE_IDS = [101, 201, 301, 401, 501] as const;

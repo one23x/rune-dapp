@@ -59,6 +59,7 @@ import {
   type HlFollowConfig,
 } from "@app/components/hl/shared";
 import { useOnboardFlow, DepositBuyPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
+import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
@@ -150,14 +151,20 @@ function AddressLine({ address, label }: { address: string; label?: string }) {
 // 资金只会进引擎托管地址(HL 下单账户),与 copy-trading 的 DepositBridge 同构,
 // 仅链/资产不同(Arbitrum USDC)。先输金额→下一步→PayEmbed,弹窗内可滚动且自适应宽度。
 function HlFunding({
-  userId, network, depositAddress, withdrawable, agentMode = false,
+  userId, network, depositAddress, withdrawable, agentMode = false, wallet, accountValue = 0,
 }: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number;
   /** 非托管 agent 模式:充值目标 = 用户自己的钱包(=HL 主账户),并隐藏站内提现
    *  (agent key 不能提现;用户直接从自己的 HL 账户提)。 */
-  agentMode?: boolean }) {
+  agentMode?: boolean;
+  /** 连接钱包地址 —— 用于读取 HL 充值限额(rune_auth_codes.hl_cap_usd)。 */
+  wallet?: string;
+  /** HL 累计已充值 proxy = HL 账户净值(剩余可充 = hl_cap_usd − accountValue)。 */
+  accountValue?: number }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const account = useActiveAccount();
+  // HL 充值限额:hl_cap_usd − 当前账户净值;无授权码 → cap 0 → 阻断。
+  const cap = useDepositCap(wallet, "hl", accountValue);
   const [depOpen, setDepOpen] = useState(false);
   const [wdOpen, setWdOpen] = useState(false);
   const [amount, setAmount] = useState("");
@@ -167,9 +174,9 @@ function HlFunding({
   // agent 模式下 HL 账户 = 用户自己的连接钱包(master),充值就充进它;custodial 充进托管 EOA。
   const depositTarget = agentMode ? (account?.address ?? "") : depositAddress;
 
-  // GAS 门禁:仅托管 + 主网 + 有托管地址时,读托管 EOA 的 Arbitrum ETH 余额。
-  // agent 模式不门禁(资金进用户自己的钱包,由用户自行付 gas)。测试网不门禁。
-  const gasGateApplies = !agentMode && network === "mainnet" && !!depositTarget;
+  // GAS 门禁已停用:服务端 deposit-forwarder 现在会自动为托管 EOA 补 Arbitrum gas
+  // (HL_GAS_TOPUP,从 server 钱包 0x36f8 出),用户无需自付 gas,故不再拦截/提醒。
+  const gasGateApplies = false;
   const gasBalance = useArbGasBalance(depositTarget, gasGateApplies);
   // 加载中(且尚无任何已知值)→ 中性状态,不提前阻断。已知余额低于阈值 → 阻断。
   const gasLoading = gasGateApplies && gasBalance.isLoading && gasBalance.data === undefined;
@@ -291,6 +298,7 @@ function HlFunding({
                 token={USDC_ARBITRUM}
                 seller={depositTarget}
                 assetLabel="USDC"
+                cap={cap}
                 onSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
                   // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),HL 账户余额已失效→重读。
@@ -2015,6 +2023,8 @@ export function HlHubPage() {
                     agentMode={agentMode}
                     depositAddress={engineEoa ?? ""}
                     withdrawable={acct?.withdrawable ?? 0}
+                    wallet={wallet}
+                    accountValue={acct?.accountValue ?? 0}
                   />
                 ) : undefined}
               />

@@ -23,6 +23,8 @@ import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
 import { funding, users, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
+import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
+import { useSupabaseNode } from "@/hooks/rune/use-supabase-node";
 import { useActiveAccount, PayEmbed } from "thirdweb/react";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
@@ -189,18 +191,46 @@ export function SectionError({ onRetry }: { onRetry?: () => void }) {
 export const BUY_NODE_URL = "/nodes";
 
 /**
- * Resolve the node-gating decision for a wallet. `blocked` is true ONLY on an
- * explicit isNode:false; any error / missing wallet falls back to allow.
+ * Resolve the node-gating decision for a wallet. Two independent sources:
+ *
+ *   1. Engine `GET /v1/node/status` (`useNodeStatus`) — reads RDS `node_access`
+ *      / redeemed `auth_codes` / on-chain `levelOf`. For real node BUYERS this
+ *      returns `isNode:false`: their auth code lives in main-net Supabase
+ *      `rune_auth_codes.assigned_to` but was never redeemed into the engine, the
+ *      on-chain `NodePresell.levelOf` reverts, and `balanceOf` grants no tier.
+ *   2. Supabase `useSupabaseNode` — the SOURCE OF TRUTH for node ownership:
+ *      a row in `rune_auth_codes` assigned to this wallet (and/or a `chain_id:56`
+ *      purchase in `rune_purchases`). This carries the granted level + caps.
+ *
+ * So a wallet is a node if EITHER source says so. `blocked` only when the engine
+ * explicitly says not-a-node AND Supabase has no node record. Any error /
+ * missing wallet / still-loading falls back to allow (optimistic — never wrongly
+ * gate a paying buyer).
  */
 export function useNodeGate(wallet: string | undefined) {
   const q = useNodeStatus(wallet);
+  const sb = useSupabaseNode(wallet);
   const status: NodeStatus | undefined = q.data;
-  const blocked = status ? status.isNode === false : false;
+
+  // Supabase-derived node identity (assigned auth code / chain-56 purchase).
+  const hasSupabaseNode = sb.isNode;
+
+  // Block ONLY when the engine explicitly says not-a-node AND Supabase has no
+  // node record. Stay optimistic while either source is still loading.
+  const engineSaysNo = status?.isNode === false;
+  const blocked = engineSaysNo && !sb.loading && !hasSupabaseNode;
+
+  // isNode = engine OR Supabase. Optimistic (true) until the engine answers.
+  const isNode = (status?.isNode ?? true) || hasSupabaseNode;
+  // Prefer engine level; else the Supabase-granted level; else ≥1 if Supabase
+  // knows this is a node (enough to pass the gate / render a badge).
+  const level = status?.level || sb.level || (hasSupabaseNode ? 1 : 0);
+
   return {
     loading: q.isLoading,
     blocked,
-    isNode: status?.isNode ?? true, // optimistic until told otherwise
-    level: status?.level ?? 0,
+    isNode,
+    level,
     limits: status?.limits ?? null,
     status,
   };
@@ -481,7 +511,7 @@ export function CopyGate({
 // ─── Deposit dialog ───────────────────────────────────────────────────────────
 
 export function DepositDialog({
-  open, onOpenChange, userId, smartWalletAddress,
+  open, onOpenChange, userId, smartWalletAddress, wallet, deposited = 0,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -489,11 +519,17 @@ export function DepositDialog({
   /** PM 直充必须打到后端读余额的地址 = user.smartWalletAddress(而非连接钱包)。
    *  缺失时回退连接钱包。 */
   smartWalletAddress?: string;
+  /** 连接钱包地址 —— 用于读取 PM 充值限额(rune_auth_codes.pm_cap_usd)。 */
+  wallet?: string;
+  /** PM 累计已充值 proxy = 当前 pUSD 余额(剩余可充 = pm_cap_usd − deposited)。 */
+  deposited?: number;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [addresses, setAddresses] = useState<{ chain: string; address: string }[]>([]);
   const [assets, setAssets] = useState<string[]>([]);
+  // PM 充值限额:pm_cap_usd − 当前 pUSD 余额;无授权码 → cap 0 → 阻断。
+  const cap = useDepositCap(wallet, "pm", deposited);
 
   const load = useMutation({
     mutationFn: async () => {
@@ -585,6 +621,7 @@ export function DepositDialog({
             token={PUSD_POLYGON}
             seller={smartWalletAddress}
             assetLabel="pUSD"
+            cap={cap}
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
               queryClient.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
@@ -665,7 +702,7 @@ function startDepositRefreshPolling(onSuccess?: () => void) {
 }
 
 export function DepositBuyPanel({
-  chain, token, seller, assetLabel, onSuccess,
+  chain, token, seller, assetLabel, onSuccess, cap,
 }: {
   chain: any; // thirdweb Chain（polygon / arbitrum）
   token: `0x${string}`;
@@ -674,6 +711,10 @@ export function DepositBuyPanel({
   /** 买入成功回调 —— 调用方在此刷新余额（PayEmbed 不会自动失效 react-query 缓存，
    *  否则「入金成功但余额不更新」直到 staleTime 过期 + 重新挂载才显示）。 */
   onSuccess?: () => void;
+  /** 充值限额校验（来自 useDepositCap）。不传 = 不做限额校验(向后兼容)。
+   *  传入时:金额必须 ≥ minPerTx 且 ≤ remaining;预设按钮过滤越界值;
+   *  无授权码(!hasCode)或 remaining<minPerTx → 阻断充值并提示。 */
+  cap?: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean };
 }) {
   const { t } = useTranslation();
   const account = useActiveAccount();
@@ -681,8 +722,68 @@ export function DepositBuyPanel({
   const [confirmed, setConfirmed] = useState(false);
   const [done, setDone] = useState(false);
   const amt = Number(amount);
-  const sellerAddr = seller ?? account?.address;
-  if (!account || !sellerAddr) return null;
+  // 充值目标 = 后端读余额/执行的地址(PM=派生 Polymarket 钱包 / HL=托管 EOA),由调用方传入。
+  // **绝不回退到连接钱包**:连接钱包不是后端读钱的地址,回退会导致"充值不到账"。
+  // seller 未就绪 → 不渲染买入流程,显示"地址准备中"(见下方守卫),而不是打到错地址。
+  const sellerAddr = seller;
+
+  // ── 限额校验 ───────────────────────────────────────────────────────────────
+  // cap 未传 → 不校验(min/max 视为放行)。传入时:
+  //   - capLoading           → 读取中,先不阻断也不让进 PayEmbed(按钮禁用)
+  //   - !hasCode             → 没绑授权码 → 硬阻断(需先购买节点 / 绑定授权码)
+  //   - remaining < minPerTx → 额度不足 / 已达上限 → 硬阻断
+  //   - 否则金额需在 [minPerTx, remaining] 内
+  const capEnabled = !!cap;
+  const minPerTx = cap?.minPerTx ?? 0;
+  const remaining = cap?.remaining ?? Infinity;
+  const capLoading = cap?.loading ?? false;
+  const noCode = capEnabled && !capLoading && !cap!.hasCode;
+  const capExhausted = capEnabled && !capLoading && cap!.hasCode && remaining < minPerTx;
+  const capBlocked = noCode || capExhausted; // 完全无法充值
+  const amountValid =
+    amt > 0 &&
+    (!capEnabled || (!capLoading && amt >= minPerTx && amt <= remaining));
+  const canProceed = amountValid && !capBlocked && !(capEnabled && capLoading);
+
+  if (!account) return null;
+  // 充值地址(后端读钱的地址)还没就绪 → 禁充并提示,绝不回退到错地址。
+  if (!sellerAddr) {
+    return (
+      <div className="rounded-2xl p-3.5 flex items-center gap-2 text-[12px] text-muted-foreground"
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}
+        data-testid="deposit-addr-preparing">
+        <Loader2 className="h-4 w-4 animate-spin text-amber-300 shrink-0" />
+        {t("deposit.addrPreparing", "正在准备充值地址,请稍候…")}
+      </div>
+    );
+  }
+
+  // 完全阻断态:无授权码 / 额度不足 → 只显示提示,不渲染金额输入与买入流程。
+  if (capBlocked) {
+    return (
+      <div
+        className="rounded-2xl p-3.5 space-y-2"
+        style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}
+        data-testid="deposit-cap-blocked"
+      >
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-300" />
+          <div className="min-w-0">
+            <div className="text-[13px] font-bold text-red-200">
+              {noCode
+                ? t("deposit.capNoCodeTitle", "暂不可充值")
+                : t("deposit.capReachedTitle", "已达充值上限")}
+            </div>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-red-100/80">
+              {noCode
+                ? t("deposit.capNoCodeDesc", "该钱包尚未绑定授权码,请先购买节点 / 绑定授权码后再充值。")
+                : t("deposit.capReachedDesc", "已达到授权码允许的累计充值上限,无法继续充值。")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -699,16 +800,30 @@ export function DepositBuyPanel({
         </div>
       </div>
 
+      {/* 限额提示:已充值额度内可充范围(单笔 ≥minPerTx,且 ≤remaining)。 */}
+      {capEnabled && !capLoading && (
+        <div className="text-[11px] text-foreground/55 leading-snug tabular-nums" data-testid="deposit-cap-hint">
+          {t("deposit.capRange", "单笔 ≥ ${{min}},本次最多可充 ${{max}}", {
+            min: minPerTx,
+            max: Math.floor(remaining),
+          })}
+        </div>
+      )}
+
       {!confirmed || !(amt > 0) ? (
         <>
           <div className="grid grid-cols-4 gap-1.5">
-            {BUY_PRESETS.map((p) => (
+            {BUY_PRESETS.map((p) => {
+              // 限额生效时过滤越界预设:<minPerTx 或 >remaining 的禁用。
+              const presetDisabled = capEnabled && !capLoading && (p < minPerTx || p > remaining);
+              return (
               <button
                 key={p}
                 type="button"
+                disabled={presetDisabled}
                 onClick={() => setAmount(String(p))}
                 className={cn(
-                  "h-11 rounded-xl text-[13px] font-bold tabular-nums transition active:scale-95",
+                  "h-11 rounded-xl text-[13px] font-bold tabular-nums transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed",
                   amt === p
                     ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-black border border-amber-400"
                     : "bg-white/[0.04] text-foreground/80 border border-white/10 hover:border-amber-400/40",
@@ -716,7 +831,8 @@ export function DepositBuyPanel({
               >
                 ${p}
               </button>
-            ))}
+              );
+            })}
           </div>
           <div className="flex items-center rounded-xl bg-background/60 border border-white/10 px-3 h-11 focus-within:border-amber-400/50 transition-colors">
             <span className="text-[13px] text-muted-foreground mr-1">$</span>
@@ -730,14 +846,26 @@ export function DepositBuyPanel({
             />
             <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{assetLabel}</span>
           </div>
+          {/* 金额越界红字提示(限额生效且已输入金额时)。 */}
+          {capEnabled && !capLoading && amt > 0 && !amountValid && (
+            <p className="text-[11px] text-red-400 leading-snug" data-testid="deposit-cap-error">
+              {amt < minPerTx
+                ? t("deposit.capBelowMin", "单笔充值不能低于 ${{min}}", { min: minPerTx })
+                : t("deposit.capAboveRemaining", "超出可充额度(最多 ${{max}})", { max: Math.floor(remaining) })}
+            </p>
+          )}
           <button
             type="button"
             className="gold-button w-full h-12 rounded-xl inline-flex items-center justify-center gap-1.5 text-[15px] font-extrabold disabled:opacity-40 disabled:saturate-50"
-            disabled={!(amt > 0)}
+            disabled={!canProceed}
             onClick={() => setConfirmed(true)}
           >
             <Zap className="h-4 w-4" />
-            {amt > 0 ? `${t("deposit.buyNow", "立即买入")} $${amt}` : t("deposit.enterAmount", "输入或选择金额")}
+            {capEnabled && capLoading
+              ? t("deposit.capChecking", "正在读取额度…")
+              : amt > 0
+                ? `${t("deposit.buyNow", "立即买入")} $${amt}`
+                : t("deposit.enterAmount", "输入或选择金额")}
           </button>
         </>
       ) : (

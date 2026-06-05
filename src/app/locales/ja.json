@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "購入を確認",
     "buyCta": "ノードを購入",
-    "buyDialogDesc": "ティアを選んで USDC で支払います。",
+    "buyDialogDesc": "ティアを選んで USDT で支払います。",
     "buyGridTitle": "ノードを購入",
     "buySuccess": "購入に成功しました",
     "buySuccessDesc": "ノードを購入しました — オンチェーン確認後に有効になります。",
@@ -2377,7 +2377,7 @@
     "heldTitle": "保有中のノード",
     "pageSubtitle": "ノードを保有して口座開設とコピートレードを解放",
     "pageTitle": "マイノード",
-    "payHint": "USDC で支払う · {{chain}}",
+    "payHint": "USDT で支払う · {{chain}}",
     "redeemDesc": "コードをお持ちですか？入力してノードアクセスを有効化します。",
     "redeemTitle": "認証コードを引き換える"
   },

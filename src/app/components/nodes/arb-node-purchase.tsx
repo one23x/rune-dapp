@@ -119,6 +119,12 @@ function TierCard({ tier }: { tier: ArbNodeTier }) {
             contractAddress={ARB_NODE_DROP_ADDRESS}
             chain={arbitrum}
             client={thirdwebClient}
+            // Gas sponsorship: claim executes via a smart account whose gas is
+            // paid by the thirdweb paymaster (enable AA for Arbitrum on the
+            // thirdweb dashboard). Buyer pays only the USDC node price, no gas.
+            // NOTE: the node NFT is claimed BY the smart account (deterministic
+            // from the connected wallet), not the raw EOA.
+            accountAbstraction={{ chain: arbitrum, sponsorGas: true }}
             claimParams={{
               type: "ERC1155",
               tokenId: tier.tokenId,

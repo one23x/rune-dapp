@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "Confirmer l'achat",
     "buyCta": "Acheter un nœud",
-    "buyDialogDesc": "Choisis un niveau et paie en USDC.",
+    "buyDialogDesc": "Choisis un niveau et paie en USDT.",
     "buyGridTitle": "Acheter un nœud",
     "buySuccess": "Achat réussi",
     "buySuccessDesc": "Nœud acheté — actif une fois confirmé on-chain.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "Mes nœuds",
     "pageSubtitle": "Détiens un nœud pour débloquer l'ouverture de compte et le copy-trading",
     "pageTitle": "Mes nœuds",
-    "payHint": "Payer en USDC · {{chain}}",
+    "payHint": "Payer en USDT · {{chain}}",
     "redeemDesc": "Tu as déjà un code ? Saisis-le pour activer l'accès au nœud.",
     "redeemTitle": "Utiliser le code d'autorisation"
   },

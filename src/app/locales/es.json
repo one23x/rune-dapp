@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "Confirmar compra",
     "buyCta": "Comprar nodo",
-    "buyDialogDesc": "Elige un nivel y paga con USDC.",
+    "buyDialogDesc": "Elige un nivel y paga con USDT.",
     "buyGridTitle": "Comprar un nodo",
     "buySuccess": "Compra exitosa",
     "buySuccessDesc": "Nodo comprado: activo una vez confirmado on-chain.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "Nodos que tengo",
     "pageSubtitle": "Ten un nodo para desbloquear la apertura de cuenta y el copy trading",
     "pageTitle": "Mis nodos",
-    "payHint": "Pagar con USDC · {{chain}}",
+    "payHint": "Pagar con USDT · {{chain}}",
     "redeemDesc": "¿Ya tienes un código? Ingrésalo para activar el acceso al nodo.",
     "redeemTitle": "Canjear código de autorización"
   },

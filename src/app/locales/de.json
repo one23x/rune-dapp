@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "Kauf bestätigen",
     "buyCta": "Node kaufen",
-    "buyDialogDesc": "Wähle eine Stufe und zahle mit USDC.",
+    "buyDialogDesc": "Wähle eine Stufe und zahle mit USDT.",
     "buyGridTitle": "Node kaufen",
     "buySuccess": "Kauf erfolgreich",
     "buySuccessDesc": "Node gekauft — aktiv nach On-Chain-Bestätigung.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "Meine Nodes",
     "pageSubtitle": "Halte eine Node, um Kontoeröffnung und Copy-Trading freizuschalten",
     "pageTitle": "Meine Nodes",
-    "payHint": "Zahlen mit USDC · {{chain}}",
+    "payHint": "Zahlen mit USDT · {{chain}}",
     "redeemDesc": "Schon einen Code? Gib ihn ein, um den Node-Zugang zu aktivieren.",
     "redeemTitle": "Autorisierungscode einlösen"
   },

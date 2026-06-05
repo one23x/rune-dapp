@@ -3,6 +3,7 @@ import { Route, Switch, useLocation } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { AppLayout } from "@/components/layout";
+import { ReferrerGate } from "@/components/rune/referrer-gate";
 
 // Marketing pages are lazy-loaded so each route ships its own chunk instead
 // of bloating the single entry bundle (recharts-heavy pages especially).
@@ -15,6 +16,7 @@ const B18           = lazy(() => import("@/pages/b18"));
 const Hyperliquid   = lazy(() => import("@/pages/hyperliquid"));
 const LegendAtm     = lazy(() => import("@/pages/legend-atm"));
 const Resources     = lazy(() => import("@/pages/resources"));
+const Recruit       = lazy(() => import("@/pages/recruit"));
 const NotFound      = lazy(() => import("@/pages/not-found"));
 
 // Lazy-load the dashboard shell — it wraps its inner routes in
@@ -35,6 +37,7 @@ export default function AppRouter() {
   const inApp = location === "/app" || location.startsWith("/app/");
   return (
     <>
+      <ReferrerGate />
       {inApp ? (
         <Suspense fallback={<Loading />}>
           <AppContainer />
@@ -61,6 +64,7 @@ export default function AppRouter() {
         <Route path="/projects/:id"             component={ProjectDetail} />
         <Route path="/tools"      component={Tools} />
         <Route path="/resources"  component={Resources} />
+        <Route path="/recruit"    component={Recruit} />
             <Route component={NotFound} />
           </Switch>
             </motion.div>

@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "Confirmar compra",
     "buyCta": "Comprar nó",
-    "buyDialogDesc": "Escolha um nível e pague com USDC.",
+    "buyDialogDesc": "Escolha um nível e pague com USDT.",
     "buyGridTitle": "Comprar um nó",
     "buySuccess": "Compra bem-sucedida",
     "buySuccessDesc": "Nó comprado — ativo após confirmação on-chain.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "Nós que possuo",
     "pageSubtitle": "Tenha um nó para desbloquear a abertura de conta e o copy trading",
     "pageTitle": "Meus nós",
-    "payHint": "Pagar com USDC · {{chain}}",
+    "payHint": "Pagar com USDT · {{chain}}",
     "redeemDesc": "Já tem um código? Insira-o para ativar o acesso ao nó.",
     "redeemTitle": "Resgatar código de autorização"
   },

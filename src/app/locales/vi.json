@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "Xác nhận mua",
     "buyCta": "Mua node",
-    "buyDialogDesc": "Chọn hạng và thanh toán bằng USDC.",
+    "buyDialogDesc": "Chọn hạng và thanh toán bằng USDT.",
     "buyGridTitle": "Mua node",
     "buySuccess": "Mua thành công",
     "buySuccessDesc": "Đã mua node — kích hoạt sau khi xác nhận on-chain.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "Node tôi đang giữ",
     "pageSubtitle": "Giữ một node để mở khoá mở tài khoản và sao chép giao dịch",
     "pageTitle": "Node của tôi",
-    "payHint": "Thanh toán bằng USDC · {{chain}}",
+    "payHint": "Thanh toán bằng USDT · {{chain}}",
     "redeemDesc": "Đã có mã? Nhập để kích hoạt quyền truy cập node.",
     "redeemTitle": "Đổi mã uỷ quyền"
   },

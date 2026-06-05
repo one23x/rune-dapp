@@ -2367,7 +2367,7 @@
     },
     "buyConfirm": "تأكيد الشراء",
     "buyCta": "شراء عقدة",
-    "buyDialogDesc": "اختر فئة وادفع بـ USDC.",
+    "buyDialogDesc": "اختر فئة وادفع بـ USDT.",
     "buyGridTitle": "شراء عقدة",
     "buySuccess": "تم الشراء بنجاح",
     "buySuccessDesc": "تم شراء العقدة — تُفعَّل بعد التأكيد على السلسلة.",
@@ -2377,7 +2377,7 @@
     "heldTitle": "العُقد التي أملكها",
     "pageSubtitle": "امتلك عقدة لفتح فتح الحساب والتداول النسخي",
     "pageTitle": "عُقدي",
-    "payHint": "الدفع بـ USDC · {{chain}}",
+    "payHint": "الدفع بـ USDT · {{chain}}",
     "redeemDesc": "لديك رمز بالفعل؟ أدخله لتفعيل وصول العقدة.",
     "redeemTitle": "استبدال رمز التفويض"
   },

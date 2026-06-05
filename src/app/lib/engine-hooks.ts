@@ -23,6 +23,7 @@ import {
   type NodeStatus,
   type PolymarketOrderInput,
 } from "@app/lib/engine";
+import { supabase } from "@app/lib/supabase-client";
 
 /**
  * Resolve the Engine user for a connected wallet — **auto-onboard on first sight**.
@@ -69,20 +70,36 @@ export function useNodeStatus(wallet: string | undefined) {
 }
 
 /**
- * Redeem a node authorization code (POST /v1/node/redeem-code). On a successful
- * `{ ok:true }` we invalidate the wallet's node-status so the gate re-resolves
- * and the normal open-account flow proceeds.
+ * Redeem a node authorization code — **against Supabase** (the single source of
+ * truth for auth codes), NOT the engine. Calls the `redeem_auth_code` RPC
+ * (security-definer) which atomically claims the code by binding
+ * `rune_auth_codes.assigned_to = wallet`. The dapp gate (`useSupabaseNode`)
+ * opens the moment a code is assigned to the wallet, and `use-deposit-cap`
+ * reads the code's pm/hl caps. A separate sync mirrors assigned codes into the
+ * engine's `node_access` so the trading account aligns server-side.
+ *
+ * (The old engine `POST /v1/node/redeem-code` read RDS `trading.auth_codes`,
+ * which never existed on prod and held none of the admin's Supabase codes.)
  */
 export function useRedeemCode(wallet: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (code: string) => {
+    mutationFn: async (code: string): Promise<{ ok: boolean; error?: string; node_id?: number; level?: number }> => {
       if (!wallet) throw new Error("not_connected");
-      return node.redeemCode(wallet, code);
+      const { data, error } = await supabase.rpc("redeem_auth_code", {
+        p_code: code.trim(),
+        p_wallet: wallet,
+      });
+      if (error) return { ok: false, error: error.message };
+      return (data ?? { ok: false, error: "no_response" }) as { ok: boolean; error?: string; node_id?: number };
     },
     onSuccess: (res) => {
       if (res?.ok) {
-        qc.invalidateQueries({ queryKey: ["engine", "node-status", wallet?.toLowerCase()] });
+        // Re-resolve every gate input: Supabase node identity, deposit caps,
+        // and the (now-secondary) engine node-status.
+        qc.invalidateQueries({ queryKey: ["rune", "supabaseNode"] });
+        qc.invalidateQueries({ queryKey: ["rune", "depositCap"] });
+        qc.invalidateQueries({ queryKey: ["engine", "node-status"] });
       }
     },
   });

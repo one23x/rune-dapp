@@ -5,7 +5,8 @@
  *   • useNodeMembershipsRune  — wallet's held nodes from rune_purchases
  *   • useNodeStatus           — current granted node level (engine gating)
  *   • useRedeemCode           — redeem an authorization code (same flow as NodeGateCard)
- *   • payNodePurchaseV2       — thirdweb Pay → USDC → Vault.purchaseNodePublic
+ *   • NodePresell.nodePresell — legacy presell buy (USDT approve + nodePresell),
+ *                               emits EventNodePresell → indexer → rune_purchases
  *   • NODE_META               — 5 tiers (101–501): level / nameCn / nameEn / color / priceUsdt
  *   • NodeBadge               — granted-level badge (from copy-trading/shared)
  *
@@ -14,7 +15,9 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useActiveAccount } from "thirdweb/react";
+import { useActiveAccount, useSendTransaction } from "thirdweb/react";
+import { prepareContractCall, waitForReceipt } from "thirdweb";
+import { approve } from "thirdweb/extensions/erc20";
 import { PageEnter } from "@app/components/page-enter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,10 +29,13 @@ import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
 import { useNodeMembershipsRune } from "@app/lib/data-rune";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
-import { usePayment, getPaymentStatusLabel } from "@app/hooks/use-payment";
+import { getPaymentStatusLabel, type PaymentStatus } from "@app/hooks/use-payment";
 import { NodeBadge } from "@app/components/copy-trading/shared";
-import { NODE_META, NODE_IDS, type NodeId } from "@/lib/thirdweb/contracts";
-import { runeChain } from "@/lib/thirdweb/chains";
+import { NODE_META, NODE_IDS, type NodeId, nodePresellContract, usdtContract } from "@/lib/thirdweb/contracts";
+import { getRuneAddresses } from "@/lib/thirdweb/addresses";
+import { runeChain, runeChainKey } from "@/lib/thirdweb/chains";
+import { thirdwebClient } from "@/lib/thirdweb/client";
+import { useNodeConfigs } from "@/hooks/rune/use-node-presell";
 import {
   Layers, ShoppingCart, KeyRound, Loader2, CheckCircle2, ShieldCheck, Gem,
 } from "lucide-react";
@@ -55,23 +61,67 @@ function BuyDialog({
   const { t } = useTranslation();
   const { toast } = useToast();
   const account = useActiveAccount();
-  const { payNodePurchaseV2, status, error, reset, markSuccess } = usePayment();
+  const { mutateAsync: sendTransaction } = useSendTransaction();
+  const configsQ = useNodeConfigs();
+  const [status, setStatus] = useState<PaymentStatus>("idle");
   const [selected, setSelected] = useState<NodeId | null>(initialTier);
 
   const busy = status === "approving" || status === "paying" || status === "confirming" || status === "recording";
 
   function handleOpenChange(v: boolean) {
     if (busy) return; // don't close mid-transaction
-    if (!v) { reset(); setSelected(initialTier); }
+    if (!v) { setStatus("idle"); setSelected(initialTier); }
     onOpenChange(v);
   }
 
+  /** Resolve the on-chain payAmount (USDT wei, 18 dec) for a given nodeId.
+   *  Source of truth is NodePresell.getNodeConfigs; fall back to the display
+   *  price in NODE_META when the read hasn't landed. */
+  function resolvePayAmount(nodeId: NodeId): bigint {
+    const cfg = (configsQ.data as { nodeId: bigint; payAmount: bigint }[] | undefined)
+      ?.find((c) => Number(c.nodeId) === nodeId);
+    if (cfg && cfg.payAmount > 0n) return cfg.payAmount;
+    return BigInt(NODE_META[nodeId].priceUsdt) * 10n ** 18n;
+  }
+
+  // Buy via the legacy NodePresell contract (0xF327…) so the QuickNode indexer
+  // picks up EventNodePresell → writes rune_purchases (no manual backfill).
+  // referrer is pre-bound on-chain; nodePresell(nodeId) pulls USDT via
+  // approve + transferFrom, so we only approve then call with the nodeId.
   async function onBuy() {
     if (!selected) return;
-    const meta = NODE_META[selected];
+    if (!account) {
+      toast({ title: t("common.error", "出错了"), description: t("node.connectFirst", "请先连接钱包"), variant: "destructive" });
+      return;
+    }
+    const nodeId = selected;
+    const payAmount = resolvePayAmount(nodeId);
+    const spender = getRuneAddresses(runeChainKey).nodePresell;
+
     try {
-      await payNodePurchaseV2(meta.nameEn);
-      markSuccess();
+      // Step 1: approve USDT to NodePresell (exact payAmount).
+      setStatus("approving");
+      const approveTx = approve({ contract: usdtContract, spender, amountWei: payAmount });
+      const approveResult = await sendTransaction(approveTx);
+      await waitForReceipt({ client: thirdwebClient, chain: runeChain, transactionHash: approveResult.transactionHash });
+
+      // Step 2: nodePresell(uint256 nodeId) — emits EventNodePresell.
+      setStatus("paying");
+      const buyTx = prepareContractCall({
+        contract: nodePresellContract,
+        method: "function nodePresell(uint256 nodeId)",
+        params: [BigInt(nodeId)],
+      });
+      (buyTx as any).gas = BigInt(600000);
+      const buyResult = await sendTransaction(buyTx);
+
+      setStatus("confirming");
+      const receipt = await waitForReceipt({ client: thirdwebClient, chain: runeChain, transactionHash: buyResult.transactionHash });
+      if (receipt.status === "reverted") throw new Error("Transaction reverted");
+
+      // No DB write needed: the indexer derives rune_purchases from
+      // EventNodePresell, so confirmation alone is success.
+      setStatus("success");
       toast({
         title: t("node.buySuccess", "购买成功"),
         description: t("node.buySuccessDesc", "节点已购买,链上确认后即生效。"),
@@ -81,9 +131,10 @@ function BuyDialog({
       queryClient.invalidateQueries({ queryKey: ["engine", "node-status", account?.address?.toLowerCase()] });
       window.setTimeout(() => handleOpenChange(false), 1200);
     } catch (e: any) {
+      setStatus("error");
       toast({
         title: t("common.error", "出错了"),
-        description: String(e?.message ?? error ?? e),
+        description: String(e?.message ?? e),
         variant: "destructive",
       });
     }
@@ -100,7 +151,7 @@ function BuyDialog({
             <div className="min-w-0">
               <DialogTitle className="text-[15px] font-bold leading-tight">{t("node.buyTitle", "购买节点")}</DialogTitle>
               <DialogDescription className="text-[12px] leading-tight">
-                {t("node.buyDialogDesc", "选择档位,使用 USDC 支付。")}
+                {t("node.buyDialogDesc", "选择档位,使用 USDT 支付。")}
               </DialogDescription>
             </div>
           </div>
@@ -337,7 +388,7 @@ export default function NodesPage() {
           <section className="space-y-3" data-testid="node-buy-grid">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-bold text-foreground">{t("node.buyGridTitle", "购买节点")}</h2>
-              <span className="text-[11px] text-muted-foreground">{t("node.payHint", "USDC 支付 · {{chain}}", { chain: runeChain.name ?? "BSC" })}</span>
+              <span className="text-[11px] text-muted-foreground">{t("node.payHint", "USDT 支付 · {{chain}}", { chain: runeChain.name ?? "BSC" })}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {NODE_IDS.map((id) => {
@@ -360,7 +411,7 @@ export default function NodesPage() {
                       </span>
                       <div className="text-right">
                         <div className="text-[16px] font-bold tabular-nums text-foreground">{fmtPrice(meta.priceUsdt)}</div>
-                        <div className="text-[10px] text-muted-foreground">USDC</div>
+                        <div className="text-[10px] text-muted-foreground">USDT</div>
                       </div>
                     </div>
                     {benefit && <p className="text-[12px] text-foreground/60 leading-snug flex-1">{benefit}</p>}
