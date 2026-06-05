@@ -304,20 +304,28 @@ export function useNodeGate(wallet: string | undefined): NodeGateResult {
   if (supa.isError || !supa.data) return backendResult("backend-fallback");
 
   const g = supa.data;
-  return {
-    loading: false,
-    blocked: g.isNode === false, // only a definite source="none" blocks
-    isNode: g.isNode,
-    level: g.level,
-    limits: g.limits,
-    status: { isNode: g.isNode, level: g.level, limits: g.limits },
-    hlCap: g.hlCap,
-    pmCap: g.pmCap,
-    hlMin: g.hlMin,
-    pmMin: g.pmMin,
-    source: g.source === "purchase" ? "purchase" : g.source === "authcode" ? "authcode" : "supabase-none",
-    canOpen: g.canOpen,
-  };
+  // Supabase 命中节点/已兑换码 → 用它(放行 + 分市场额度)。
+  if (g.isNode) {
+    return {
+      loading: false,
+      blocked: false,
+      isNode: true,
+      level: g.level,
+      limits: g.limits,
+      status: { isNode: g.isNode, level: g.level, limits: g.limits },
+      hlCap: g.hlCap,
+      pmCap: g.pmCap,
+      hlMin: g.hlMin,
+      pmMin: g.pmMin,
+      source: g.source === "purchase" ? "purchase" : "authcode",
+      canOpen: true,
+    };
+  }
+  // Supabase 判定"无节点无码"(source=none)。**不单凭这个就挡** —— 要求后端也判否
+  // (both-sources-deny):仅当后端也明确 isNode:false 才 blocked;后端放行/加载中/无数据 → 乐观放行。
+  // 修复 HIGH:防止授权码授权 / 后端手动授权 / 智能钱包≠EOA 地址 / 链ID不符 / authcode 表 RLS 未开
+  // 这些 Supabase 看不到但后端认可的合法用户被误挡(deny-on-empty 回归)。backendResult 走后端裁决。
+  return backendResult("backend-fallback");
 }
 
 /** Small badge showing the granted node level + its key limits (L1–L5). */
