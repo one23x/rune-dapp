@@ -24,6 +24,7 @@ import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
 import { funding, users, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
+import { useSupabaseNodeGate } from "@app/lib/node-gate-supabase";
 import { useActiveAccount, PayEmbed } from "thirdweb/react";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
@@ -217,21 +218,105 @@ export function SectionError({ onRetry }: { onRetry?: () => void }) {
 // re-point (internal route today; swap for an external store URL later).
 export const BUY_NODE_URL = "/nodes";
 
+/** Where the resolved gate decision came from (diagnostics + UX). */
+export type NodeGateSource = "purchase" | "authcode" | "supabase-none" | "backend" | "backend-fallback";
+
+export interface NodeGateResult {
+  loading: boolean;
+  blocked: boolean;
+  isNode: boolean;
+  level: number;
+  limits: NodeStatus["limits"];
+  status: NodeStatus | undefined;
+  // Phase-1 additions (per-market caps from Supabase). Optional / additive —
+  // existing consumers (loading/blocked/isNode/level/limits/status) unchanged.
+  hlCap: number | null;
+  pmCap: number | null;
+  hlMin: number | null;
+  pmMin: number | null;
+  source: NodeGateSource;
+  canOpen: boolean;
+}
+
 /**
- * Resolve the node-gating decision for a wallet. `blocked` is true ONLY on an
- * explicit isNode:false; any error / missing wallet falls back to allow.
+ * Resolve the node-gating decision for a wallet.
+ *
+ * Source of truth is chosen by `VITE_NODE_GATING_SOURCE` ("supabase" default |
+ * "backend"). In "supabase" mode we read the RUNE node tables (rune_purchases /
+ * trading_auth_codes via `useSupabaseNodeGate`) and fall back to the backend
+ * `node.status` on any Supabase error / missing config. In "backend" mode we use
+ * the original `useNodeStatus`-only logic verbatim (one-flip rollback valve).
+ *
+ * INVARIANT — `blocked` is true ONLY when we have a definite "no node + no code"
+ * verdict: Supabase source="none", or (backend path) an explicit isNode:false.
+ * Any loading / query error / missing wallet → blocked=false (fall back to
+ * allow) so the gate never bricks open-account. Real enforcement is the
+ * backend's job (onboard rejects non-node wallets regardless of this gate).
  */
-export function useNodeGate(wallet: string | undefined) {
-  const q = useNodeStatus(wallet);
-  const status: NodeStatus | undefined = q.data;
-  const blocked = status ? status.isNode === false : false;
+export function useNodeGate(wallet: string | undefined): NodeGateResult {
+  const mode =
+    (import.meta.env.VITE_NODE_GATING_SOURCE as string | undefined) ?? "supabase";
+  const useSupabase = mode === "supabase";
+
+  const supa = useSupabaseNodeGate(wallet, useSupabase);
+  const eng = useNodeStatus(wallet);
+
+  // Backend-only path: original behaviour, zero change.
+  const backendResult = (source: NodeGateSource): NodeGateResult => {
+    const status = eng.data;
+    return {
+      loading: eng.isLoading,
+      blocked: status ? status.isNode === false : false,
+      isNode: status?.isNode ?? true, // optimistic until told otherwise
+      level: status?.level ?? 0,
+      limits: status?.limits ?? null,
+      status,
+      hlCap: null,
+      pmCap: null,
+      hlMin: null,
+      pmMin: null,
+      source,
+      canOpen: status ? status.isNode !== false : true,
+    };
+  };
+
+  if (!useSupabase) return backendResult("backend");
+
+  // Supabase mode — wait for the Supabase query, fall back to backend on error.
+  if (supa.isLoading) {
+    return {
+      loading: true,
+      blocked: false,
+      isNode: true,
+      level: 0,
+      limits: null,
+      status: undefined,
+      hlCap: null,
+      pmCap: null,
+      hlMin: null,
+      pmMin: null,
+      source: "supabase-none",
+      canOpen: true,
+    };
+  }
+
+  // Supabase errored (network / RLS / unconfigured) → fall back to backend.
+  if (supa.isError || !supa.data) return backendResult("backend-fallback");
+
+  const g = supa.data;
   return {
-    loading: q.isLoading,
-    blocked,
-    isNode: status?.isNode ?? true, // optimistic until told otherwise
-    level: status?.level ?? 0,
-    limits: status?.limits ?? null,
-    status,
+    loading: false,
+    blocked: g.isNode === false, // only a definite source="none" blocks
+    isNode: g.isNode,
+    level: g.level,
+    limits: g.limits,
+    status: { isNode: g.isNode, level: g.level, limits: g.limits },
+    hlCap: g.hlCap,
+    pmCap: g.pmCap,
+    hlMin: g.hlMin,
+    pmMin: g.pmMin,
+    source: g.source === "purchase" ? "purchase" : g.source === "authcode" ? "authcode" : "supabase-none",
+    canOpen: g.canOpen,
   };
 }
 
