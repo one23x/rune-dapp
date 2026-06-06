@@ -41,6 +41,14 @@ create table if not exists public.trading_acct_daily (
 create index if not exists trading_acct_daily_day_idx on public.trading_acct_daily (day, venue);
 alter table public.trading_acct_daily add column if not exists is_manual boolean not null default false;
 
+-- 双轨统计:基础列 = rollup 每次刷新的「真实统计」;manual_* = admin 手动覆盖(rollup 永不触碰)。
+-- 前端展示 = coalesce(manual_*, 基础列);admin 面板两套都看。字段置 null = 恢复真实值。
+alter table public.trading_acct_daily add column if not exists manual_position_value_usd numeric;
+alter table public.trading_acct_daily add column if not exists manual_day_pnl_usd numeric;
+alter table public.trading_acct_daily add column if not exists manual_realized_pnl_day_usd numeric;
+alter table public.trading_acct_daily add column if not exists manual_unrealized_pnl_usd numeric;
+alter table public.trading_acct_daily add column if not exists manual_note text;
+
 -- ── 交易记录实体表(前端读这张;刷新只追加 on conflict do nothing,手动行永不被删/改)──
 --    sync 行 record_id 规则:PM 成交 'fill:<fill_id>';HL 持仓变动 'hlpos:<pos_id>:<updated_at epoch>'
 --    手动补单:直接 insert,record_id 自定义(如 'manual:xxx'),source 默认 'manual'
@@ -171,8 +179,7 @@ begin
     closed_today       = excluded.closed_today,
     fills_today        = excluded.fills_today,
     fills_notional_today_usd = excluded.fills_notional_today_usd,
-    snapped_at         = now()
-  where t.is_manual = false;
+    snapped_at         = now();   -- 基础列永远刷真实值;manual_* 列不在 update 集合中,天然保留
 
   -- ════ Hyperliquid(mainnet / testnet 按订阅 network)════
   with hl as (
@@ -216,8 +223,7 @@ begin
     open_positions     = excluded.open_positions,
     closed_today       = excluded.closed_today,
     hl_today_used_usd  = excluded.hl_today_used_usd,
-    snapped_at         = now()
-  where t.is_manual = false;
+    snapped_at         = now();   -- 基础列永远刷真实值;manual_* 列不在 update 集合中,天然保留
 end $$;
 
 -- ── HL 前端显示覆盖(统计数字;某字段非 null = 用该值替代引擎真实值)──────────────
@@ -264,35 +270,52 @@ select venue, record_type, user_id, wallet, market_id, symbol, side,
 from trading_trade_records;
 
 -- ── ② 按钱包看交易账户 + 历史每日各项数据(金额 + 百分比)────────────────────────
+--    展示值 = coalesce(manual_*, 真实);末尾附 real_* 真实列 + is_overridden,admin 两套都看。
 create or replace view public.v_wallet_daily_history as
+with disp as (
+  select d.*,
+    coalesce(d.manual_position_value_usd, d.position_value_usd)     as v_position_value,
+    coalesce(d.manual_day_pnl_usd, d.day_pnl_usd)                   as v_day_pnl,
+    coalesce(d.manual_realized_pnl_day_usd, d.realized_pnl_day_usd) as v_realized_day,
+    coalesce(d.manual_unrealized_pnl_usd, d.unrealized_pnl_usd)     as v_unrealized
+  from trading_acct_daily d
+)
 select
   u.smart_wallet_address as wallet,
   u.engine_eoa_address,
   u.status               as account_status,
   d.user_id, d.venue, d.day,
-  d.position_value_usd,                                          -- 当日持仓金额
-  round(100 * d.position_value_usd
-    / nullif(sum(d.position_value_usd) over (partition by d.user_id, d.day), 0), 2)
+  d.v_position_value     as position_value_usd,                  -- 当日持仓金额(展示值)
+  round(100 * d.v_position_value
+    / nullif(sum(d.v_position_value) over (partition by d.user_id, d.day), 0), 2)
                           as position_share_pct,                 -- 当日持仓占比 %(占该钱包全 venue)
   d.position_cost_usd,
-  d.day_pnl_usd,                                                 -- 每日盈亏金额
-  round(100 * d.day_pnl_usd / nullif(d.position_cost_usd, 0), 2) as day_pnl_pct,
-  d.realized_pnl_day_usd,                                        -- 当日实现盈亏金额
-  round(100 * d.realized_pnl_day_usd / nullif(d.position_cost_usd, 0), 2) as realized_day_pct,
-  d.unrealized_pnl_usd,                                          -- 当日浮盈亏金额
-  round(100 * d.unrealized_pnl_usd / nullif(d.position_cost_usd, 0), 2)   as unrealized_pct,
+  d.v_day_pnl            as day_pnl_usd,                         -- 每日盈亏金额(展示值)
+  round(100 * d.v_day_pnl / nullif(d.position_cost_usd, 0), 2)   as day_pnl_pct,
+  d.v_realized_day       as realized_pnl_day_usd,                -- 当日实现盈亏金额(展示值)
+  round(100 * d.v_realized_day / nullif(d.position_cost_usd, 0), 2) as realized_day_pct,
+  d.v_unrealized         as unrealized_pnl_usd,                  -- 当日浮盈亏金额(展示值)
+  round(100 * d.v_unrealized / nullif(d.position_cost_usd, 0), 2)   as unrealized_pct,
   d.realized_pnl_cum_usd,
-  sum(d.day_pnl_usd) over (partition by d.user_id, d.venue, date_trunc('month', d.day)
+  sum(d.v_day_pnl) over (partition by d.user_id, d.venue, date_trunc('month', d.day)
                            order by d.day)                       as mtd_pnl_usd,         -- 当月累计盈亏
-  round(100 * sum(d.day_pnl_usd) over (partition by d.user_id, d.venue, date_trunc('month', d.day)
+  round(100 * sum(d.v_day_pnl) over (partition by d.user_id, d.venue, date_trunc('month', d.day)
                            order by d.day)
     / nullif(first_value(d.position_cost_usd) over (partition by d.user_id, d.venue, date_trunc('month', d.day)
                            order by d.day), 0), 2)               as mtd_pnl_pct,
-  d.unrealized_pnl_usd   as mtd_unrealized_pnl_usd,              -- 当月浮盈亏(=最新浮动盈亏)
-  round(100 * d.unrealized_pnl_usd / nullif(d.position_cost_usd, 0), 2) as mtd_unrealized_pct,
+  d.v_unrealized         as mtd_unrealized_pnl_usd,              -- 当月浮盈亏(=最新浮动盈亏)
+  round(100 * d.v_unrealized / nullif(d.position_cost_usd, 0), 2) as mtd_unrealized_pct,
   d.open_positions, d.closed_today, d.fills_today, d.fills_notional_today_usd,
-  d.hl_today_used_usd, d.snapped_at
-from trading_acct_daily d
+  d.hl_today_used_usd, d.snapped_at,
+  -- ── 真实统计(rollup 计算值,admin 对照用)──
+  d.position_value_usd   as real_position_value_usd,
+  d.day_pnl_usd          as real_day_pnl_usd,
+  d.realized_pnl_day_usd as real_realized_pnl_day_usd,
+  d.unrealized_pnl_usd   as real_unrealized_pnl_usd,
+  (d.manual_position_value_usd is not null or d.manual_day_pnl_usd is not null
+   or d.manual_realized_pnl_day_usd is not null or d.manual_unrealized_pnl_usd is not null) as is_overridden,
+  d.manual_note
+from disp d
 join trading_users u on u.id = d.user_id;
 
 -- ── ③ 按钱包看当日持仓明细(实时,直接从源表算)─────────────────────────────────
@@ -332,7 +355,18 @@ join trading_hl_copy_subscriptions s on s.id = hp.subscription_id
 join trading_users u on u.id = s.user_id
 left join trading_mark_prices mk on mk.venue = 'hl_' || s.network and mk.symbol = hp.coin
 where hp.size_base is distinct from 0
-group by s.network, u.smart_wallet_address, s.user_id, hp.coin;
+group by s.network, u.smart_wallet_address, s.user_id, hp.coin
+union all
+-- admin 手动持仓(trading_hl_manual_positions,add/replace 的 active 行)
+select ('hl_' || mp.network), mp.wallet, null::uuid,
+  mp.coin, mp.coin,
+  mp.size, mp.entry_px, coalesce(mp.mark_px, mp.entry_px),
+  abs(mp.size) * coalesce(mp.mark_px, mp.entry_px, 0),
+  abs(mp.size) * coalesce(mp.entry_px, 0),
+  coalesce(mp.unrealized_pnl_usd, mp.size * (coalesce(mp.mark_px, mp.entry_px, 0) - coalesce(mp.entry_px, 0))),
+  null, null, mp.updated_at
+from trading_hl_manual_positions mp
+where mp.active and mp.mode in ('add','replace');
 
 -- ── ④ 按钱包看当日平仓/成交记录(UTC+8 当日)───────────────────────────────────
 create or replace view public.v_wallet_today_closed as
@@ -368,26 +402,29 @@ select h.*
 from v_wallet_daily_history h
 where h.day = (now() at time zone 'Asia/Singapore')::date;
 
--- ── ⑥ 亏损监控:当日浮亏 或 当日实现亏损 的账户────────────────────────────────
+-- ── ⑥ 亏损监控:当日浮亏 或 当日实现亏损 的账户(按展示值判定)─────────────────
 create or replace view public.v_loss_monitor_today as
 select
   u.smart_wallet_address as wallet,
   u.engine_eoa_address,
   d.user_id, d.venue, d.day,
-  (d.unrealized_pnl_usd < 0)   as is_unrealized_loss,
-  (d.realized_pnl_day_usd < 0) as is_realized_loss,
-  d.unrealized_pnl_usd,
-  round(100 * d.unrealized_pnl_usd / nullif(d.position_cost_usd, 0), 2)   as unrealized_pct,
-  d.realized_pnl_day_usd,
-  round(100 * d.realized_pnl_day_usd / nullif(d.position_cost_usd, 0), 2) as realized_day_pct,
-  d.day_pnl_usd,
-  round(100 * d.day_pnl_usd / nullif(d.position_cost_usd, 0), 2)          as day_pnl_pct,
-  d.position_value_usd, d.position_cost_usd, d.open_positions, d.snapped_at
+  (coalesce(d.manual_unrealized_pnl_usd, d.unrealized_pnl_usd) < 0)       as is_unrealized_loss,
+  (coalesce(d.manual_realized_pnl_day_usd, d.realized_pnl_day_usd) < 0)   as is_realized_loss,
+  coalesce(d.manual_unrealized_pnl_usd, d.unrealized_pnl_usd)             as unrealized_pnl_usd,
+  round(100 * coalesce(d.manual_unrealized_pnl_usd, d.unrealized_pnl_usd) / nullif(d.position_cost_usd, 0), 2)   as unrealized_pct,
+  coalesce(d.manual_realized_pnl_day_usd, d.realized_pnl_day_usd)         as realized_pnl_day_usd,
+  round(100 * coalesce(d.manual_realized_pnl_day_usd, d.realized_pnl_day_usd) / nullif(d.position_cost_usd, 0), 2) as realized_day_pct,
+  coalesce(d.manual_day_pnl_usd, d.day_pnl_usd)                           as day_pnl_usd,
+  round(100 * coalesce(d.manual_day_pnl_usd, d.day_pnl_usd) / nullif(d.position_cost_usd, 0), 2)                 as day_pnl_pct,
+  coalesce(d.manual_position_value_usd, d.position_value_usd) as position_value_usd,
+  d.position_cost_usd, d.open_positions, d.snapped_at
 from trading_acct_daily d
 join trading_users u on u.id = d.user_id
 where d.day = (now() at time zone 'Asia/Singapore')::date
-  and (d.unrealized_pnl_usd < 0 or d.realized_pnl_day_usd < 0)
-order by least(d.unrealized_pnl_usd, d.realized_pnl_day_usd) asc;
+  and (coalesce(d.manual_unrealized_pnl_usd, d.unrealized_pnl_usd) < 0
+    or coalesce(d.manual_realized_pnl_day_usd, d.realized_pnl_day_usd) < 0)
+order by least(coalesce(d.manual_unrealized_pnl_usd, d.unrealized_pnl_usd),
+               coalesce(d.manual_realized_pnl_day_usd, d.realized_pnl_day_usd)) asc;
 
 -- ── 权限(沿用既有 trading_* 模式:前端 anon/authenticated 只读)────────────────
 grant select on public.trading_mark_prices, public.trading_acct_daily, public.trading_trade_records,
@@ -404,10 +441,20 @@ do $$
 declare t text;
 begin
   foreach t in array array['trading_mark_prices','trading_acct_daily','trading_trade_records',
-                           'trading_hl_overrides','trading_hl_manual_positions'] loop
+                           'trading_hl_overrides','trading_hl_manual_positions',
+                           -- 同步镜像表(admin 面板直读;数据已通过 v_* views 对外,放开 select 不扩大暴露面)
+                           'trading_users','trading_positions','trading_hl_positions','trading_orders',
+                           'trading_signal_trades','trading_polymarket_fills',
+                           'trading_copy_subscriptions','trading_hl_copy_subscriptions'] loop
     execute format('alter table public.%I enable row level security', t);
     if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname='public_read') then
       execute format('create policy public_read on public.%I for select to anon, authenticated using (true)', t);
+    end if;
+    -- admin-panel 写权限:登录的 Supabase Auth 用户且在 admin_users 注册的才可写
+    if not exists (select 1 from pg_policies where schemaname='public' and tablename=t and policyname='admin_write') then
+      execute format($p$create policy admin_write on public.%I for all to authenticated
+        using (exists (select 1 from public.admin_users au where au.user_id = auth.uid()))
+        with check (exists (select 1 from public.admin_users au where au.user_id = auth.uid()))$p$, t);
     end if;
   end loop;
 end $$;

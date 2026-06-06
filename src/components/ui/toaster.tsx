@@ -1,4 +1,8 @@
-import { useToast } from "@/hooks/use-toast"
+// IMPORTANT: must read the SAME toast store the app dispatches into. All
+// feature code calls useToast from "@app/hooks/use-toast"; the duplicate
+// "@/hooks/use-toast" module is a second, independent store — importing it
+// here meant no feature toast ever rendered (2026-06-06 授权码"点击没反应").
+import { useToast } from "@app/hooks/use-toast"
 import {
   Toast,
   ToastClose,

@@ -65,7 +65,9 @@ export function pusdAmount(v: unknown): number {
   if (v == null) return 0;
   if (typeof v === "number" || typeof v === "string") return asNumber(v);
   const o = v as Record<string, unknown>;
-  for (const k of ["balance", "pusd", "pusdBalance", "available", "amount", "value", "collateral"]) {
+  // 引擎 /trade/polymarket/users/:id/pusd-balance 返回 { smartWallet, balanceRaw, balanceUsd }
+  // —— 余额在 `balanceUsd`(人类可读 USD 值)。必须排在前面,否则之前漏读这字段 = 余额恒显 0。
+  for (const k of ["balanceUsd", "balance", "pusd", "pusdBalance", "available", "amount", "value", "collateral"]) {
     if (o[k] != null) return asNumber(o[k]);
   }
   return 0;
