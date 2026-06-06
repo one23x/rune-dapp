@@ -41,8 +41,17 @@ export function useEngineUser(wallet: string | undefined) {
     queryFn: async () => {
       const existing = await users.findOrNull(wallet!);
       if (existing) return existing;
-      const onboarded = (await users.onboard(wallet!)) as Record<string, unknown>;
-      return { ...onboarded, id: onboarded.id ?? onboarded.userId };
+      try {
+        const onboarded = (await users.onboard(wallet!)) as Record<string, unknown>;
+        return { ...onboarded, id: onboarded.id ?? onboarded.userId };
+      } catch (e: any) {
+        // 引擎节点门控拒绝(非节点/未兑码)→ 不是错误,而是「未开户」:返回 null,
+        // 让 PM/HL 的 !userId 分支配合 useNodeGate.blocked 显示授权码卡(NodeGateCard),
+        // 而不是落入「加载失败 / 重试」分支。兑码成功后 useRedeemCode 失效本查询自动重试开户。
+        const msg = String(e?.message ?? e);
+        if (/node_required|not.?a.?node|403|forbidden/i.test(msg)) return null;
+        throw e;
+      }
     },
     enabled: !!wallet,
     retry: false,
@@ -113,10 +122,13 @@ export function useRedeemCode(wallet: string | undefined) {
     onSuccess: (res) => {
       if (res?.ok) {
         // Re-resolve every gate input: Supabase node identity, deposit caps,
-        // and the (now-secondary) engine node-status.
+        // the Supabase node-gate(useSupabaseNodeGate 的 queryKey),engine
+        // node-status,以及 engine user 本身(被 node_required 拒过的开户要重试)。
         qc.invalidateQueries({ queryKey: ["rune", "supabaseNode"] });
         qc.invalidateQueries({ queryKey: ["rune", "depositCap"] });
+        qc.invalidateQueries({ queryKey: ["rune", "node-gate"] });
         qc.invalidateQueries({ queryKey: ["engine", "node-status"] });
+        qc.invalidateQueries({ queryKey: ["engine", "user"] });
       }
     },
   });

@@ -137,25 +137,21 @@ async function resolveSupaGate(address: string): Promise<SupaGate> {
     };
   }
 
-  // 2) Redeemed auth code — trading_auth_codes (anon may see 0 rows until a
-  //    read-only RLS policy is added; that just falls through to "none").
+  // 2) Redeemed auth code — **rune_auth_codes**(授权码唯一真表:374 条,
+  //    redeem_auth_code RPC 写 assigned_to,anon 有只读 policy)。
+  //    ⚠ 旧版读 trading_auth_codes 是错的 —— 那是张 0 行的空镜像,导致
+  //    「验证成功但 gate 永不放行」(2026-06-06 修复)。
   const { data: codes, error: codeErr } = await supabase
-    .from("trading_auth_codes")
-    .select(
-      "node_id, level, hl_cap_usd, pm_cap_usd, hl_min_usd, pm_min_usd, revoked_at, expires_at",
-    )
-    .eq("redeemed_by_wallet", addr)
-    .is("revoked_at", null);
+    .from("rune_auth_codes")
+    .select("node_id, hl_cap_usd, pm_cap_usd, hl_min_usd, pm_min_usd")
+    .eq("assigned_to", addr);
   if (codeErr) throw codeErr;
 
-  const now = Date.now();
-  const valid = (codes ?? []).filter(
-    (c) => !c.expires_at || new Date(c.expires_at as string).getTime() > now,
-  );
+  const valid = codes ?? [];
 
   if (valid.length > 0) {
     const lvlOf = (c: (typeof valid)[number]): number =>
-      (c.level as number | null) ?? NODE_ID_TO_LEVEL[c.node_id as number] ?? 0;
+      NODE_ID_TO_LEVEL[c.node_id as number] ?? 0;
     const best = valid.reduce((a, b) => (lvlOf(b) > lvlOf(a) ? b : a));
     const level = lvlOf(best);
     const hlCap = (best.hl_cap_usd as number | null) ?? null;
