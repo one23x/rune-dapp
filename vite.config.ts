@@ -20,8 +20,18 @@ if (!basePath) throw new Error("BASE_PATH environment variable is required.");
 const ENGINE_BASE = process.env.ONE_AGENTS_API_BASE || "https://api.one-agents.com";
 const ENGINE_KEY = process.env.ONE_AGENTS_API_KEY || "";
 
+// ── 构建号(iOS 自动刷新用)──────────────────────────────────────────────────
+// iOS Safari / 钱包内置 WKWebView 不回收后台标签页:用户「重开」时跑的仍是内存
+// 里的旧 SPA,index.html 的 must-revalidate 没机会生效。构建时把 BUILD_ID 编进
+// bundle 并产出 /version.json;前端切回前台时比对,不一致整页 reload
+// (见 src/app/lib/version-check.ts)。
+const BUILD_ID = new Date().toISOString();
+
 export default defineConfig({
   base: basePath,
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -31,6 +41,17 @@ export default defineConfig({
       renderLegacyChunks: true,
       additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
     }),
+    {
+      name: "emit-version-json",
+      apply: "build",
+      generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "version.json",
+          source: JSON.stringify({ buildId: BUILD_ID }),
+        });
+      },
+    },
   ],
   resolve: {
     alias: {

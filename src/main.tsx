@@ -8,10 +8,15 @@ import { Toaster } from "@/components/ui/toaster";
 // calls across the dashboard import this instance; providing a different
 // client here silently turns them all into no-ops.
 import { queryClient } from "@app/lib/queryClient";
+// iOS Safari/WKWebView 旧 SPA 常驻内存拿不到新版 → 切回前台比对构建号自动刷新,
+// 并兜住旧 chunk 404(vite:preloadError)防白屏。
+import { installVersionCheck } from "@app/lib/version-check";
 
 import AppRouter from "./app-router";
 import "@app/lib/i18n"; // initializes i18next (used by format.ts and dashboard)
 import "./index.css";
+
+installVersionCheck();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

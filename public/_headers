@@ -18,3 +18,7 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# 版本探针:绝不缓存(iOS 自动刷新机制靠它判断有没有新部署)
+/version.json
+  Cache-Control: no-store
