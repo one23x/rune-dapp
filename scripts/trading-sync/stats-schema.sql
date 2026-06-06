@@ -749,10 +749,14 @@ begin
 
     for i in 1..n loop
       -- 随机选一个该 venue 有 mark 价的币
+      -- 只选真实币:排除 mark 表 hl venue 下混入的 #<polymarket-token> 行(2026-06-06 污染,170 行)
       select symbol, px into mk from trading_mark_prices
-       where venue = acct.venue and px > 0 order by random() limit 1;
+       where venue = acct.venue and px > 0 and symbol not like '#%'
+       order by random() limit 1;
       if mk.symbol is null then
-        select symbol, px into mk from trading_mark_prices where px > 0 order by random() limit 1;
+        select symbol, px into mk from trading_mark_prices
+         where venue like 'hl\_%' escape '\' and px > 0 and symbol not like '#%'
+         order by random() limit 1;
       end if;
       exit when mk.symbol is null;
 
