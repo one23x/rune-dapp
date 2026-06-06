@@ -27,7 +27,7 @@ import { funding, users, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 import { useSupabaseNodeGate } from "@app/lib/node-gate-supabase";
-import { useActiveAccount, useReadContract, useSendTransaction, PayEmbed } from "thirdweb/react";
+import { useActiveAccount, useActiveWalletChain, useSwitchActiveWalletChain, useReadContract, useSendTransaction, PayEmbed } from "thirdweb/react";
 import { getContract, prepareContractCall, toUnits, toTokens } from "thirdweb";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
@@ -784,6 +784,11 @@ function DepositTransferPanel({
   const { t } = useTranslation();
   const { toast } = useToast();
   const account = useActiveAccount();
+  // 转账前主动把钱包切到 Polygon(pUSD = Polymarket 抵押币只在 Polygon 上),
+  // 切完链立刻拉起 transfer 授权签名 —— 不要求用户自己去钱包里换网络。
+  const activeChain = useActiveWalletChain();
+  const switchChain = useSwitchActiveWalletChain();
+  const [switching, setSwitching] = useState(false);
   const [amount, setAmount] = useState("");
   const { mutate: sendTx, isPending } = useSendTransaction();
 
@@ -854,8 +859,25 @@ function DepositTransferPanel({
     );
   }
 
-  function onSubmit() {
+  async function onSubmit() {
     if (!seller || !amountValid) return;
+    // ① 钱包不在 Polygon → 主动切链(用户在钱包里确认),失败就停,不发交易。
+    if (activeChain?.id !== polygon.id) {
+      setSwitching(true);
+      try {
+        await switchChain(polygon);
+      } catch (e: any) {
+        toast({
+          title: t("deposit.switchChainFailed", "请切换到 Polygon 网络"),
+          description: String(e?.shortMessage ?? e?.message ?? e),
+          variant: "destructive",
+        });
+        return;
+      } finally {
+        setSwitching(false);
+      }
+    }
+    // ② 切链就绪 → 立刻拉起 pUSD(Polymarket 抵押币)transfer 授权签名。
     const tx = prepareContractCall({
       contract: pusd,
       method: "function transfer(address,uint256)",
@@ -957,15 +979,17 @@ function DepositTransferPanel({
       <button
         type="button"
         className="gold-button w-full h-12 rounded-xl inline-flex items-center justify-center gap-1.5 text-[15px] font-extrabold disabled:opacity-40 disabled:saturate-50"
-        disabled={!amountValid || amt > walletBal || isPending || cap.loading}
+        disabled={!amountValid || amt > walletBal || isPending || switching || cap.loading}
         onClick={onSubmit}
       >
-        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        {isPending
-          ? t("deposit.transferring", "转账中…")
-          : amt > 0
-            ? `${t("deposit.transferNow", "立即转账")} $${amt}`
-            : t("deposit.enterAmount", "输入或选择金额")}
+        {isPending || switching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        {switching
+          ? t("deposit.switchingChain", "切换到 Polygon…")
+          : isPending
+            ? t("deposit.transferring", "转账中…")
+            : amt > 0
+              ? `${t("deposit.transferNow", "立即转账")} $${amt}`
+              : t("deposit.enterAmount", "输入或选择金额")}
       </button>
 
       <p className="text-[10px] leading-snug text-amber-300/80">
