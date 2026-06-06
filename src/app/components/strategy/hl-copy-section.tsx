@@ -1863,11 +1863,12 @@ function packConfig(pack: HlPack): HlFollowConfig {
 }
 
 function PackCard({
-  pack, leaders, subscribed, busy, onEnable, underfunded = false,
+  pack, leaders, subsIndex, busy, onEnable, underfunded = false,
 }: {
   pack: HlPack;
   leaders: HlLeader[];
-  subscribed: Set<string>;
+  /** leader → 该 leader 名下订阅的参数指纹列表(ratio/cap)。 */
+  subsIndex: Map<string, Array<{ ratio: number; cap: number | null }>>;
   busy: boolean;
   onEnable: (picks: HlLeader[], pack: HlPack) => void;
   /** 账户净值 < HL_MIN → 跟单按钮变「充值后跟单」并禁用 follow(UIUX Rec #2)。 */
@@ -1885,7 +1886,14 @@ function PackCard({
     () => [...leaders].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, pack.count),
     [leaders, pack.count],
   );
-  const followedCount = picks.filter((l) => subscribed.has(l.address.toLowerCase())).length;
+  // 「已启用」= pick 名下存在与本包参数指纹一致的订阅(ratio=ratioPct/100 全等 + cap 全等)。
+  // 各包的 picks 互为子集(同一评分池 top-N),只看 leader 会一人订阅、多卡全亮。
+  const packRatio = pack.ratioPct / 100;
+  const followedCount = picks.filter((l) =>
+    (subsIndex.get(l.address.toLowerCase()) ?? []).some(
+      (s) => Math.abs(s.ratio - packRatio) < 1e-9 && (s.cap == null || s.cap === pack.cap),
+    ),
+  ).length;
   const allOn = picks.length > 0 && followedCount === picks.length;
 
   const param = (k: string, v: React.ReactNode) => (
@@ -2054,10 +2062,11 @@ const CONSOLE_TIER_META: Record<NonNullable<ConsolePack["tier"]>, { label: strin
  * No leaderAddress → disabled "项目方未绑定 leader" state.
  */
 function ConsolePackCard({
-  pack, subscribed, busy, onEnable, underfunded = false,
+  pack, subsIndex, busy, onEnable, underfunded = false,
 }: {
   pack: ConsolePack;
-  subscribed: Set<string>;
+  /** leader → 该 leader 名下订阅的参数指纹列表(ratio/cap)。 */
+  subsIndex: Map<string, Array<{ ratio: number; cap: number | null }>>;
   busy: boolean;
   onEnable: (pack: ConsolePack) => void;
   underfunded?: boolean;
@@ -2074,7 +2083,11 @@ function ConsolePackCard({
   const tierMeta = pack.tier ? CONSOLE_TIER_META[pack.tier] : null;
   const color = tierMeta?.color ?? "#a78bfa";
   const leaderBound = !!pack.leaderAddress;
-  const isOn = leaderBound && subscribed.has(pack.leaderAddress!.toLowerCase());
+  // 「已开启」= 本包 leader 名下存在【参数指纹与本包一致】的订阅(ratio 全等,cap 若有也全等)。
+  // 只看 leader 会把别的入口/别的包建的订阅误判成本包开启(选一个包、多卡全亮)。
+  const isOn = leaderBound && (subsIndex.get(pack.leaderAddress!.toLowerCase()) ?? []).some(
+    (s) => Math.abs(s.ratio - cfg.notionalRatio) < 1e-9 && (s.cap == null || cfg.notionalCapUsd == null || s.cap === cfg.notionalCapUsd),
+  );
 
   const minBal = pack.minBalanceUsd;
   // perf — show a compact summary if the console attached a number-ish field.
@@ -2240,13 +2253,25 @@ export function HlHubPage() {
   const consolePacks = packsQ.data?.packs ?? [];
   const useConsole = packsQ.isSuccess && consolePacks.length > 0;
 
-  const subscribedLeaders = useMemo(() => {
-    const set = new Set<string>();
+  // 订阅索引:leader → 该 leader 名下各订阅的参数指纹(ratio/cap)。
+  // 「包已开启」必须 leader + 参数双重匹配 —— 只看 leader 会把其他入口(批量跟单/
+  // 别的包/改绑前的旧包)建的订阅误判成本包已开启:包间共享 leader 时一人订阅四卡全亮。
+  const subsIndex = useMemo(() => {
+    const m = new Map<string, Array<{ ratio: number; cap: number | null }>>();
     for (const s of subsQ.data?.subscriptions ?? []) {
-      if ((s as any).status !== "stopped") set.add(String((s as any).leaderAddress).toLowerCase());
+      const row = s as any;
+      if (row.status === "stopped") continue;
+      const k = String(row.leaderAddress).toLowerCase();
+      const list = m.get(k) ?? [];
+      list.push({
+        ratio: Number(row.notionalRatio ?? NaN),
+        cap: row.notionalCapUsd != null ? Number(row.notionalCapUsd) : null,
+      });
+      m.set(k, list);
     }
-    return set;
+    return m;
   }, [subsQ.data]);
+  const subscribedLeaders = useMemo(() => new Set(subsIndex.keys()), [subsIndex]);
 
   const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
@@ -2406,7 +2431,7 @@ export function HlHubPage() {
                       <ConsolePackCard
                         key={p.slug}
                         pack={p}
-                        subscribed={subscribedLeaders}
+                        subsIndex={subsIndex}
                         busy={busyPack === p.slug}
                         onEnable={onEnableConsolePack}
                         underfunded={underfunded}
@@ -2424,7 +2449,7 @@ export function HlHubPage() {
                         key={p.key}
                         pack={p}
                         leaders={leaders}
-                        subscribed={subscribedLeaders}
+                        subsIndex={subsIndex}
                         busy={busyPack === p.key}
                         onEnable={onEnablePack}
                         underfunded={underfunded}
