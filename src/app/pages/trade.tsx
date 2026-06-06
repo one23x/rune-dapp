@@ -11,7 +11,7 @@ import {
   getAiPredictionsReal, fetchPolymarkets, getNewsPredictions,
   getPredictionBets,
 } from "@app/lib/api";
-import { useEngineUser, usePolymarketPlaceOrder } from "@app/lib/engine-hooks";
+import { useEngineUserLookup, usePolymarketPlaceOrder } from "@app/lib/engine-hooks";
 import { queryClient } from "@app/lib/queryClient";
 import { formatCompact } from "@app/lib/constants";
 import {
@@ -560,13 +560,15 @@ function sanitizeAmount(raw: string): string {
 }
 
 function BetDialog({
-  open, onOpenChange, target, walletAddr, userId,
+  open, onOpenChange, target, walletAddr, userId, accountLoading = false,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   target: BetTarget | null;
   walletAddr: string;
   userId: string | undefined;
+  /** true while we're still resolving whether this wallet has an opened account. */
+  accountLoading?: boolean;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -709,8 +711,19 @@ function BetDialog({
 
             {!walletAddr ? (
               <p className="text-[11px] text-amber-400/80">{t("trade.connectWalletBet")}</p>
+            ) : accountLoading ? (
+              <p className="text-[11px] text-amber-400/80">{t("trade.checkingAccount", "正在检查交易账户…")}</p>
             ) : !userId ? (
-              <p className="text-[11px] text-amber-400/80">{t("trade.preparingAccount", "正在准备交易账户…")}</p>
+              /* 门控:未开通交易账户者不能下单,引导去开户(节点/授权码门控)。 */
+              <div className="rounded-lg p-3 space-y-2 bg-amber-500/[0.06] border border-amber-500/20">
+                <p className="text-[12px] font-semibold text-amber-300">{t("trade.noAccountTitle", "您还未开通交易账户")}</p>
+                <p className="text-[11px] text-amber-200/80 leading-snug">{t("trade.noAccountDesc", "下单前需先开通交易账户(需持有节点或输入授权码)。开通后即可连接 Polymarket 按真实价位下单与平仓。")}</p>
+                <Link href="/copy-trading">
+                  <Button size="sm" className="w-full gold-button font-bold" onClick={() => onOpenChange(false)}>
+                    {t("trade.goOpenAccount", "去开通交易账户")}
+                  </Button>
+                </Link>
+              </div>
             ) : null}
           </div>
         )}
@@ -835,11 +848,14 @@ export default function Trade() {
 
   const betIds = useMemo(() => new Set(myBets.map((b: PredictionBet) => b.marketId)), [myBets]);
 
-  // Resolve the engine trading subaccount for the connected wallet (auto-onboard
-  // on first sight — idempotent find-or-create on the engine). userId is required
-  // to place a REAL Polymarket CLOB order.
-  const engineUserQ = useEngineUser(walletAddr || undefined);
-  const userId: string | undefined = engineUserQ.data?.id as string | undefined;
+  // Resolve the engine trading subaccount WITHOUT auto-onboarding: placing a real
+  // Polymarket order requires an *explicitly opened* trading account (node /
+  // auth-code gated). A wallet that never opened one resolves to userId=undefined
+  // → the bet flow shows the "go open an account" gate instead of silently
+  // onboarding. (Deposit/copy-trading surfaces keep their own auto-onboard.)
+  const engineUserQ = useEngineUserLookup(walletAddr || undefined);
+  const userId: string | undefined = engineUserQ.data?.id;
+  const accountLoading = !!walletAddr && engineUserQ.isLoading;
 
   const { toast } = useToast();
 
@@ -1300,6 +1316,7 @@ export default function Trade() {
         target={betTarget}
         walletAddr={walletAddr}
         userId={userId}
+        accountLoading={accountLoading}
       />
     </div>
   );

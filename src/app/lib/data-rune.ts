@@ -31,12 +31,26 @@ const NODE_ID_TO_TIER: Record<number, string> = {
   501: "INITIAL",
 };
 
-const NODE_ID_TO_PRICE: Record<number, number> = {
+/** Node tier ID → USD price. Exported so the node-gating hook
+ *  (`node-gate-supabase.ts`) derives a holder's per-market cap from the
+ *  highest tier they own without duplicating the constant. */
+export const NODE_ID_TO_PRICE: Record<number, number> = {
   101: 50000,
   201: 10000,
   301:  5000,
   401:  2500,
   501:  1000,
+};
+
+/** Node tier ID → trading level (1–5). `level = (601 - nodeId) / 100`
+ *  (101→5 highest … 501→1 entry). Mirror of NODE_ID_TO_PRICE keys; lives
+ *  here so the gate hook shares one source of truth. */
+export const NODE_ID_TO_LEVEL: Record<number, number> = {
+  101: 5,
+  201: 4,
+  301: 3,
+  401: 2,
+  501: 1,
 };
 
 /** Minimal NodeMembership shape — matches what TAICLAW pages destructure. */

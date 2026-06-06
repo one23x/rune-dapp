@@ -11,12 +11,13 @@
  */
 
 import { useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import {
   Wallet, ArrowDown, ArrowUp, Plus, ChevronRight, Sparkles, Zap, Activity,
   BarChart2, TrendingUp, TrendingDown, Layers, X, Gift, Loader2,
+  History as HistoryIcon, CheckCircle2, XCircle, ExternalLink,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -31,8 +32,9 @@ import {
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { PremiumCard } from "@app/components/premium-card";
 import {
-  OnboardCard, DepositDialog, WithdrawDialog, SectionEmpty,
-  asArray, pusdAmount, normalizeOrder, isClosed, fmtUsd,
+  OnboardCard, DepositDialog, WithdrawDialog, SectionEmpty, CopyRiskDialog,
+  asArray, pusdAmount, normalizeOrder, isClosed, fmtUsd, fmtPct, pnlColor,
+  polygonscanTx, polygonscanAddress, type NormOrder, type CopyRiskParams,
 } from "@app/components/copy-trading/shared";
 
 export default function CopyTradingPage() {
@@ -55,8 +57,22 @@ export default function CopyTradingPage() {
   const signalsQ = useLeaderSignals();
   const hotQ = useHotMarkets();
 
+  const [, navigate] = useLocation();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  // 跟单前风险提示 —— 在进入策略页 / 启用跟单前强制弹一次。激进档需勾选确认。
+  const [riskOpen, setRiskOpen] = useState(false);
+
+  // 概览 CTA 代表「稳健」默认档(真实参数在策略页选定);用于风险弹窗的关键参数展示。
+  const overviewRiskParams: CopyRiskParams = {
+    tier: "balanced", ratioPct: 5, perTradeCapUsd: 100, dailyCapUsd: 500, minBalanceUsd: 50,
+  };
+
+  // PM 在 Polygon 上:订单常无 txHash → 「查看链上记录」降级到 deposit/交易钱包地址页。
+  const tradeWallet =
+    (balanceQ.data as { smartWallet?: string } | undefined)?.smartWallet ??
+    (userQ.data as { smartWalletAddress?: string } | undefined)?.smartWalletAddress ??
+    wallet;
 
   // Close/cancel + redeem REAL Polymarket positions via the engine. `confirmClose`
   // holds the order pending a destructive-close confirmation; `confirmRedeem`
@@ -213,25 +229,27 @@ export default function CopyTradingPage() {
             </button>
           </div>
 
-          {/* Activate strategy CTA */}
-          <Link href="/copy-trading/auto" className="block">
-            <button className="w-full relative overflow-hidden rounded-xl py-3 px-4 flex items-center justify-between group active:scale-[0.98] transition-transform"
-              style={{ border: "1px solid rgba(245,158,11,0.3)", background: "linear-gradient(90deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))" }}>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
-                  <Plus size={16} className="text-amber-400" strokeWidth={2.5} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-amber-400 leading-tight">{t("copyTrading.activateEngineTitle", "激活智能跟单引擎")}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{t("copyTrading.activateEngineDesc", "选择 L1–L5 策略包 · 自动跟单顶级交易员")}</p>
-                </div>
+          {/* Activate strategy CTA —— 进入策略页前先弹跟单风险提示(任务3-PM)。 */}
+          <button
+            onClick={() => setRiskOpen(true)}
+            className="w-full relative overflow-hidden rounded-xl py-3 px-4 flex items-center justify-between group active:scale-[0.98] transition-transform"
+            style={{ border: "1px solid rgba(245,158,11,0.3)", background: "linear-gradient(90deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))" }}
+            data-testid="button-activate-engine"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                <Plus size={16} className="text-amber-400" strokeWidth={2.5} />
               </div>
-              <div className="flex items-center gap-1">
-                <Sparkles size={12} className="text-amber-400/60" />
-                <ChevronRight size={16} className="text-amber-400/60 group-hover:translate-x-0.5 transition-transform" />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-amber-400 leading-tight">{t("copyTrading.activateEngineTitle", "激活智能跟单引擎")}</p>
+                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{t("copyTrading.activateEngineDesc", "选择 L1–L5 策略包 · 自动跟单顶级交易员")}</p>
               </div>
-            </button>
-          </Link>
+            </div>
+            <div className="flex items-center gap-1">
+              <Sparkles size={12} className="text-amber-400/60" />
+              <ChevronRight size={16} className="text-amber-400/60 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
 
           {/* Stats grid */}
           <div className="grid grid-cols-3 gap-2 mt-4">
@@ -251,93 +269,20 @@ export default function CopyTradingPage() {
         </div>
       </div>
 
-      {/* ── Active Positions ── */}
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <h3 className="text-sm font-semibold text-foreground">{t("copyTrading.activePositions", "Active Positions")}</h3>
-          <div className="flex items-center gap-3">
-            {/* Redeem resolved positions → pUSD (account-level engine route). */}
-            <button
-              onClick={() => setConfirmRedeem(true)}
-              disabled={orderMut.isRedeeming || !userId}
-              className="text-xs text-amber-400/90 hover:text-amber-300 flex items-center gap-1 disabled:opacity-50 transition-colors"
-            >
-              {orderMut.isRedeeming ? <Loader2 size={12} className="animate-spin" /> : <Gift size={12} />}
-              {t("copyTrading.redeem", "赎回结算")}
-            </button>
-            <Link href="/copy-trading/stats" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-              {t("copyTrading.viewAll", "View All")} <ChevronRight size={12} />
-            </Link>
-          </div>
-        </div>
-
-        {openQ.isLoading ? (
-          <div className="space-y-3">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
-        ) : openOrders.length === 0 ? (
-          <SectionEmpty icon={Layers} title={t("copyTrading.noPositions")} desc={t("copyTrading.noPositionsDesc")} />
-        ) : (
-          <div className="space-y-3">
-            {openOrders.slice(0, 5).map((pos) => {
-              const isBuy = pos.side === "BUY" || pos.side === "YES" || pos.side === "LONG";
-              const pnlPositive = (pos.pnl ?? 0) >= 0;
-              return (
-                <div key={pos.id} className="relative overflow-hidden rounded-xl p-4"
-                  style={{ background: "#15120d", border: "1px solid rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.02)" }}>
-                  <div className="absolute top-0 left-0 w-1 h-full opacity-50"
-                    style={{ background: isBuy ? "#10b981" : "#ef4444" }} />
-
-                  <div className="flex justify-between items-start mb-3">
-                    <h4 className="text-sm font-medium text-foreground/90 leading-snug pr-4 line-clamp-2">{pos.market}</h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
-                      style={isBuy ? { background: "rgba(16,185,129,0.1)", color: "#10b981" } : { background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
-                      {pos.side || "—"}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2 mb-3 pb-3 border-b border-white/5">
-                    <PosCell label={t("copyTrading.colPrice", "Price")} value={pos.price ? fmtUsd(pos.price) : "—"} />
-                    <PosCell label={t("copyTrading.colSize", "Size")} value={pos.size ? pos.size.toLocaleString() : "—"} />
-                    <PosCell label={t("copyTrading.colNotional", "Notional")} value={fmtUsd(pos.notional)} />
-                    <PosCell label={t("copyTrading.colStatus", "Status")}
-                      value={
-                        <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                          {pos.status || "Live"}
-                        </span>
-                      } />
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">{t("copyTrading.unrealizedPnl", "Unrealized PnL")}</span>
-                    {pos.pnl == null ? (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    ) : (
-                      <span className="text-sm font-medium flex items-center gap-1" style={{ color: pnlPositive ? "#10b981" : "#ef4444" }}>
-                        {pnlPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                        {fmtUsd(pos.pnl)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Close / Cancel — destructive, gated behind a confirm dialog.
-                      Cancels the live CLOB order via the engine. */}
-                  <button
-                    onClick={() => setConfirmClose({ id: pos.id, market: pos.market })}
-                    disabled={orderMut.isCancelling}
-                    className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}
-                  >
-                    {orderMut.isCancelling && orderMut.cancellingId === pos.id
-                      ? <Loader2 size={13} className="animate-spin" />
-                      : <X size={13} />}
-                    {t("copyTrading.closePosition", "平仓 / 撤单")}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* ── 交易记录(三 Tab:当前持仓 / 历史记录 / 当日平仓)── 任务4-PM ── */}
+      <PmTradeRecords
+        openOrders={openOrders}
+        allOrders={allOrders}
+        balance={balance}
+        openNotional={openNotional}
+        loading={openQ.isLoading || ordersQ.isLoading}
+        tradeWallet={tradeWallet}
+        onCloseOrder={(o) => setConfirmClose({ id: o.id, market: o.market })}
+        cancellingId={orderMut.isCancelling ? orderMut.cancellingId : undefined}
+        onRedeem={() => setConfirmRedeem(true)}
+        redeeming={orderMut.isRedeeming}
+        canRedeem={!!userId}
+      />
 
       {/* ── Quick Actions ── */}
       <div className="space-y-3">
@@ -364,6 +309,14 @@ export default function CopyTradingPage() {
           未就绪时下游 DepositBuyPanel 会显示"地址准备中"并禁充,而不是打到错地址。 */}
       <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} wallet={wallet} deposited={balance} smartWalletAddress={(balanceQ.data as { smartWallet?: string } | undefined)?.smartWallet} />
       <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} />
+
+      {/* 跟单前风险提示(任务3-PM):确认后进入策略页选择/启用跟单。 */}
+      <CopyRiskDialog
+        open={riskOpen}
+        onOpenChange={setRiskOpen}
+        params={overviewRiskParams}
+        onConfirm={() => { setRiskOpen(false); navigate("/copy-trading/auto"); }}
+      />
 
       {/* Confirm: close / cancel a single live position. */}
       <AlertDialog open={!!confirmClose} onOpenChange={(o) => { if (!o) setConfirmClose(null); }}>
@@ -448,5 +401,389 @@ function QuickAction({ href, icon: Icon, iconColor, bg, label }: {
         <span className="text-sm font-medium text-foreground/80">{label}</span>
       </div>
     </Link>
+  );
+}
+
+// ─── PM 交易记录:三 Tab(当前持仓 / 历史记录 / 当日平仓)— 任务4-PM ──────────────
+// 与 HL 侧结构对齐。数字表达同 HL:盈绿带+、亏红带-、浮盈不显示成亏损、百分比规范。
+
+type PmTab = "open" | "history" | "today";
+
+/** 当日(自然日)起点时间戳。 */
+function startOfDay(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function PmTradeRecords({
+  openOrders, allOrders, balance, openNotional, loading, tradeWallet,
+  onCloseOrder, cancellingId, onRedeem, redeeming, canRedeem,
+}: {
+  openOrders: NormOrder[];
+  allOrders: NormOrder[];
+  balance: number;
+  openNotional: number;
+  loading: boolean;
+  tradeWallet?: string;
+  onCloseOrder: (o: NormOrder) => void;
+  cancellingId?: string;
+  onRedeem: () => void;
+  redeeming: boolean;
+  canRedeem: boolean;
+}) {
+  const { t } = useTranslation();
+  const [tab, setTab] = useState<PmTab>("open");
+
+  const closed = useMemo(() => allOrders.filter(isClosed), [allOrders]);
+
+  // ── 当日数据(今日成交 / 已平仓 / 当日盈亏 / 赢率)──
+  const today = useMemo(() => {
+    const todayStart = startOfDay(Date.now());
+    const todayOrders = allOrders.filter((o) => o.createdAt >= todayStart);
+    const todayClosed = todayOrders.filter(isClosed);
+    const withPnl = todayClosed.filter((o) => o.pnl != null);
+    const wins = withPnl.filter((o) => (o.pnl ?? 0) >= 0).length;
+    const pnl = withPnl.reduce((s, o) => s + (o.pnl ?? 0), 0);
+    const cost = todayClosed.reduce((s, o) => s + o.notional, 0);
+    return {
+      filled: todayOrders.length,
+      closedCount: todayClosed.length,
+      closed: todayClosed,
+      pnl,
+      pnlPct: cost > 0 ? (pnl / cost) * 100 : 0,
+      winRate: withPnl.length > 0 ? (wins / withPnl.length) * 100 : 0,
+    };
+  }, [allOrders]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-semibold text-foreground">{t("copyTrading.recordsTitle", "交易记录")}</h3>
+        <button
+          onClick={onRedeem}
+          disabled={redeeming || !canRedeem}
+          className="text-xs text-amber-400/90 hover:text-amber-300 flex items-center gap-1 disabled:opacity-50 transition-colors"
+        >
+          {redeeming ? <Loader2 size={12} className="animate-spin" /> : <Gift size={12} />}
+          {t("copyTrading.redeem", "赎回结算")}
+        </button>
+      </div>
+
+      {/* Tab 切换 */}
+      <div className="flex gap-1.5 rounded-xl p-1" style={{ background: "rgba(26,24,19,1)", border: "1px solid rgba(51,47,38,1)" }}>
+        {([
+          { k: "open" as PmTab, label: t("copyTrading.tabOpenPositions", "当前持仓") },
+          { k: "history" as PmTab, label: t("copyTrading.tabHistoryRecords", "历史记录") },
+          { k: "today" as PmTab, label: t("copyTrading.tabTodayClosed", "当日平仓") },
+        ]).map((x) => (
+          <button
+            key={x.k}
+            onClick={() => setTab(x.k)}
+            className={`flex-1 rounded-lg py-2 text-[12px] font-semibold transition-all ${
+              tab === x.k ? "text-amber-400" : "text-muted-foreground hover:text-foreground"
+            }`}
+            style={tab === x.k ? { background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" } : {}}
+            data-testid={`tab-pm-${x.k}`}
+          >
+            {x.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+      ) : tab === "open" ? (
+        <PmOpenTab
+          openOrders={openOrders}
+          today={today}
+          balance={balance}
+          openNotional={openNotional}
+          onCloseOrder={onCloseOrder}
+          cancellingId={cancellingId}
+        />
+      ) : tab === "history" ? (
+        <PmHistoryTab closed={closed} />
+      ) : (
+        <PmTodayTab today={today} tradeWallet={tradeWallet} />
+      )}
+    </div>
+  );
+}
+
+type TodaySummary = {
+  filled: number; closedCount: number; closed: NormOrder[];
+  pnl: number; pnlPct: number; winRate: number;
+};
+
+// ── Tab1:当前持仓 ──
+function PmOpenTab({
+  openOrders, today, balance, openNotional, onCloseOrder, cancellingId,
+}: {
+  openOrders: NormOrder[];
+  today: TodaySummary;
+  balance: number;
+  openNotional: number;
+  onCloseOrder: (o: NormOrder) => void;
+  cancellingId?: string;
+}) {
+  const { t } = useTranslation();
+  // 持仓占用资金占可用余额的比例(PM 无传统保证金,用「持仓占用资金」代替)。
+  const totalFunds = balance + openNotional;
+  const usedPct = totalFunds > 0 ? (openNotional / totalFunds) * 100 : 0;
+
+  return (
+    <div className="space-y-3">
+      {/* 统计格:当日盈亏 / 已平仓 / 持仓 / 持仓占用资金 / 可用(pUSD)*/}
+      <div className="grid grid-cols-3 gap-2">
+        <RecStat
+          label={t("copyTrading.statTodayPnl", "当日盈亏")}
+          value={fmtUsd(today.pnl)}
+          sub={fmtPct(today.pnlPct)}
+          accent={pnlColor(today.pnl)}
+        />
+        <RecStat label={t("copyTrading.statClosed", "已平仓")} value={String(today.closedCount)} />
+        <RecStat label={t("copyTrading.statOpen", "持仓")} value={String(openOrders.length)} />
+        <RecStat
+          label={t("copyTrading.statHeldFunds", "持仓占用资金")}
+          value={fmtUsd(openNotional)}
+          sub={fmtPct(usedPct)}
+        />
+        <RecStat label={t("copyTrading.statAvailable", "可用")} value={fmtUsd(balance)} accent="#f59e0b" />
+      </div>
+
+      {openOrders.length === 0 ? (
+        <SectionEmpty icon={Layers} title={t("copyTrading.noPositions")} desc={t("copyTrading.noPositionsDesc")} />
+      ) : (
+        <div className="space-y-3">
+          {openOrders.slice(0, 8).map((pos) => {
+            const isBuy = pos.side === "BUY" || pos.side === "YES" || pos.side === "LONG";
+            const pnlPositive = (pos.pnl ?? 0) >= 0;
+            return (
+              <div key={pos.id} className="relative overflow-hidden rounded-xl p-4"
+                style={{ background: "#15120d", border: "1px solid rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.02)" }}>
+                <div className="absolute top-0 left-0 w-1 h-full opacity-50" style={{ background: isBuy ? "#10b981" : "#ef4444" }} />
+
+                <div className="flex justify-between items-start mb-3">
+                  <h4 className="text-sm font-medium text-foreground/90 leading-snug pr-4 line-clamp-2">{pos.market}</h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
+                    style={isBuy ? { background: "rgba(16,185,129,0.1)", color: "#10b981" } : { background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                    {pos.side || "—"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 mb-3 pb-3 border-b border-white/5">
+                  <PosCell label={t("copyTrading.colPrice", "Price")} value={pos.price ? fmtUsd(pos.price) : "—"} />
+                  <PosCell label={t("copyTrading.colSize", "Size")} value={pos.size ? pos.size.toLocaleString() : "—"} />
+                  <PosCell label={t("copyTrading.colNotional", "Notional")} value={fmtUsd(pos.notional)} />
+                  <PosCell label={t("copyTrading.colStatus", "Status")}
+                    value={
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                        {pos.status || "Live"}
+                      </span>
+                    } />
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">{t("copyTrading.unrealizedPnl", "Unrealized PnL")}</span>
+                  {pos.pnl == null ? (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  ) : (
+                    <span className="text-sm font-medium flex items-center gap-1" style={{ color: pnlColor(pos.pnl) }}>
+                      {pnlPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                      {fmtUsd(pos.pnl)}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => onCloseOrder(pos)}
+                  disabled={!!cancellingId}
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}
+                >
+                  {cancellingId === pos.id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+                  {t("copyTrading.closePosition", "平仓 / 撤单")}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tab2:历史记录(按自然日聚合)──
+function PmHistoryTab({ closed }: { closed: NormOrder[] }) {
+  const { t } = useTranslation();
+
+  // 按自然日聚合:每日一行(当日盈亏 / 已平仓 / 交易单数 / 赢率)。
+  const days = useMemo(() => {
+    const map = new Map<number, NormOrder[]>();
+    for (const o of closed) {
+      const day = startOfDay(o.createdAt || Date.now());
+      const arr = map.get(day) ?? [];
+      arr.push(o);
+      map.set(day, arr);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([day, orders]) => {
+        const withPnl = orders.filter((o) => o.pnl != null);
+        const wins = withPnl.filter((o) => (o.pnl ?? 0) >= 0).length;
+        const pnl = withPnl.reduce((s, o) => s + (o.pnl ?? 0), 0);
+        const cost = orders.reduce((s, o) => s + o.notional, 0);
+        return {
+          day,
+          pnl,
+          pnlPct: cost > 0 ? (pnl / cost) * 100 : 0,
+          closedCount: orders.length,
+          trades: orders.length,
+          winRate: withPnl.length > 0 ? (wins / withPnl.length) * 100 : 0,
+        };
+      });
+  }, [closed]);
+
+  if (days.length === 0) {
+    return <SectionEmpty icon={HistoryIcon} title={t("copyTrading.noHistory", "暂无历史记录")} />;
+  }
+
+  return (
+    <div className="space-y-2">
+      {days.map((d) => {
+        const dateStr = new Date(d.day).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+        return (
+          <div key={d.day} className="rounded-xl p-3.5"
+            style={{ background: "rgba(18,16,12,0.98)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[12px] font-semibold text-foreground/80">{dateStr}</span>
+              <span className="text-[13px] font-bold tabular-nums flex items-center gap-1.5" style={{ color: pnlColor(d.pnl) }}>
+                {d.pnl >= 0 ? "+" : ""}{fmtUsd(d.pnl)}
+                <span className="text-[11px] font-medium opacity-80">{fmtPct(d.pnlPct)}</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <DayCell label={t("copyTrading.statClosed", "已平仓")} value={String(d.closedCount)} />
+              <DayCell label={t("copyTrading.statTrades", "交易单数")} value={String(d.trades)} />
+              <DayCell
+                label={t("copyTrading.statWinRate", "赢率")}
+                value={`${d.winRate.toFixed(0)}%`}
+                accent={d.winRate >= 55 ? "#10b981" : undefined}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Tab3:当日平仓 ──
+function PmTodayTab({ today, tradeWallet }: { today: TodaySummary; tradeWallet?: string }) {
+  const { t } = useTranslation();
+
+  // 「查看链上记录」:优先订单 txHash 跳交易详情;PM 撮合订单常无 txHash →
+  // 降级到 deposit/交易钱包的 Polygonscan 地址页。
+  const onchainHref = (o: NormOrder): string | null => {
+    if (o.txHash) return polygonscanTx(o.txHash);
+    if (tradeWallet) return polygonscanAddress(tradeWallet);
+    return null;
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* 当日总数据 */}
+      <div className="grid grid-cols-2 gap-2">
+        <RecStat label={t("copyTrading.statTodayFilled", "今日成交")} value={String(today.filled)} />
+        <RecStat label={t("copyTrading.statClosed", "已平仓")} value={String(today.closedCount)} />
+        <RecStat
+          label={t("copyTrading.statTodayPnl", "当日盈亏")}
+          value={fmtUsd(today.pnl)}
+          sub={fmtPct(today.pnlPct)}
+          accent={pnlColor(today.pnl)}
+        />
+        <RecStat
+          label={t("copyTrading.statWinRate", "赢率")}
+          value={`${today.winRate.toFixed(0)}%`}
+          accent={today.winRate >= 55 ? "#10b981" : undefined}
+        />
+      </div>
+
+      {today.closed.length === 0 ? (
+        <SectionEmpty icon={HistoryIcon} title={t("copyTrading.noTodayClosed", "今日暂无平仓订单")} />
+      ) : (
+        <div className="space-y-2">
+          {today.closed.map((o) => {
+            const isWin = (o.pnl ?? 0) >= 0;
+            const isBuy = o.side === "BUY" || o.side === "YES" || o.side === "LONG";
+            const href = onchainHref(o);
+            return (
+              <div key={o.id} className="rounded-xl overflow-hidden relative"
+                style={{ background: "rgba(18,16,12,0.98)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: isWin ? "#10b981" : "#ef4444" }} />
+                <div className="pl-4 pr-3 py-3">
+                  <div className="flex justify-between items-start mb-2 gap-2">
+                    <p className="text-[13px] font-medium text-foreground/85 leading-tight line-clamp-2 flex-1">{o.market}</p>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                      isBuy ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                    }`}>{o.side || "—"}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-white/[0.04]">
+                    <div className="flex items-center gap-1.5">
+                      {isWin ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <XCircle className="h-3.5 w-3.5 text-red-400" />}
+                      {o.pnl != null && (
+                        <span className="text-[13px] font-bold tabular-nums" style={{ color: pnlColor(o.pnl) }}>
+                          {o.pnl >= 0 ? "+" : ""}{fmtUsd(o.pnl)}
+                        </span>
+                      )}
+                    </div>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-amber-400/90 hover:text-amber-300 flex items-center gap-1"
+                        data-testid={`link-onchain-${o.id}`}
+                      >
+                        {o.txHash
+                          ? t("copyTrading.viewOnchain", "查看链上记录")
+                          : t("copyTrading.viewOnPolygonscan", "在 Polygonscan 查看")}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/60">{t("copyTrading.noOnchainRecord", "无链上记录")}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecStat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
+  return (
+    <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1 truncate">{label}</p>
+      <p className="text-sm font-semibold tabular-nums truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>
+        {value}
+        {sub && <span className="ml-1 text-[10px] font-medium opacity-70">{sub}</span>}
+      </p>
+    </div>
+  );
+}
+
+function DayCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+      <p className="text-[9px] text-muted-foreground uppercase tracking-wide truncate">{label}</p>
+      <p className="text-[12px] font-semibold tabular-nums truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>{value}</p>
+    </div>
   );
 }

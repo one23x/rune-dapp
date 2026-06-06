@@ -50,6 +50,23 @@ export function useEngineUser(wallet: string | undefined) {
 }
 
 /**
+ * Lookup-only variant — resolves the engine trading subaccount **without**
+ * auto-onboarding. Used by gated surfaces (e.g. the prediction-market bet flow)
+ * where placing an order must require an *explicitly opened* trading account
+ * (node / auth-code gated). Returns `data:null` (not an error) for a wallet that
+ * has never opened an account, so callers can distinguish "not onboarded yet"
+ * from "still loading".
+ */
+export function useEngineUserLookup(wallet: string | undefined) {
+  return useQuery({
+    queryKey: ["engine", "user-lookup", wallet?.toLowerCase()],
+    queryFn: async () => (await users.findOrNull(wallet!)) ?? null,
+    enabled: !!wallet,
+    retry: false,
+  });
+}
+
+/**
  * Node-gating status for a wallet (GET /v1/node/status). Drives the 开户 gate:
  * a trading account can only be opened by a node holder.
  *

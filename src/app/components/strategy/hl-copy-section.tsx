@@ -35,6 +35,7 @@ import { getRpcClient, eth_getBalance } from "thirdweb/rpc";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -61,6 +62,7 @@ import {
 } from "@app/components/hl/shared";
 import { useOnboardFlow, DepositBuyPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
+import { HlDepositGuide } from "@app/components/hl/hl-deposit-guide";
 
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
@@ -254,6 +256,9 @@ function HlFunding({
           </DialogHeader>
 
           <div className="space-y-3 mt-1">
+            {/* 非托管 agent 模式:展示「直充 Bridge2」完整引导(你钱包=HL账户 → 发 USDC 到 Bridge2)。
+                下方 DepositBuyPanel 仍可帮你先把 USDC 买/桥到自己钱包(第 1 步),再按引导发去 Bridge2。 */}
+            {agentMode && <HlDepositGuide network={network} />}
             {/* GAS 门禁(仅托管主网):读托管 EOA 的 Arbitrum ETH 余额。
                 - 加载中 → 中性 spinner,不提前阻断;
                 - 不足(< MIN_GAS_WEI) → 红色阻断卡,隐藏所有充值路径(买币 + 转账),
@@ -380,6 +385,11 @@ function HlFunding({
               {dest !== "" && !destValid && (
                 <p className="mt-1 text-[11px] text-red-400">{t("hl.withdrawInvalidDest", "请输入有效的 Arbitrum 地址")}</p>
               )}
+              {/* 链提醒:HL withdraw3 只经官方桥提到 Arbitrum —— 目标地址必须支持 Arbitrum。 */}
+              <p className="mt-1.5 text-[11px] text-amber-300/85 flex items-start gap-1 leading-snug">
+                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                <span>{t("hl.withdrawChainNote", "仅提现到 Arbitrum 网络(USDC)。请确认目标地址支持 Arbitrum,否则资金可能丢失。默认已填入你当前连接的钱包地址。")}</span>
+              </p>
             </div>
 
             {confirming && amountValid && destValid && (
@@ -1205,41 +1215,117 @@ function PositionRow({ p, network, address, onClose, closing }: { p: HlPosition;
   );
 }
 
-// 本账户真实成交一行(来源 = /v1/hl/account 的 recentFills = 该 follower 地址自己的 HL fills)。
-function HistoryRow({ f, network, address }: { f: HlFillRow; network: HlNetwork; address?: string }) {
-  const { t } = useTranslation();
-  const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
-  const long = /long/i.test(f.dir);
-  const pnlPos = (f.closedPnl ?? 0) >= 0;
+// ── 交易记录聚合 helpers ──────────────────────────────────────────────────────
+//
+// 把本账户真实成交(recentFills)按"自然日"分组,每天一行聚合:当日已实现盈亏合计、
+// 已平仓笔数、成交总笔数、赢率(closedPnl>=0 的已平仓笔数 / 当日已平仓总笔数)。
+// 历史日没有浮盈数据,用当日已实现 closedPnl 合计代表"当日盈亏";仅"今天"那一行可在
+// 调用处叠加 account.unrealizedPnl 作为当前浮盈。
+
+// 本地"自然日"键(YYYY-MM-DD),用于分组与判断"今天"。
+function dayKey(ms: number): string {
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+interface DailyAgg {
+  day: string;          // YYYY-MM-DD
+  ms: number;           // 当日代表性时间戳(用于排序 / 展示)
+  fills: number;        // 当日成交总笔数
+  closes: number;       // 当日已平仓笔数(isClose)
+  wins: number;         // 当日 closedPnl>=0 的已平仓笔数
+  realizedPnl: number;  // 当日已实现盈亏合计(closedPnl 求和)
+  notional: number;     // 当日成交名义合计(sz*px),用作百分比分母
+}
+
+function aggregateFillsByDay(fills: HlFillRow[]): DailyAgg[] {
+  const map = new Map<string, DailyAgg>();
+  for (const f of fills) {
+    const key = dayKey(f.time);
+    let agg = map.get(key);
+    if (!agg) { agg = { day: key, ms: f.time, fills: 0, closes: 0, wins: 0, realizedPnl: 0, notional: 0 }; map.set(key, agg); }
+    agg.fills += 1;
+    agg.notional += (f.sz ?? 0) * (f.px ?? 0);
+    agg.ms = Math.max(agg.ms, f.time);
+    if (f.isClose) {
+      agg.closes += 1;
+      agg.realizedPnl += f.closedPnl ?? 0;
+      if ((f.closedPnl ?? 0) >= 0) agg.wins += 1;
+    }
+  }
+  // 最新的一天在最上面。
+  return [...map.values()].sort((a, b) => b.ms - a.ms);
+}
+
+// 统计格 —— label + 金额 + 旁边百分比(专业交易所风格:盈绿带+、亏红带-)。
+// tone:"pnl" 按正负着色;"neutral" 不着色(如保证金/可用)。
+function StatCell({
+  label, value, pct, tone = "neutral",
+}: { label: string; value: number; pct?: number | null; tone?: "pnl" | "neutral" }) {
+  const pos = value >= 0;
+  const valColor = tone === "pnl" ? (pos ? "text-emerald-400" : "text-red-400") : "text-foreground/85";
+  const sign = tone === "pnl" ? (pos ? "+" : "") : "";
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <div className="flex items-center gap-2 min-w-0">
-        <span className={cn("font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>{long ? "LONG" : "SHORT"}</span>
-        <span className="text-[12px] font-bold text-foreground/85">{f.coin}</span>
-        <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{f.isClose ? t("hl.close") : t("hl.open")}</Badge>
+    <div className="min-w-0">
+      <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{label}</div>
+      <div className={cn("text-[13px] font-bold tabular-nums truncate", valColor)}>
+        {sign}{fmtUsd(value)}
+        {pct != null && Number.isFinite(pct) && (
+          <span className={cn("text-[9px] ml-0.5", tone === "pnl" ? "opacity-70" : "text-muted-foreground/60")}>
+            ({pct >= 0 && tone === "pnl" ? "+" : ""}{pct.toFixed(2)}%)
+          </span>
+        )}
       </div>
-      <div className="flex items-center gap-2.5 shrink-0">
-        <span className="text-[11px] tabular-nums num-gold">{fmtUsd((f.sz ?? 0) * (f.px ?? 0))}</span>
-        {f.isClose && (() => {
-          const notional = (f.sz ?? 0) * (f.px ?? 0);
-          const pct = notional > 0 ? ((f.closedPnl ?? 0) / notional) * 100 : 0;
-          return (
-            <span className={cn("text-[11px] tabular-nums", pnlPos ? "text-emerald-400" : "text-red-400")}>{pnlPos ? "+" : ""}{fmtUsd(f.closedPnl ?? 0)}<span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span></span>
-          );
-        })()}
-        <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(f.time).toISOString(), tAgo)}</span>
-        {/* 链上记录跳转:优先跳该笔成交的 tx,无 hash 时退回本账户地址页 */}
-        <a
-          href={f.hash ? hlExplorerTx(f.hash, network) : hlExplorerAddress(address ?? "", network)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
-          title={t("hl.viewOnExplorer", "区块链浏览器查看")}
-          className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+    </div>
+  );
+}
+
+// 历史记录:每日一条聚合行。
+function DailyRow({ agg, todayUnrealized }: { agg: DailyAgg; todayUnrealized?: number }) {
+  const { t } = useTranslation();
+  // 当日盈亏 = 已实现合计;今天叠加当前浮盈(todayUnrealized)作为"当前浮盈亏"。
+  const dayPnl = agg.realizedPnl + (todayUnrealized ?? 0);
+  const dayPos = dayPnl >= 0;
+  const realizedPos = agg.realizedPnl >= 0;
+  // 百分比分母用当日成交名义合计;为 0 时不显示 %。
+  const pct = (v: number) => (agg.notional > 0 ? (v / agg.notional) * 100 : NaN);
+  const winRate = agg.closes > 0 ? (agg.wins / agg.closes) * 100 : 0;
+  return (
+    <div className="glass-panel p-3">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[12px] font-bold text-foreground/85 tabular-nums">{agg.day}</span>
+          {todayUnrealized != null && (
+            <Badge className="text-[8px] px-1 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate">{t("hl.today", "今天")}</Badge>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <div className={cn("text-[12px] font-bold tabular-nums", dayPos ? "text-emerald-400" : "text-red-400")}>
+            {dayPos ? "+" : ""}{fmtUsd(dayPnl)}
+            {Number.isFinite(pct(dayPnl)) && <span className="text-[9px] opacity-70"> ({pct(dayPnl) >= 0 ? "+" : ""}{pct(dayPnl).toFixed(2)}%)</span>}
+          </div>
+          <div className="text-[9px] text-muted-foreground/60">{todayUnrealized != null ? t("hl.statDayPnlToday", "当前浮盈亏") : t("hl.statDayPnl", "当日盈亏")}</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1 text-center">
+        <div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statClosed", "已平仓")}</div>
+          <div className={cn("text-[12px] font-bold tabular-nums", realizedPos ? "text-emerald-400" : "text-red-400")}>
+            {realizedPos ? "+" : ""}{fmtUsd(agg.realizedPnl)}
+            {Number.isFinite(pct(agg.realizedPnl)) && <span className="text-[8px] opacity-70"> ({pct(agg.realizedPnl) >= 0 ? "+" : ""}{pct(agg.realizedPnl).toFixed(2)}%)</span>}
+          </div>
+        </div>
+        <div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statTrades", "交易单数")}</div>
+          <div className="text-[12px] font-bold tabular-nums text-foreground/80">{agg.fills}</div>
+        </div>
+        <div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statWinRate", "赢率")}</div>
+          <div className="text-[12px] font-bold tabular-nums num-gold">{winRate.toFixed(2)}%</div>
+        </div>
       </div>
     </div>
   );
@@ -1284,27 +1370,44 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   // 历史 = **本账户**真实成交(recentFills 来自该 follower 地址的 HL userFills),
   // 不再用全网 leader 信号。只显示这个账户自己的开/平仓。
   const history = acct?.recentFills ?? [];
-  // 盈亏%(相对账户净值);净值=0 时不显示 %。每个盈亏金额旁标 %,避免客户误读。
   const av = acct?.accountValue ?? 0;
-  const pctTxt = (v: number) => (av > 0 ? ` (${v >= 0 ? "+" : ""}${((v / av) * 100).toFixed(2)}%)` : "");
+  // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
+  const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
+
+  // 历史记录:每日一条聚合(最新在上)。
+  const dailyAgg = useMemo(() => aggregateFillsByDay(history), [history]);
+  const todayKey = dayKey(Date.now());
+  // 当日(今天)成交 + 平仓明细;当日统计的百分比分母用当日成交名义合计。
+  const todayFills = useMemo(() => history.filter((f) => dayKey(f.time) === todayKey), [history, todayKey]);
+  const todayCloses = useMemo(() => todayFills.filter((f) => f.isClose), [todayFills]);
+  const todayStats = useMemo(() => {
+    const notional = todayFills.reduce((s, f) => s + (f.sz ?? 0) * (f.px ?? 0), 0);
+    const realized = todayCloses.reduce((s, f) => s + (f.closedPnl ?? 0), 0);
+    const wins = todayCloses.filter((f) => (f.closedPnl ?? 0) >= 0).length;
+    const winRate = todayCloses.length > 0 ? (wins / todayCloses.length) * 100 : 0;
+    return { notional, realized, fills: todayFills.length, closes: todayCloses.length, winRate };
+  }, [todayFills, todayCloses]);
+  const todayPctOfNotional = (v: number): number | null => (todayStats.notional > 0 ? (v / todayStats.notional) * 100 : null);
 
   return (
-    <Tabs defaultValue="open" className="w-full">
-      <TabsList className="w-full grid grid-cols-2 mb-3">
-        <TabsTrigger value="open" className="text-xs">{t("hl.subTabOpen")}</TabsTrigger>
-        <TabsTrigger value="history" className="text-xs">{t("hl.subTabHistory")}</TabsTrigger>
+    <Tabs defaultValue="positions" className="w-full">
+      <TabsList className="w-full grid grid-cols-3 mb-3">
+        <TabsTrigger value="positions" className="text-xs">{t("hl.tabPositions", "当前持仓")}</TabsTrigger>
+        <TabsTrigger value="history" className="text-xs">{t("hl.tabHistory", "历史记录")}</TabsTrigger>
+        <TabsTrigger value="closedToday" className="text-xs">{t("hl.tabClosedToday", "当日平仓")}</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="open" className="space-y-2 mt-0">
+      {/* Tab1 当前持仓:统计格(每个金额旁带 %)+ 持仓列表。 */}
+      <TabsContent value="positions" className="space-y-2 mt-0">
         {acct && (
           <div className="glass-panel p-3">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.accountValue", "账户净值")}</div><div className="text-[13px] font-bold num-gold tabular-nums">{fmtUsd(acct.accountValue)}</div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.marginUsed", "保证金占用")}</div><div className="text-[13px] font-bold text-foreground/80 tabular-nums">{fmtUsd(acct.marginUsed ?? 0)}</div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.available", "可用")}</div><div className="text-[13px] font-bold text-foreground/80 tabular-nums">{fmtUsd(acct.withdrawable)}</div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.todayPnl", "当日盈亏")}</div><div className={cn("text-[12px] font-bold tabular-nums", (acct.todayPnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400")}>{(acct.todayPnl ?? 0) >= 0 ? "+" : ""}{fmtUsd(acct.todayPnl ?? 0)}<span className="text-[9px] opacity-70">{pctTxt(acct.todayPnl ?? 0)}</span></div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.unrealized", "未实现盈亏")}</div><div className={cn("text-[12px] font-bold tabular-nums", acct.unrealizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.unrealizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.unrealizedPnl)}<span className="text-[9px] opacity-70">{pctTxt(acct.unrealizedPnl)}</span></div></div>
-              <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.realized", "已实现盈亏")}</div><div className={cn("text-[12px] font-bold tabular-nums", acct.realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>{acct.realizedPnl >= 0 ? "+" : ""}{fmtUsd(acct.realizedPnl)}<span className="text-[9px] opacity-70">{pctTxt(acct.realizedPnl)}</span></div></div>
+            <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
+              <StatCell label={t("hl.todayPnl", "当日盈亏")} value={acct.todayPnl ?? 0} pct={pctOfAv(acct.todayPnl ?? 0)} tone="pnl" />
+              <StatCell label={t("hl.realized", "已平仓")} value={acct.realizedPnl} pct={pctOfAv(acct.realizedPnl)} tone="pnl" />
+              <StatCell label={t("hl.statHoldValue", "持仓价值")} value={acct.positions.reduce((s, p) => s + p.positionValue, 0)} pct={pctOfAv(acct.positions.reduce((s, p) => s + p.positionValue, 0))} tone="neutral" />
+              <StatCell label={t("hl.marginUsed", "保证金")} value={acct.marginUsed ?? 0} pct={pctOfAv(acct.marginUsed ?? 0)} tone="neutral" />
+              <StatCell label={t("hl.available", "可用")} value={acct.withdrawable} pct={pctOfAv(acct.withdrawable)} tone="neutral" />
+              <StatCell label={t("hl.unrealized", "未实现盈亏")} value={acct.unrealizedPnl} pct={pctOfAv(acct.unrealizedPnl)} tone="pnl" />
             </div>
           </div>
         )}
@@ -1319,16 +1422,86 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         )}
       </TabsContent>
 
-      <TabsContent value="history" className="space-y-1.5 mt-0">
+      {/* Tab2 历史记录:每日一条聚合行(今天那行叠加当前浮盈)。 */}
+      <TabsContent value="history" className="space-y-2 mt-0">
         {acctQ.isLoading ? (
-          <div className="space-y-1.5">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
-        ) : history.length === 0 ? (
+          <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+        ) : dailyAgg.length === 0 ? (
           <HlEmpty icon={HistoryIcon} title={t("hl.noHistory")} desc={t("hl.noHistoryDesc")} />
         ) : (
-          history.map((f, i) => <HistoryRow key={`${f.coin}-${f.time}-${i}`} f={f} network={network} address={acct?.address} />)
+          dailyAgg.map((agg) => (
+            <DailyRow key={agg.day} agg={agg} todayUnrealized={agg.day === todayKey ? (acct?.unrealizedPnl ?? 0) : undefined} />
+          ))
+        )}
+      </TabsContent>
+
+      {/* Tab3 当日平仓:今天总数据 + 今天 isClose 明细(每条带查看链上记录)。 */}
+      <TabsContent value="closedToday" className="space-y-2 mt-0">
+        <div className="glass-panel p-3">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+            <div className="min-w-0">
+              <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statTodayTrades", "当日成交")}</div>
+              <div className="text-[13px] font-bold tabular-nums text-foreground/85">{todayStats.fills}</div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statTodayClosed", "已平仓笔数")}</div>
+              <div className="text-[13px] font-bold tabular-nums text-foreground/85">{todayStats.closes}</div>
+            </div>
+            <StatCell label={t("hl.statTodayRealized", "当日已实现盈亏")} value={todayStats.realized} pct={todayPctOfNotional(todayStats.realized)} tone="pnl" />
+            <div className="min-w-0">
+              <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statWinRate", "赢率")}</div>
+              <div className="text-[13px] font-bold tabular-nums num-gold">{todayStats.winRate.toFixed(2)}%</div>
+            </div>
+          </div>
+        </div>
+        {acctQ.isLoading ? (
+          <div className="space-y-1.5">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
+        ) : todayCloses.length === 0 ? (
+          <HlEmpty icon={HistoryIcon} title={t("hl.noClosedToday", "今日暂无平仓")} desc={t("hl.noClosedTodayDesc", "今天还没有平仓记录,平仓后会在此显示。")} />
+        ) : (
+          todayCloses.map((f, i) => <ClosedTodayRow key={`${f.coin}-${f.time}-${i}`} f={f} network={network} address={acct?.address} />)
         )}
       </TabsContent>
     </Tabs>
+  );
+}
+
+// 当日平仓明细一行 —— 基于 HistoryRow,显式给出「查看链上记录」按钮(优先 tx,无 hash 退回地址页)。
+function ClosedTodayRow({ f, network, address }: { f: HlFillRow; network: HlNetwork; address?: string }) {
+  const { t } = useTranslation();
+  const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
+  const long = /long/i.test(f.dir);
+  const pnlPos = (f.closedPnl ?? 0) >= 0;
+  const notional = (f.sz ?? 0) * (f.px ?? 0);
+  const pct = notional > 0 ? ((f.closedPnl ?? 0) / notional) * 100 : NaN;
+  return (
+    <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={cn("font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>{long ? "LONG" : "SHORT"}</span>
+        <span className="text-[12px] font-bold text-foreground/85">{f.coin}</span>
+        <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{t("hl.close")}</Badge>
+      </div>
+      <div className="flex items-center gap-2.5 shrink-0">
+        <span className="text-[11px] tabular-nums num-gold">{fmtUsd(notional)}</span>
+        <span className={cn("text-[11px] tabular-nums", pnlPos ? "text-emerald-400" : "text-red-400")}>
+          {pnlPos ? "+" : ""}{fmtUsd(f.closedPnl ?? 0)}
+          {Number.isFinite(pct) && <span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span>}
+        </span>
+        <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(f.time).toISOString(), tAgo)}</span>
+        {/* 查看链上记录:优先该笔成交 tx,无 hash 退回本账户地址页。 */}
+        <a
+          href={f.hash ? hlExplorerTx(f.hash, network) : hlExplorerAddress(address ?? "", network)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
+          data-testid={`button-hl-closed-explorer-${f.coin}-${f.time}`}
+        >
+          <ExternalLink className="h-3 w-3" />
+          {t("hl.viewOnChain", "查看链上记录")}
+        </a>
+      </div>
+    </div>
   );
 }
 
@@ -1521,16 +1694,51 @@ function BottomTabs({ network }: { network: HlNetwork }) {
 //
 // 每个 pack 预设:跟几位(count,按评分取 top-N)+ 镜像比例 + 单笔/日上限 + 杠杆上限
 // + 币种白名单。用户选一个 → 一键跟单(copyMany 批量订阅该 N 位 leader),无需手动调参。
+// 风险等级 —— low/medium/high。high 包(aggressive)在二次确认态额外要求勾选「我已知悉
+// 高风险并自愿承担」。所有包都已降为保守/稳健参数:杠杆有上限(≤5x)、不再全跟(99→10)。
+type HlRisk = "low" | "medium" | "high";
 interface HlPack {
-  key: string; color: string;
+  key: string; color: string; risk: HlRisk;
   count: number; ratioPct: number; cap: number; daily: number; maxLev: number; coins: string[];
 }
 const HL_PACKS: HlPack[] = [
-  { key: "highwin",    color: "#34d399", count: 2,  ratioPct: 4,  cap: 40,  daily: 120, maxLev: 3, coins: ["BTC", "ETH", "SOL"] },
-  { key: "leadmirror", color: "#a78bfa", count: 1,  ratioPct: 6,  cap: 60,  daily: 180, maxLev: 5, coins: [] },
-  { key: "balanced",   color: "#818cf8", count: 4,  ratioPct: 5,  cap: 50,  daily: 200, maxLev: 5, coins: [] },
-  { key: "aggressive", color: "#fb7185", count: 99, ratioPct: 10, cap: 100, daily: 500, maxLev: 0, coins: [] },
+  { key: "highwin",    color: "#34d399", risk: "low",    count: 2,  ratioPct: 4, cap: 40,  daily: 120, maxLev: 3, coins: ["BTC", "ETH", "SOL"] },
+  { key: "leadmirror", color: "#a78bfa", risk: "medium", count: 1,  ratioPct: 6, cap: 60,  daily: 180, maxLev: 3, coins: [] },
+  { key: "balanced",   color: "#818cf8", risk: "medium", count: 4,  ratioPct: 5, cap: 50,  daily: 200, maxLev: 5, coins: [] },
+  { key: "aggressive", color: "#fb7185", risk: "high",   count: 10, ratioPct: 8, cap: 80,  daily: 250, maxLev: 5, coins: [] },
 ];
+
+// 高风险勾选框 —— 复用 ui/Checkbox(暗色主题)。仅 high 风险包在确认态展示;
+// 未勾选时"确认跟单"按钮 disabled。低/中风险不渲染此项,维持原二次确认。
+function HighRiskAck({ checked, onChange, color }: { checked: boolean; onChange: (v: boolean) => void; color: string }) {
+  const { t } = useTranslation();
+  return (
+    <label
+      className="mt-1 flex items-start gap-2 cursor-pointer select-none rounded-lg px-2 py-1.5"
+      style={{ background: `${color}10`, border: `1px solid ${color}33` }}
+    >
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(v) => onChange(v === true)}
+        className="mt-0.5 border-red-400/70 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+        data-testid="checkbox-hl-high-risk-ack"
+      />
+      <span className="text-[11px] leading-snug font-semibold text-red-200">
+        {t("hl.pack.highRiskAck", "我已知悉高风险并自愿承担")}
+      </span>
+    </label>
+  );
+}
+
+// 满仓保护提示(显示层)—— 真实限额由后端执行,这里仅如实告知。
+function FullPositionNote({ color }: { color: string }) {
+  const { t } = useTranslation();
+  return (
+    <p className="text-[11px] leading-relaxed" style={{ color: `${color}cc` }}>
+      {t("hl.pack.fullPositionNote", "单笔下单最多使用账户可用余额的 20%,且不超过节点额度。")}
+    </p>
+  );
+}
 
 function packConfig(pack: HlPack): HlFollowConfig {
   return {
@@ -1558,8 +1766,11 @@ function PackCard({
   const { t } = useTranslation();
   // 一次性风险确认:首次点击进入 confirm 态,再点一次才真正跟单(UIUX Rec #5b)。
   const [confirm, setConfirm] = useState(false);
-  useEffect(() => { if (busy) setConfirm(false); }, [busy]);
-  // 按评分取 top-N(aggressive=全部);count 99 → 整张榜。
+  // 高风险包(risk:"high")确认态额外要求勾选「我已知悉高风险并自愿承担」。
+  const [riskAck, setRiskAck] = useState(false);
+  const isHighRisk = pack.risk === "high";
+  useEffect(() => { if (busy) { setConfirm(false); setRiskAck(false); } }, [busy]);
+  // 按评分取 top-N。
   const picks = useMemo(
     () => [...leaders].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, pack.count),
     [leaders, pack.count],
@@ -1588,7 +1799,7 @@ function PackCard({
         )}
       </div>
       <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: `${pack.color}1a`, color: pack.color }}>
-        {t(`hl.pack.${pack.key}.risk`, "")} · {t("hl.packFollowN", "跟 {{count}} 位", { count: picks.length })}
+        {t(`hl.risk.${pack.risk}`, pack.risk === "low" ? "低风险" : pack.risk === "medium" ? "中风险" : "高风险")} · {t("hl.packFollowN", "跟 {{count}} 位", { count: picks.length })}
       </div>
       <p className="mt-2 text-[12px] leading-relaxed text-foreground/55">{t(`hl.pack.${pack.key}.desc`, "")}</p>
 
@@ -1632,15 +1843,19 @@ function PackCard({
               <p className="text-[11px] leading-relaxed text-red-300/90">
                 {t("hl.packRiskLine", "杠杆交易可能亏损全部本金,爆仓后无法追回。")}
               </p>
+              {/* 满仓保护(显示层):如实告知单笔下单上限。 */}
+              <FullPositionNote color={pack.color} />
+              {/* 高风险包:必须勾选「已知悉高风险并自愿承担」,否则按钮 disabled。 */}
+              {isHighRisk && <HighRiskAck checked={riskAck} onChange={setRiskAck} color={pack.color} />}
             </div>
           )}
 
           <button
             type="button"
-            disabled={busy || picks.length === 0}
+            disabled={busy || picks.length === 0 || (confirm && !allOn && isHighRisk && !riskAck)}
             onClick={() => {
               if (allOn) { onEnable(picks, pack); return; }
-              if (confirm) { onEnable(picks, pack); setConfirm(false); }
+              if (confirm) { onEnable(picks, pack); setConfirm(false); setRiskAck(false); }
               else setConfirm(true);
             }}
             className={cn(
@@ -1739,9 +1954,13 @@ function ConsolePackCard({
 }) {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
-  useEffect(() => { if (busy) setConfirm(false); }, [busy]);
+  const [riskAck, setRiskAck] = useState(false);
+  useEffect(() => { if (busy) { setConfirm(false); setRiskAck(false); } }, [busy]);
 
   const cfg = useMemo(() => consolePackConfig(pack), [pack]);
+  // 高风险判定(由解析后的参数推断):杠杆 ≥8 或 镜像比例 ≥10% 视为高风险,
+  // 确认态额外要求勾选「已知悉高风险并自愿承担」。
+  const isHighRisk = cfg.maxLeverage >= 8 || cfg.notionalRatio >= 0.10;
   const tierMeta = pack.tier ? CONSOLE_TIER_META[pack.tier] : null;
   const color = tierMeta?.color ?? "#a78bfa";
   const leaderBound = !!pack.leaderAddress;
@@ -1845,15 +2064,19 @@ function ConsolePackCard({
               <p className="text-[11px] leading-relaxed text-red-300/90">
                 {t("hl.packRiskLine", "杠杆交易可能亏损全部本金,爆仓后无法追回。")}
               </p>
+              {/* 满仓保护(显示层):如实告知单笔下单上限。 */}
+              <FullPositionNote color={color} />
+              {/* 高风险参数(杠杆≥8 或 镜像≥10%):必须勾选才可确认跟单。 */}
+              {isHighRisk && <HighRiskAck checked={riskAck} onChange={setRiskAck} color={color} />}
             </div>
           )}
 
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || (confirm && !isOn && isHighRisk && !riskAck)}
             onClick={() => {
               if (isOn) { onEnable(pack); return; }
-              if (confirm) { onEnable(pack); setConfirm(false); }
+              if (confirm) { onEnable(pack); setConfirm(false); setRiskAck(false); }
               else setConfirm(true);
             }}
             className={cn(

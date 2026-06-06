@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { useToast } from "@app/hooks/use-toast";
@@ -24,7 +25,7 @@ import { queryClient } from "@app/lib/queryClient";
 import { funding, users, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
-import { useSupabaseNode } from "@/hooks/rune/use-supabase-node";
+import { useSupabaseNodeGate } from "@app/lib/node-gate-supabase";
 import { useActiveAccount, PayEmbed } from "thirdweb/react";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
@@ -80,6 +81,8 @@ export interface NormOrder {
   status: string;
   pnl: number | null;
   createdAt: number;
+  /** 链上交易哈希(PM 撮合订单常缺失)→ 用于「查看链上记录」,缺失时降级到地址页。 */
+  txHash: string | null;
 }
 
 export function normalizeOrder(raw: any, i: number): NormOrder {
@@ -89,6 +92,8 @@ export function normalizeOrder(raw: any, i: number): NormOrder {
   const notional = notionalRaw != null ? asNumber(notionalRaw) : price * size;
   const pnlRaw = raw?.pnl ?? raw?.realizedPnl ?? raw?.profit;
   const ts = raw?.createdAt ?? raw?.created_at ?? raw?.timestamp ?? raw?.ts;
+  const txRaw = raw?.txHash ?? raw?.transactionHash ?? raw?.tx_hash ?? raw?.txid ?? raw?.hash;
+  const txHash = typeof txRaw === "string" && /^0x[a-fA-F0-9]{6,}$/.test(txRaw) ? txRaw : null;
   return {
     id: String(raw?.id ?? raw?.orderId ?? raw?.orderID ?? raw?.hash ?? `ord-${i}`),
     market: String(raw?.market ?? raw?.question ?? raw?.marketId ?? raw?.tokenId ?? raw?.title ?? "—"),
@@ -99,6 +104,7 @@ export function normalizeOrder(raw: any, i: number): NormOrder {
     status: String(raw?.status ?? raw?.state ?? "").toUpperCase(),
     pnl: pnlRaw != null ? asNumber(pnlRaw) : null,
     createdAt: ts ? new Date(ts).getTime() || 0 : 0,
+    txHash,
   };
 }
 
@@ -108,6 +114,29 @@ export function isClosed(o: NormOrder) { return CLOSED_STATES.has(o.status); }
 export function fmtUsd(n: number, digits = 2): string {
   const sign = n < 0 ? "-" : "";
   return `${sign}$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+}
+
+/** Signed percent — 盈绿带+ / 亏红带-，与 fmtUsd 的符号规范一致。 */
+export function fmtPct(n: number, digits = 1): string {
+  if (!Number.isFinite(n)) return "0.0%";
+  const sign = n > 0 ? "+" : n < 0 ? "-" : "";
+  return `${sign}${Math.abs(n).toFixed(digits)}%`;
+}
+
+/** PnL → color (emerald/red/neutral)。0 视为非亏(绿),严格亏损才红。 */
+export function pnlColor(n: number | null | undefined): string {
+  if (n == null) return "hsl(var(--foreground))";
+  return n >= 0 ? "#10b981" : "#f87171";
+}
+
+// ─── Polygonscan helpers ─────────────────────────────────────────────────────
+// PM 在 Polygon 上结算。订单常无 txHash(CLOB 撮合/聚合),所以「查看链上记录」
+// 优先用 txHash 跳交易详情,缺失时降级到用户 deposit/交易钱包的地址页。
+export function polygonscanTx(hash: string): string {
+  return `https://polygonscan.com/tx/${hash}`;
+}
+export function polygonscanAddress(addr: string): string {
+  return `https://polygonscan.com/address/${addr}`;
 }
 
 // ─── Sub-tab nav (mirrors DashboardSubTabs, route-aware) ─────────────────────
@@ -190,50 +219,114 @@ export function SectionError({ onRetry }: { onRetry?: () => void }) {
 // re-point (internal route today; swap for an external store URL later).
 export const BUY_NODE_URL = "/nodes";
 
+/** Where the resolved gate decision came from (diagnostics + UX). */
+export type NodeGateSource = "purchase" | "authcode" | "supabase-none" | "backend" | "backend-fallback";
+
+export interface NodeGateResult {
+  loading: boolean;
+  blocked: boolean;
+  isNode: boolean;
+  level: number;
+  limits: NodeStatus["limits"];
+  status: NodeStatus | undefined;
+  // Phase-1 additions (per-market caps from Supabase). Optional / additive —
+  // existing consumers (loading/blocked/isNode/level/limits/status) unchanged.
+  hlCap: number | null;
+  pmCap: number | null;
+  hlMin: number | null;
+  pmMin: number | null;
+  source: NodeGateSource;
+  canOpen: boolean;
+}
+
 /**
- * Resolve the node-gating decision for a wallet. Two independent sources:
+ * Resolve the node-gating decision for a wallet.
  *
- *   1. Engine `GET /v1/node/status` (`useNodeStatus`) — reads RDS `node_access`
- *      / redeemed `auth_codes` / on-chain `levelOf`. For real node BUYERS this
- *      returns `isNode:false`: their auth code lives in main-net Supabase
- *      `rune_auth_codes.assigned_to` but was never redeemed into the engine, the
- *      on-chain `NodePresell.levelOf` reverts, and `balanceOf` grants no tier.
- *   2. Supabase `useSupabaseNode` — the SOURCE OF TRUTH for node ownership:
- *      a row in `rune_auth_codes` assigned to this wallet (and/or a `chain_id:56`
- *      purchase in `rune_purchases`). This carries the granted level + caps.
+ * Source of truth is chosen by `VITE_NODE_GATING_SOURCE` ("supabase" default |
+ * "backend"). In "supabase" mode we read the RUNE node tables (rune_purchases /
+ * trading_auth_codes via `useSupabaseNodeGate`) and fall back to the backend
+ * `node.status` on any Supabase error / missing config. In "backend" mode we use
+ * the original `useNodeStatus`-only logic verbatim (one-flip rollback valve).
  *
- * So a wallet is a node if EITHER source says so. `blocked` only when the engine
- * explicitly says not-a-node AND Supabase has no node record. Any error /
- * missing wallet / still-loading falls back to allow (optimistic — never wrongly
- * gate a paying buyer).
+ * INVARIANT — `blocked` is true ONLY when we have a definite "no node + no code"
+ * verdict: Supabase source="none", or (backend path) an explicit isNode:false.
+ * Any loading / query error / missing wallet → blocked=false (fall back to
+ * allow) so the gate never bricks open-account. Real enforcement is the
+ * backend's job (onboard rejects non-node wallets regardless of this gate).
  */
-export function useNodeGate(wallet: string | undefined) {
-  const q = useNodeStatus(wallet);
-  const sb = useSupabaseNode(wallet);
-  const status: NodeStatus | undefined = q.data;
+export function useNodeGate(wallet: string | undefined): NodeGateResult {
+  const mode =
+    (import.meta.env.VITE_NODE_GATING_SOURCE as string | undefined) ?? "supabase";
+  const useSupabase = mode === "supabase";
 
-  // Supabase-derived node identity (assigned auth code / chain-56 purchase).
-  const hasSupabaseNode = sb.isNode;
+  const supa = useSupabaseNodeGate(wallet, useSupabase);
+  const eng = useNodeStatus(wallet);
 
-  // Block ONLY when the engine explicitly says not-a-node AND Supabase has no
-  // node record. Stay optimistic while either source is still loading.
-  const engineSaysNo = status?.isNode === false;
-  const blocked = engineSaysNo && !sb.loading && !hasSupabaseNode;
-
-  // isNode = engine OR Supabase. Optimistic (true) until the engine answers.
-  const isNode = (status?.isNode ?? true) || hasSupabaseNode;
-  // Prefer engine level; else the Supabase-granted level; else ≥1 if Supabase
-  // knows this is a node (enough to pass the gate / render a badge).
-  const level = status?.level || sb.level || (hasSupabaseNode ? 1 : 0);
-
-  return {
-    loading: q.isLoading,
-    blocked,
-    isNode,
-    level,
-    limits: status?.limits ?? null,
-    status,
+  // Backend-only path: original behaviour, zero change.
+  const backendResult = (source: NodeGateSource): NodeGateResult => {
+    const status = eng.data;
+    return {
+      loading: eng.isLoading,
+      blocked: status ? status.isNode === false : false,
+      isNode: status?.isNode ?? true, // optimistic until told otherwise
+      level: status?.level ?? 0,
+      limits: status?.limits ?? null,
+      status,
+      hlCap: null,
+      pmCap: null,
+      hlMin: null,
+      pmMin: null,
+      source,
+      canOpen: status ? status.isNode !== false : true,
+    };
   };
+
+  if (!useSupabase) return backendResult("backend");
+
+  // Supabase mode — wait for the Supabase query, fall back to backend on error.
+  if (supa.isLoading) {
+    return {
+      loading: true,
+      blocked: false,
+      isNode: true,
+      level: 0,
+      limits: null,
+      status: undefined,
+      hlCap: null,
+      pmCap: null,
+      hlMin: null,
+      pmMin: null,
+      source: "supabase-none",
+      canOpen: true,
+    };
+  }
+
+  // Supabase errored (network / RLS / unconfigured) → fall back to backend.
+  if (supa.isError || !supa.data) return backendResult("backend-fallback");
+
+  const g = supa.data;
+  // Supabase 命中节点/已兑换码 → 用它(放行 + 分市场额度)。
+  if (g.isNode) {
+    return {
+      loading: false,
+      blocked: false,
+      isNode: true,
+      level: g.level,
+      limits: g.limits,
+      status: { isNode: g.isNode, level: g.level, limits: g.limits },
+      hlCap: g.hlCap,
+      pmCap: g.pmCap,
+      hlMin: g.hlMin,
+      pmMin: g.pmMin,
+      source: g.source === "purchase" ? "purchase" : "authcode",
+      canOpen: true,
+    };
+  }
+  // Supabase 判定"无节点无码"(source=none)。**不单凭这个就挡** —— 要求后端也判否
+  // (both-sources-deny):仅当后端也明确 isNode:false 才 blocked;后端放行/加载中/无数据 → 乐观放行。
+  // 修复 HIGH:防止授权码授权 / 后端手动授权 / 智能钱包≠EOA 地址 / 链ID不符 / authcode 表 RLS 未开
+  // 这些 Supabase 看不到但后端认可的合法用户被误挡(deny-on-empty 回归)。backendResult 走后端裁决。
+  return backendResult("backend-fallback");
 }
 
 /** Small badge showing the granted node level + its key limits (L1–L5). */
@@ -922,9 +1015,16 @@ export function WithdrawDialog({
 }: { open: boolean; onOpenChange: (v: boolean) => void; userId: string; available: number }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const account = useActiveAccount();
   const [amount, setAmount] = useState("");
   const [dest, setDest] = useState("");
   const [confirming, setConfirming] = useState(false);
+
+  // 默认把提现目标地址填成「当前连接的钱包」——最常见就是提回自己钱包(仍可改)。
+  // reset() 在关闭时清空,所以每次重新打开都会重新预填最新连接地址。
+  useEffect(() => {
+    if (open && !dest && account?.address) setDest(account.address);
+  }, [open, account?.address]);
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && amt <= available;
@@ -992,6 +1092,11 @@ export function WithdrawDialog({
             {dest !== "" && !destValid && (
               <p className="mt-1 text-[11px] text-red-400">{t("copyTrading.withdrawInvalidDest")}</p>
             )}
+            {/* 链提醒:pUSD 提现只发 Polygon —— 目标地址必须支持 Polygon,否则资金会丢。 */}
+            <p className="mt-1.5 text-[11px] text-amber-300/85 flex items-start gap-1 leading-snug">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>{t("copyTrading.withdrawChainNotePm", "仅提现到 Polygon 网络(pUSD)。请确认目标地址支持 Polygon,否则资金可能丢失。默认已填入你当前连接的钱包地址。")}</span>
+            </p>
           </div>
 
           {confirming && amountValid && destValid && (
@@ -1000,6 +1105,7 @@ export function WithdrawDialog({
                 <AlertTriangle className="h-3.5 w-3.5" /> {t("copyTrading.withdrawReviewTitle")}
               </div>
               <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">{t("copyTrading.withdrawAmountLabel")}</span><span className="font-bold tabular-nums">{fmtUsd(amt)}</span></div>
+              <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">{t("copyTrading.withdrawNetwork", "网络")}</span><span className="font-semibold text-amber-200">Polygon · pUSD</span></div>
               <div className="text-[11px] font-mono text-foreground/70 break-all">{dest}</div>
             </div>
           )}
@@ -1026,6 +1132,157 @@ export function WithdrawDialog({
               {withdraw.isPending ? t("copyTrading.withdrawSubmitting") : t("copyTrading.withdrawSubmit")}
             </Button>
           )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── 跟单前风险提示弹窗(PM)───────────────────────────────────────────────────
+//
+// 在确认跟单前展示策略关键参数 + 红色风险文案。激进档(镜像≥10% 或 日上限较高)
+// 强制勾选「我已知悉高风险并自愿承担」才放行;保守/稳健档只需普通确认。
+// 观感对齐 HL 侧的二次确认(packRiskLine):金黄边框 + 红色风险行。
+
+export interface CopyRiskParams {
+  /** 跟单档:用于决定是否强制勾选高风险确认。 */
+  tier: "conservative" | "balanced" | "aggressive";
+  /** 镜像比例(整数百分比,如 8 表示 8%)。 */
+  ratioPct: number;
+  /** 单笔上限(USD)。 */
+  perTradeCapUsd: number;
+  /** 日上限(USD)。null = 随单/不限。 */
+  dailyCapUsd?: number | null;
+  /** 最少资金要求(USD)。null = 无门槛。 */
+  minBalanceUsd?: number | null;
+}
+
+/**
+ * 判定是否「激进档」:显式 tier=aggressive,或可见参数偏激进(镜像≥10% 或日上限较高)。
+ * 阈值据可见参数自洽判断,真实限额由后端执行。
+ */
+export function isAggressiveRisk(p: CopyRiskParams): boolean {
+  if (p.tier === "aggressive") return true;
+  if (p.ratioPct >= 10) return true;
+  if ((p.dailyCapUsd ?? 0) >= 1000) return true;
+  return false;
+}
+
+export function CopyRiskDialog({
+  open, onOpenChange, params, onConfirm, busy = false,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  params: CopyRiskParams;
+  /** 用户勾选(若激进)并点确认后触发——调用方在此真正启用跟单/跳转。 */
+  onConfirm: () => void;
+  busy?: boolean;
+}) {
+  const { t } = useTranslation();
+  const aggressive = isAggressiveRisk(params);
+  const [acked, setAcked] = useState(false);
+
+  // 每次重新打开都重置勾选,避免上一次的「已勾选」残留放行。
+  useEffect(() => { if (!open) setAcked(false); }, [open]);
+
+  const canConfirm = (!aggressive || acked) && !busy;
+
+  const row = (k: string, v: React.ReactNode) => (
+    <div className="flex items-center justify-between gap-2 text-[12px]">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-bold text-foreground/85 tabular-nums">{v}</span>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card border-border w-[calc(100vw-1.5rem)] max-w-md p-4 rounded-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-4 w-4 text-black" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-[15px] font-bold leading-tight">
+                {t("copyTrading.riskDialogTitle", "跟单前风险提示")}
+              </DialogTitle>
+              <DialogDescription className="text-[12px] leading-tight">
+                {aggressive
+                  ? t("copyTrading.riskDialogDescAggressive", "激进策略波动较大,请确认你已了解风险。")
+                  : t("copyTrading.riskDialogDesc", "请确认以下跟单参数后再继续。")}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-3 mt-1">
+          {/* 关键参数 */}
+          <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.20)" }}>
+            {row(t("copyTrading.riskParamRatio", "镜像比例"), `${params.ratioPct}%`)}
+            {row(t("copyTrading.riskParamCap", "单笔上限"), fmtUsd(params.perTradeCapUsd, 0))}
+            {row(
+              t("copyTrading.riskParamDaily", "日上限"),
+              params.dailyCapUsd != null && params.dailyCapUsd > 0
+                ? fmtUsd(params.dailyCapUsd, 0)
+                : t("copyTrading.riskParamAuto", "随单"),
+            )}
+            {row(
+              t("copyTrading.riskParamMinBal", "最少资金要求"),
+              params.minBalanceUsd != null && params.minBalanceUsd > 0
+                ? fmtUsd(params.minBalanceUsd, 0)
+                : t("copyTrading.riskParamNone", "无门槛"),
+            )}
+          </div>
+
+          {/* 满仓保护提示(真实限额后端执行) */}
+          <div className="flex items-start gap-1.5 rounded-lg px-3 py-2 text-[11px] leading-snug text-foreground/65"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-emerald-400/80" />
+            <span>{t("copyTrading.riskMaxExposure", "满仓保护:单笔下单最多使用账户可用余额的 20%。")}</span>
+          </div>
+
+          {/* 红色风险文案 */}
+          <div className="rounded-xl p-3 space-y-1" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.22)" }}>
+            <div className="flex items-center gap-1.5 text-[12px] font-bold text-red-300">
+              <AlertTriangle className="h-3.5 w-3.5" />{t("copyTrading.riskWarnTitle", "风险提示")}
+            </div>
+            <p className="text-[11px] leading-relaxed text-red-300/90">
+              {t("copyTrading.riskWarnLine", "预测市场存在亏损风险,行情不利时可能损失全部本金。跟单不保证盈利,请理性参与、量力而行。")}
+            </p>
+          </div>
+
+          {/* 激进档:强制勾选 */}
+          {aggressive && (
+            <label className="flex items-start gap-2 cursor-pointer rounded-lg px-3 py-2.5"
+              style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)" }}>
+              <Checkbox
+                checked={acked}
+                onCheckedChange={(v) => setAcked(v === true)}
+                className="mt-0.5 shrink-0"
+                data-testid="checkbox-risk-ack"
+              />
+              <span className="text-[12px] leading-snug text-foreground/85">
+                {t("copyTrading.riskAck", "我已知悉高风险并自愿承担")}
+              </span>
+            </label>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 mt-1">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            {t("common.cancel", "取消")}
+          </Button>
+          <Button
+            size="sm"
+            disabled={!canConfirm}
+            onClick={onConfirm}
+            className="bg-gradient-to-r from-amber-500 to-yellow-600 border-amber-500/50 text-black font-bold disabled:opacity-50"
+            data-testid="button-risk-confirm"
+          >
+            {busy
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : t("copyTrading.riskConfirm", "我已知悉,继续跟单")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
