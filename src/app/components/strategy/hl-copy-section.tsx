@@ -50,6 +50,11 @@ import {
   useConsolePacks,
 } from "@app/lib/engine-hooks";
 import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
+import {
+  useWalletOpenPositions, useWalletTodayClosed, useWalletDailyHistory,
+  fmtPct as fmtStatsPct, numOrZero,
+  type StatsVenue, type OpenPositionRow, type TodayClosedRow, type WalletDailyRow,
+} from "@app/lib/trading-stats-hooks";
 import { hyperliquid, users } from "@app/lib/engine";
 import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
 import { AiDecisionCards } from "./ai-decision-cards";
@@ -1342,8 +1347,33 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
   const engineEoa = hlUser?.engineEoaAddress;
   const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
-  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
+  // 顶部账户统计(净值/今日盈亏/浮盈/已实现/可用/保证金)仍走引擎+overrides 合并层。
   const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
+  // 三个列表(当前持仓 / 历史每日 / 当日平仓)改读 Supabase stats 视图,按连接钱包过滤,
+  // venue = hl_<network>。这样 admin 在 Supabase 改的手动持仓 / 持平订单 / manual_* 在此即时一致。
+  const venue: StatsVenue = (`hl_${network}` as StatsVenue);
+  const openQ = useWalletOpenPositions(wallet);
+  const closedQ = useWalletTodayClosed(wallet);
+  const dailyQ = useWalletDailyHistory(wallet);
+  const openPositions = useMemo<OpenPositionRow[]>(
+    () => (openQ.data ?? []).filter((r) => r.venue === venue), [openQ.data, venue]);
+  const closedToday = useMemo<TodayClosedRow[]>(
+    () => (closedQ.data ?? []).filter((r) => r.venue === venue), [closedQ.data, venue]);
+  const dailyHistory = useMemo<WalletDailyRow[]>(
+    () => (dailyQ.data ?? []).filter((r) => r.venue === venue), [dailyQ.data, venue]);
+  // 当日平仓汇总:笔数 + 实现盈亏合计,从 Supabase 行求和(替代客户端 recentFills 现算)。
+  const closedSummary = useMemo(() => {
+    const closes = closedToday.length;
+    const realized = closedToday.reduce((s, r) => s + numOrZero(r.realized_pnl_usd), 0);
+    const notional = closedToday.reduce((s, r) => s + numOrZero(r.notional_usd), 0);
+    const wins = closedToday.filter((r) => numOrZero(r.realized_pnl_usd) >= 0).length;
+    return {
+      closes,
+      realized,
+      winRate: closes > 0 ? (wins / closes) * 100 : 0,
+      realizedPct: notional > 0 ? (realized / notional) * 100 : null,
+    };
+  }, [closedToday]);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
@@ -1366,28 +1396,12 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   }
 
   const acct = acctQ.data;
-  const positions = acct?.positions ?? [];
-  // 历史 = **本账户**真实成交(recentFills 来自该 follower 地址的 HL userFills),
-  // 不再用全网 leader 信号。只显示这个账户自己的开/平仓。
-  const history = acct?.recentFills ?? [];
   const av = acct?.accountValue ?? 0;
   // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
   const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
-
-  // 历史记录:每日一条聚合(最新在上)。
-  const dailyAgg = useMemo(() => aggregateFillsByDay(history), [history]);
-  const todayKey = dayKey(Date.now());
-  // 当日(今天)成交 + 平仓明细;当日统计的百分比分母用当日成交名义合计。
-  const todayFills = useMemo(() => history.filter((f) => dayKey(f.time) === todayKey), [history, todayKey]);
-  const todayCloses = useMemo(() => todayFills.filter((f) => f.isClose), [todayFills]);
-  const todayStats = useMemo(() => {
-    const notional = todayFills.reduce((s, f) => s + (f.sz ?? 0) * (f.px ?? 0), 0);
-    const realized = todayCloses.reduce((s, f) => s + (f.closedPnl ?? 0), 0);
-    const wins = todayCloses.filter((f) => (f.closedPnl ?? 0) >= 0).length;
-    const winRate = todayCloses.length > 0 ? (wins / todayCloses.length) * 100 : 0;
-    return { notional, realized, fills: todayFills.length, closes: todayCloses.length, winRate };
-  }, [todayFills, todayCloses]);
-  const todayPctOfNotional = (v: number): number | null => (todayStats.notional > 0 ? (v / todayStats.notional) * 100 : null);
+  // 顶部"持仓价值"仍取自合并层 acct.positions(顶部统计不动);三个列表已改读 Supabase。
+  const acctHoldValue = (acct?.positions ?? []).reduce((s, p) => s + p.positionValue, 0);
+  const listLoading = openQ.isLoading || closedQ.isLoading || dailyQ.isLoading;
 
   return (
     <Tabs defaultValue="positions" className="w-full">
@@ -1404,65 +1418,219 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
             <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
               <StatCell label={t("hl.todayPnl", "当日盈亏")} value={acct.todayPnl ?? 0} pct={pctOfAv(acct.todayPnl ?? 0)} tone="pnl" />
               <StatCell label={t("hl.realized", "已平仓")} value={acct.realizedPnl} pct={pctOfAv(acct.realizedPnl)} tone="pnl" />
-              <StatCell label={t("hl.statHoldValue", "持仓价值")} value={acct.positions.reduce((s, p) => s + p.positionValue, 0)} pct={pctOfAv(acct.positions.reduce((s, p) => s + p.positionValue, 0))} tone="neutral" />
+              <StatCell label={t("hl.statHoldValue", "持仓价值")} value={acctHoldValue} pct={pctOfAv(acctHoldValue)} tone="neutral" />
               <StatCell label={t("hl.marginUsed", "保证金")} value={acct.marginUsed ?? 0} pct={pctOfAv(acct.marginUsed ?? 0)} tone="neutral" />
               <StatCell label={t("hl.available", "可用")} value={acct.withdrawable} pct={pctOfAv(acct.withdrawable)} tone="neutral" />
               <StatCell label={t("hl.unrealized", "未实现盈亏")} value={acct.unrealizedPnl} pct={pctOfAv(acct.unrealizedPnl)} tone="pnl" />
             </div>
           </div>
         )}
-        {acctQ.isLoading ? (
+        {listLoading ? (
           <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
-        ) : acctQ.isError ? (
+        ) : openQ.isError ? (
           <HlEmpty icon={Layers} title={t("hl.acctError")} desc={t("hl.acctErrorDesc")} />
-        ) : positions.length === 0 ? (
+        ) : openPositions.length === 0 ? (
           <HlEmpty icon={Layers} title={t("hl.noPositions")} desc={t("hl.noPositionsDesc")} />
         ) : (
-          positions.map((p, i) => <PositionRow key={`${p.coin}-${i}`} p={p} network={network} address={acct?.address} onClose={onClosePosition} closing={closingCoin === p.coin} />)
+          openPositions.map((p, i) => <SbPositionRow key={`${p.symbol}-${i}`} p={p} network={network} address={acct?.address} onClose={onClosePosition} closing={closingCoin === (p.symbol ?? "")} />)
         )}
       </TabsContent>
 
-      {/* Tab2 历史记录:每日一条聚合行(今天那行叠加当前浮盈)。 */}
+      {/* Tab2 历史记录:Supabase v_wallet_daily_history(coalesce manual)按日一行。 */}
       <TabsContent value="history" className="space-y-2 mt-0">
-        {acctQ.isLoading ? (
+        {listLoading ? (
           <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
-        ) : dailyAgg.length === 0 ? (
+        ) : dailyQ.isError ? (
+          <HlEmpty icon={HistoryIcon} title={t("hl.acctError")} desc={t("hl.acctErrorDesc")} />
+        ) : dailyHistory.length === 0 ? (
           <HlEmpty icon={HistoryIcon} title={t("hl.noHistory")} desc={t("hl.noHistoryDesc")} />
         ) : (
-          dailyAgg.map((agg) => (
-            <DailyRow key={agg.day} agg={agg} todayUnrealized={agg.day === todayKey ? (acct?.unrealizedPnl ?? 0) : undefined} />
-          ))
+          dailyHistory.map((d) => <SbDailyRow key={`${d.venue}-${d.day}`} d={d} />)
         )}
       </TabsContent>
 
-      {/* Tab3 当日平仓:今天总数据 + 今天 isClose 明细(每条带查看链上记录)。 */}
+      {/* Tab3 当日平仓:Supabase v_wallet_today_closed,汇总(笔数/实现盈亏合计)由行求和。 */}
       <TabsContent value="closedToday" className="space-y-2 mt-0">
         <div className="glass-panel p-3">
           <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
             <div className="min-w-0">
-              <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statTodayTrades", "当日成交")}</div>
-              <div className="text-[13px] font-bold tabular-nums text-foreground/85">{todayStats.fills}</div>
-            </div>
-            <div className="min-w-0">
               <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statTodayClosed", "已平仓笔数")}</div>
-              <div className="text-[13px] font-bold tabular-nums text-foreground/85">{todayStats.closes}</div>
+              <div className="text-[13px] font-bold tabular-nums text-foreground/85">{closedSummary.closes}</div>
             </div>
-            <StatCell label={t("hl.statTodayRealized", "当日已实现盈亏")} value={todayStats.realized} pct={todayPctOfNotional(todayStats.realized)} tone="pnl" />
+            <StatCell label={t("hl.statTodayRealized", "当日已实现盈亏")} value={closedSummary.realized} pct={closedSummary.realizedPct} tone="pnl" />
             <div className="min-w-0">
               <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statWinRate", "赢率")}</div>
-              <div className="text-[13px] font-bold tabular-nums num-gold">{todayStats.winRate.toFixed(2)}%</div>
+              <div className="text-[13px] font-bold tabular-nums num-gold">{closedSummary.winRate.toFixed(2)}%</div>
             </div>
           </div>
         </div>
-        {acctQ.isLoading ? (
+        {listLoading ? (
           <div className="space-y-1.5">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
-        ) : todayCloses.length === 0 ? (
+        ) : closedQ.isError ? (
+          <HlEmpty icon={HistoryIcon} title={t("hl.acctError")} desc={t("hl.acctErrorDesc")} />
+        ) : closedToday.length === 0 ? (
           <HlEmpty icon={HistoryIcon} title={t("hl.noClosedToday", "今日暂无平仓")} desc={t("hl.noClosedTodayDesc", "今天还没有平仓记录,平仓后会在此显示。")} />
         ) : (
-          todayCloses.map((f, i) => <ClosedTodayRow key={`${f.coin}-${f.time}-${i}`} f={f} network={network} address={acct?.address} />)
+          closedToday.map((r, i) => <SbClosedTodayRow key={`${r.symbol}-${r.happened_at}-${i}`} r={r} network={network} address={acct?.address} />)
         )}
       </TabsContent>
     </Tabs>
+  );
+}
+
+// ── Supabase-backed 行渲染(替代基于引擎 fills/positions 的 PositionRow/DailyRow/ClosedTodayRow)。
+// 数据来自 v_wallet_open_positions / v_wallet_daily_history / v_wallet_today_closed,按连接钱包
+// + venue=hl_<network> 过滤;admin 在 Supabase 改的手动持仓/持平/manual_* 在此即时一致。
+
+// 当前持仓一行(Supabase v_wallet_open_positions)。无 leverage/ROE 字段 → 用持仓价值占比表达。
+function SbPositionRow({
+  p, network, address, onClose, closing,
+}: { p: OpenPositionRow; network: HlNetwork; address?: string; onClose?: (coin: string) => void; closing?: boolean }) {
+  const { t } = useTranslation();
+  const [confirm, setConfirm] = useState(false);
+  const coin = p.symbol ?? p.market_id ?? "—";
+  const size = numOrZero(p.size);
+  const long = size >= 0;
+  const cost = numOrZero(p.position_cost_usd);
+  const upnl = numOrZero(p.unrealized_pnl_usd);
+  const roe = cost > 0 ? (upnl / cost) * 100 : 0;
+  const pos = upnl >= 0;
+  return (
+    <div className="glass-panel p-3">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[13px] font-bold text-foreground/90">{coin}</span>
+          <span className={cn("inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
+            {long ? "LONG" : "SHORT"}
+          </span>
+          {address && (
+            <a
+              href={hlExplorerAddress(address, network)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
+              title={t("hl.viewOnExplorer", "区块链浏览器查看")}
+              className="h-6 w-6 grid place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition shrink-0"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <div className={cn("text-[12px] font-bold tabular-nums", pos ? "text-emerald-400" : "text-red-400")}>{pos ? "+" : ""}{fmtUsd(upnl)}</div>
+          {cost > 0 && <div className={cn("text-[10px] tabular-nums", pos ? "text-emerald-400/70" : "text-red-400/70")}>{pos ? "+" : ""}{roe.toFixed(2)}%</div>}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1 text-center">
+        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.size")}</div><div className="text-[12px] font-bold tabular-nums">{Math.abs(size).toLocaleString()}</div></div>
+        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry")}</div><div className="text-[12px] font-bold tabular-nums">{p.entry_px != null ? Number(p.entry_px).toLocaleString() : "—"}</div></div>
+        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(numOrZero(p.position_value_usd))}</div></div>
+      </div>
+      {onClose && p.symbol && (
+        <button
+          type="button"
+          disabled={closing}
+          onClick={() => {
+            if (confirm) { onClose(p.symbol!); setConfirm(false); }
+            else { setConfirm(true); window.setTimeout(() => setConfirm(false), 3000); }
+          }}
+          className={cn(
+            "mt-2.5 w-full h-9 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 transition active:scale-[0.99] disabled:opacity-60",
+            confirm ? "bg-red-500 text-white" : "bg-white/[0.04] text-red-300 border border-red-500/25 hover:bg-red-500/10",
+          )}
+          data-testid={`button-hl-close-${coin}`}
+        >
+          {closing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          {closing ? t("hl.closing", "平仓中…") : confirm ? t("hl.closeConfirm", "确认市价平仓?") : t("hl.closePosition", "平仓")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// 历史记录每日一行(Supabase v_wallet_daily_history)。当日盈亏/已实现/浮盈/赢率直接取自该行。
+function SbDailyRow({ d }: { d: WalletDailyRow }) {
+  const { t } = useTranslation();
+  const dayPnl = numOrZero(d.day_pnl_usd);
+  const dayPos = dayPnl >= 0;
+  const realized = numOrZero(d.realized_pnl_day_usd);
+  const realizedPos = realized >= 0;
+  const closes = numOrZero(d.closed_today);
+  const fills = numOrZero(d.fills_today);
+  return (
+    <div className="glass-panel p-3">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[12px] font-bold text-foreground/85 tabular-nums">{d.day}</span>
+        </div>
+        <div className="text-right shrink-0">
+          <div className={cn("text-[12px] font-bold tabular-nums", dayPos ? "text-emerald-400" : "text-red-400")}>
+            {dayPos ? "+" : ""}{fmtUsd(dayPnl)}
+            {d.day_pnl_pct != null && <span className="text-[9px] opacity-70"> ({fmtStatsPct(d.day_pnl_pct)})</span>}
+          </div>
+          <div className="text-[9px] text-muted-foreground/60">{t("hl.statDayPnl", "当日盈亏")}</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1 text-center">
+        <div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statClosed", "已平仓")}</div>
+          <div className={cn("text-[12px] font-bold tabular-nums", realizedPos ? "text-emerald-400" : "text-red-400")}>
+            {realizedPos ? "+" : ""}{fmtUsd(realized)}
+            {d.realized_day_pct != null && <span className="text-[8px] opacity-70"> ({fmtStatsPct(d.realized_day_pct)})</span>}
+          </div>
+        </div>
+        <div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statTrades", "交易单数")}</div>
+          <div className="text-[12px] font-bold tabular-nums text-foreground/80">{fills || closes}</div>
+        </div>
+        <div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.mtdPnl", "当月累计")}</div>
+          <div className={cn("text-[12px] font-bold tabular-nums", numOrZero(d.mtd_pnl_usd) >= 0 ? "text-emerald-400" : "text-red-400")}>
+            {numOrZero(d.mtd_pnl_usd) >= 0 ? "+" : ""}{fmtUsd(numOrZero(d.mtd_pnl_usd))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 当日平仓明细一行(Supabase v_wallet_today_closed)。无 per-fill txHash → 退回账户地址页。
+function SbClosedTodayRow({ r, network, address }: { r: TodayClosedRow; network: HlNetwork; address?: string }) {
+  const { t } = useTranslation();
+  const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
+  const long = r.side ? /buy|long/i.test(r.side) : true;
+  const realized = numOrZero(r.realized_pnl_usd);
+  const pnlPos = realized >= 0;
+  const notional = numOrZero(r.notional_usd);
+  const pct = notional > 0 ? (realized / notional) * 100 : NaN;
+  const coin = r.symbol ?? r.market_id ?? "—";
+  return (
+    <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={cn("font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>{long ? "LONG" : "SHORT"}</span>
+        <span className="text-[12px] font-bold text-foreground/85 truncate">{coin}</span>
+        <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{t("hl.close")}</Badge>
+      </div>
+      <div className="flex items-center gap-2.5 shrink-0">
+        {notional > 0 && <span className="text-[11px] tabular-nums num-gold">{fmtUsd(notional)}</span>}
+        <span className={cn("text-[11px] tabular-nums", pnlPos ? "text-emerald-400" : "text-red-400")}>
+          {pnlPos ? "+" : ""}{fmtUsd(realized)}
+          {Number.isFinite(pct) && <span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span>}
+        </span>
+        {r.happened_at && <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(r.happened_at).toISOString(), tAgo)}</span>}
+        <a
+          href={hlExplorerAddress(address ?? "", network)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
+          data-testid={`button-hl-closed-explorer-${coin}-${r.happened_at}`}
+        >
+          <ExternalLink className="h-3 w-3" />
+          {t("hl.viewOnChain", "查看链上记录")}
+        </a>
+      </div>
+    </div>
   );
 }
 
