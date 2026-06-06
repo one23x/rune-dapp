@@ -553,7 +553,7 @@
     "customAmount": "사용자 지정 금액",
     "enterAmount": "금액 입력 또는 선택",
     "manualTransfer": "또는 주소로 송금",
-    "onchainWaitPm": "Polygon USDC만 지원. 온체인 확인에 약 2~5분 소요되며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요."
+    "onchainWaitPm": "Polygon pUSD만 지원. 온체인 확인에 약 2~5분 소요되며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요."
   },
   "ma": {
     "chartArea": "영역",
