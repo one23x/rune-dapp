@@ -34,6 +34,8 @@ export interface TradeRecord {
   notional_usd: number | null;
   realized_pnl_usd: number | null;
   happened_at: string | null;
+  /** 链上 tx hash —— 有值才渲染「查看链上记录」直达 explorer tx 详情页;手动行可复用真实订单的 hash。 */
+  tx_hash: string | null;
 }
 
 export interface WalletDailyRow {
@@ -71,6 +73,8 @@ export interface OpenPositionRow {
   position_cost_usd: number | null;
   unrealized_pnl_usd: number | null;
   updated_at: string | null;
+  /** 仅 admin 手动持仓行有值;直达 explorer tx 详情页(不去地址列表页防穿帮)。 */
+  tx_hash: string | null;
 }
 
 export interface TodayClosedRow {
@@ -85,6 +89,8 @@ export interface TodayClosedRow {
   notional_usd: number | null;
   realized_pnl_usd: number | null;
   happened_at: string | null;
+  /** 有值才渲染链上详情链接(explorer/tx/<hash>);无值不显示链接。 */
+  tx_hash: string | null;
 }
 
 export interface LossMonitorRow {

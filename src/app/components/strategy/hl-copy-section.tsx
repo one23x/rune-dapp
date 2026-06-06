@@ -28,11 +28,9 @@ import {
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
   Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X, ExternalLink,
-  KeyRound, Server,
+  KeyRound, Server, QrCode,
 } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getRpcClient, eth_getBalance } from "thirdweb/rpc";
-import { thirdwebClient } from "@/lib/thirdweb/client";
+import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,7 +63,8 @@ import {
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
   type HlFollowConfig,
 } from "@app/components/hl/shared";
-import { useOnboardFlow, DepositBuyPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
+import { useOnboardFlow, DepositBuyPanel, DepositTransferPanel, DepositAddressPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
+import { HL_BRIDGE2_MAINNET } from "@app/components/hl/hl-deposit-guide";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 import { HlDepositGuide } from "@app/components/hl/hl-deposit-guide";
 
@@ -73,28 +72,8 @@ import { HlDepositGuide } from "@app/components/hl/hl-deposit-guide";
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
 const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}`;
 
-// GAS GATE —— 托管 EOA 必须持有最低限度的 Arbitrum ETH,否则它无法把充进来的 USDC
-// 转入 HL bridge2,资金会卡在链上的 EOA 上、永远进不了 HL 账户。0.0002 ETH 足够一笔
-// Arbitrum 上的 ERC20 transfer。低于此阈值时,custodial 主网的充值路径必须被硬阻断。
-const MIN_GAS_WEI = 200000000000000n; // 0.0002 ETH
-
-// 读取某地址在 Arbitrum One 上的原生 ETH 余额(用于 gas 门禁)。
-// 用 thirdweb RPC(直接依赖,viem 仅为传递依赖、应用层无法解析)走与 chains.ts 相同的
-// Arbitrum RPC(VITE_ARBITRUM_RPC ?? https://arb1.arbitrum.io/rpc),等价于
-// viem 的 createPublicClient({ chain: arbitrum }).getBalance({ address })。
-function useArbGasBalance(address: string | undefined, enabled: boolean) {
-  return useQuery({
-    queryKey: ["arb", "gas-balance", address?.toLowerCase()],
-    enabled: enabled && !!address && /^0x[a-fA-F0-9]{40}$/.test(address ?? ""),
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-    queryFn: async () => {
-      const rpc = getRpcClient({ client: thirdwebClient, chain: arbitrum });
-      const wei = await eth_getBalance(rpc, { address: address as `0x${string}` });
-      return wei; // bigint
-    },
-  });
-}
+// (旧「托管 EOA gas 门禁」已删:服务端 deposit-forwarder 自动给 EOA 补 gas
+//  [HL_GAS_TOPUP];连接钱包自己的 gas 由 DepositTransferPanel 的 gas-grant 兜底。)
 
 // 非托管 agent 模式开关 —— 默认 OFF,生产只显示托管流程;待测网验证订单归属后
 // 设 VITE_HL_AGENT_MODE_ENABLED=1 才放出「自托管」选项。flag off 时 mode 恒为 custodial。
@@ -104,14 +83,9 @@ const AGENT_MODE_ENABLED = (import.meta.env.VITE_HL_AGENT_MODE_ENABLED as string
 // don't silently fail with insufficient_funds (UIUX Rec #2).
 const HL_MIN = 10;
 
-// On-chain authenticity: the HL read plane exposes no per-fill txHash, so the
-// honest "verify on chain" link is the address page on Hyperliquid's own
-// explorer — it shows that address's real fills/positions.
-function hlExplorerAddress(addr: string, network: HlNetwork): string {
-  const base = network === "testnet" ? "https://app.hyperliquid-testnet.xyz" : "https://app.hyperliquid.xyz";
-  return `${base}/explorer/address/${addr}`;
-}
-// 单笔成交的链上记录(tx hash)。无 hash 时退回账户地址页。
+// 单笔记录的链上详情页(explorer/tx/<hash>)。真假数据混合 → 行上只允许这种
+// 详情页直链;**禁止**账户地址列表页链接(列表页只有真实成交,手动行会穿帮)。
+// 无 hash 的行不渲染链接。
 function hlExplorerTx(hash: string, network: HlNetwork): string {
   const base = network === "testnet" ? "https://app.hyperliquid-testnet.xyz" : "https://app.hyperliquid.xyz";
   return `${base}/explorer/tx/${hash}`;
@@ -181,15 +155,11 @@ function HlFunding({
 
   // agent 模式下 HL 账户 = 用户自己的连接钱包(master),充值就充进它;custodial 充进托管 EOA。
   const depositTarget = agentMode ? (account?.address ?? "") : depositAddress;
-
-  // GAS 门禁已停用:服务端 deposit-forwarder 现在会自动为托管 EOA 补 Arbitrum gas
-  // (HL_GAS_TOPUP,从 server 钱包 0x36f8 出),用户无需自付 gas,故不再拦截/提醒。
-  const gasGateApplies = false;
-  const gasBalance = useArbGasBalance(depositTarget, gasGateApplies);
-  // 加载中(且尚无任何已知值)→ 中性状态,不提前阻断。已知余额低于阈值 → 阻断。
-  const gasLoading = gasGateApplies && gasBalance.isLoading && gasBalance.data === undefined;
-  const gasInsufficient =
-    gasGateApplies && gasBalance.data !== undefined && gasBalance.data < MIN_GAS_WEI;
+  // Tab1 钱包直转的收款方:agent 模式 = HL Bridge2(sender=连接钱包=HL 账户,
+  // 这是 HL 的入金机制);托管模式 = 托管 EOA(forwarder 自动补 gas 后转入 HL)。
+  const transferTarget = agentMode ? HL_BRIDGE2_MAINNET : depositTarget;
+  // (旧的托管 EOA gas 门禁已删:服务端 deposit-forwarder 自动补 EOA gas,HL_GAS_TOPUP;
+  //  用户连接钱包自己的 gas 由 DepositTransferPanel 的 gas-grant 流程兜底。)
 
   const amt = Number(amount);
   const amountValid = amount !== "" && Number.isFinite(amt) && amt > 0 && (withdrawable <= 0 || amt <= withdrawable);
@@ -216,7 +186,10 @@ function HlFunding({
 
   async function copyAddr() {
     if (!depositTarget) return;
-    const ok = await copyText(depositTarget);
+    await copyAny(depositTarget);
+  }
+  async function copyAny(addr: string) {
+    const ok = await copyText(addr);
     toast(ok ? { title: t("common.copied", "已复制") } : { title: t("common.copyFailed", "复制失败"), variant: "destructive" });
   }
 
@@ -261,96 +234,118 @@ function HlFunding({
           </DialogHeader>
 
           <div className="space-y-3 mt-1">
-            {/* 非托管 agent 模式:展示「直充 Bridge2」完整引导(你钱包=HL账户 → 发 USDC 到 Bridge2)。
-                下方 DepositBuyPanel 仍可帮你先把 USDC 买/桥到自己钱包(第 1 步),再按引导发去 Bridge2。 */}
-            {agentMode && <HlDepositGuide network={network} />}
-            {/* GAS 门禁(仅托管主网):读托管 EOA 的 Arbitrum ETH 余额。
-                - 加载中 → 中性 spinner,不提前阻断;
-                - 不足(< MIN_GAS_WEI) → 红色阻断卡,隐藏所有充值路径(买币 + 转账),
-                  因为不论哪条路径,USDC 都会卡在没有 gas 的 EOA 上、进不了 HL 账户;
-                - 充足 → 照常显示充值路径(无吓人提示)。 */}
-            {gasLoading && (
-              <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-[11.5px] text-foreground/55">
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-300/80" />
-                <span>{t("hl.gasGateChecking", "正在检查托管地址的 gas 余额…")}</span>
-              </div>
-            )}
-
-            {gasInsufficient ? (
-              /* 阻断卡:gas 不足 → 不显示任何充值路径,只给客服补 gas 的地址 + 复制。 */
-              <div className="rounded-2xl border border-red-500/40 bg-red-500/[0.07] p-3.5 space-y-2.5" data-testid="card-hl-gas-blocked">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-red-400" />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-bold text-red-200">{t("hl.gasGateBlockedTitle", "暂时无法充值")}</div>
-                    <p className="mt-1 text-[11.5px] leading-snug text-red-100/80">
-                      {t("hl.gasGateBlockedMsg", "托管交易地址的 gas(Arbitrum ETH)不足,现在充值资金会卡在链上无法进入 HL 账户。请联系客服为该地址补充少量 Arbitrum ETH 后再充值。")}
-                    </p>
-                  </div>
-                </div>
-                {/* 给客服补 gas 用的托管地址 + 复制(复用本组件的 copyAddr 模式)。 */}
-                <div className="rounded-xl p-2.5 bg-black/20 border border-red-500/20">
-                  <div className="text-[10px] uppercase tracking-wide text-red-300/70 mb-1">{t("hl.gasGateFundLabel", "需补 gas 的托管地址 · ARBITRUM ETH")}</div>
-                  <div className="flex items-center gap-2">
-                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-gas-blocked-address">{depositTarget}</code>
-                    <button onClick={copyAddr} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-red-200 hover:bg-white/5 transition-colors" data-testid="button-hl-gas-blocked-copy">
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
+            {network === "testnet" ? (
+              /* ── 测试网:水龙头引导 + 托管地址(无三 Tab;测试 USDC 没有跨链/直转通道)── */
               <>
-            {/* 主路径:用卡 / 跨链一键买入 USDC 直充(custodial→托管 EOA;agent→自己钱包)
-                (仅主网且有地址;门禁加载中或不足时不渲染) */}
-            {network === "mainnet" && depositTarget && !gasLoading && (
-              <DepositBuyPanel
-                chain={arbitrum}
-                token={USDC_ARBITRUM}
-                seller={depositTarget}
-                assetLabel="USDC"
-                cap={cap}
-                onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
-                  // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),HL 账户余额已失效→重读。
-                  window.setTimeout(() => setDepOpen(false), 1500);
-                }}
-              />
-            )}
-
-            {/* 次路径:转账到地址(门禁加载中时也先不展示,避免用户在判定前手动转账) */}
-            {!gasLoading && (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
-              <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
-                <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                {agentMode
-                  ? t("hl.depositAddressLabelAgent", "充值地址(你的钱包 / HL 账户)")
-                  : network === "testnet" ? t("hl.depositAddressLabel", "充值地址(托管 EOA)") : t("deposit.manualTransfer", "或转账到地址")}
-              </div>
-              {depositTarget ? (
-                <div className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
-                  <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">ARBITRUM · USDC</div>
-                  <div className="flex items-center gap-2">
-                    <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-deposit-address">{depositTarget}</code>
-                    <button onClick={copyAddr} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors" data-testid="button-hl-copy-address">
-                      <Copy className="h-4 w-4" />
-                    </button>
+                <HlDepositGuide network="testnet" />
+                {!agentMode && (
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+                    <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
+                      <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                      {t("hl.depositAddressLabel", "充值地址(托管 EOA)")}
+                    </div>
+                    {depositTarget ? (
+                      <div className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
+                        <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">ARBITRUM · USDC</div>
+                        <div className="flex items-center gap-2">
+                          <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0" data-testid="text-hl-deposit-address">{depositTarget}</code>
+                          <button onClick={copyAddr} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors" data-testid="button-hl-copy-address">
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
-              )}
-              <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-                {agentMode
-                  ? t("hl.depositNoteAgent", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请直接在 Hyperliquid 上操作。")
-                  : t("hl.depositNote", "仅支持 USDC(Arbitrum)。到账后即可在金库一键跟单。提现请用本页「提现」。")}
-              </p>
-              <p className="text-[11px] leading-snug text-amber-300/80">
-                {t("hl.depositOnchainWait", "充值需等链上确认,约 2–5 分钟到账;到账后余额自动刷新,请耐心等待。")}
-              </p>
-            </div>
-            )}
+                )}
               </>
+            ) : (
+              /* ── 主网:三 Tab(钱包直转 / 地址扫码|充值引导 / 跨链充值),与 PM 弹窗同构 ──
+                 交易账户红线:
+                 - 托管:Tab1/Tab2/Tab3 收款方都 = 托管 EOA(forwarder 自动补 gas 转入 HL)。
+                 - agent:Tab1 直转 → HL Bridge2(sender=连接钱包=HL 账户,这是 HL 的入金机制);
+                   Tab2 **不给二维码**(第三方扫码打款会把钱记到对方的 HL 账户)→ 引导+警示;
+                   Tab3 PayEmbed 把 USDC 买/桥到自己钱包,再用 Tab1 发往 Bridge2。 */
+              <Tabs defaultValue="transfer">
+                <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+                  <TabsTrigger value="transfer" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
+                    <Wallet className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t("deposit.tabTransfer", "钱包转账")}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="address" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
+                    <QrCode className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{agentMode ? t("hl.tabDepositGuide", "充值引导") : t("deposit.tabAddress", "地址/扫码")}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="bridge" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
+                    <Zap className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t("deposit.tabBridge", "跨链充值")}</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Tab 1 — 钱包直转 USDC(Arbitrum):先切链,gas 不足自动领,再拉起授权。 */}
+                <TabsContent value="transfer" className="space-y-3">
+                  <DepositTransferPanel
+                    seller={transferTarget || undefined}
+                    cap={cap}
+                    chain={arbitrum}
+                    tokenAddress={USDC_ARBITRUM}
+                    tokenLabel="USDC"
+                    chainLabel="Arbitrum"
+                    gasChain="arbitrum"
+                    minHard={5}
+                    hint={agentMode
+                      ? t("hl.transferHintAgent", "USDC 将由你连接的钱包直接发往 HL Bridge2,HL 会把发送地址(=你的钱包)记为你的 HL 账户。最低 5 USDC,约 1 分钟到账。")
+                      : t("hl.transferHintCustodial", "仅支持 Arbitrum 网络的 USDC,资金将进入你的托管交易地址并自动转入 HL 账户。最低 5 USDC。")}
+                    onSuccess={() => queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] })}
+                    onCopy={copyAny}
+                  />
+                </TabsContent>
+
+                {/* Tab 2 — 托管:地址/二维码(任何来源都可打款到托管 EOA,安全);
+                            agent:引导 + 强警示,绝不展示 Bridge2 二维码。 */}
+                <TabsContent value="address" className="space-y-3">
+                  {agentMode ? (
+                    <>
+                      <HlDepositGuide network={network} />
+                      <div className="rounded-xl p-2.5 flex items-start gap-2"
+                        style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.25)" }}>
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-300" />
+                        <p className="text-[11px] leading-snug text-red-100/85">
+                          {t("hl.bridge2Warn", "切勿从交易所或他人钱包直接向 Bridge2 转账 —— HL 会把「发送地址」记为入金账户,资金会进入对方的 HL 账户且无法找回。请使用「钱包转账」由本人连接的钱包发出。")}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <DepositAddressPanel
+                      seller={depositTarget || undefined}
+                      cap={cap}
+                      onCopy={copyAny}
+                      warnText={t("hl.addressWarn", "仅支持 Arbitrum 网络的 USDC,转入其他代币 / 其他链将无法找回。")}
+                    />
+                  )}
+                </TabsContent>
+
+                {/* Tab 3 — 跨链充值(原 DepositBuyPanel 逻辑原样):custodial→托管 EOA;agent→自己钱包。 */}
+                <TabsContent value="bridge" className="space-y-3">
+                  {depositTarget ? (
+                    <DepositBuyPanel
+                      chain={arbitrum}
+                      token={USDC_ARBITRUM}
+                      seller={depositTarget}
+                      assetLabel="USDC"
+                      cap={cap}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
+                        // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),HL 账户余额已失效→重读。
+                        window.setTimeout(() => setDepOpen(false), 1500);
+                      }}
+                    />
+                  ) : (
+                    <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </div>
         </DialogContent>
@@ -1156,69 +1151,8 @@ function DataSourceTab({ network }: { network: HlNetwork }) {
 }
 
 // ── 持仓 / 平仓 / 历史 tab ───────────────────────────────────────────────────
-
-function PositionRow({ p, network, address, onClose, closing }: { p: HlPosition; network: HlNetwork; address?: string; onClose?: (coin: string) => void; closing?: boolean }) {
-  const { t } = useTranslation();
-  const [confirm, setConfirm] = useState(false);
-  const long = p.side === "LONG";
-  const lev = p.leverage && p.leverage > 0 ? p.leverage : null;
-  // ROE% = uPnL / initial margin (positionValue / leverage) — exchange convention.
-  const initMargin = lev ? p.positionValue / lev : p.positionValue;
-  const roe = initMargin > 0 ? (p.upnl / initMargin) * 100 : 0;
-  const pos = p.upnl >= 0;
-  return (
-    <div className="glass-panel p-3">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[13px] font-bold text-foreground/90">{p.coin}</span>
-          <span className={cn("inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
-            {p.side}
-          </span>
-          {lev != null && <Badge className="text-[9px] px-1 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate">{lev}x</Badge>}
-          {address && (
-            <a
-              href={hlExplorerAddress(address, network)}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
-              title={t("hl.viewOnExplorer", "区块链浏览器查看")}
-              className="h-6 w-6 grid place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition shrink-0"
-            >
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
-        </div>
-        <div className="text-right shrink-0">
-          <div className={cn("text-[12px] font-bold tabular-nums", pos ? "text-emerald-400" : "text-red-400")}>{pos ? "+" : ""}{fmtUsd(p.upnl)}</div>
-          <div className={cn("text-[10px] tabular-nums", pos ? "text-emerald-400/70" : "text-red-400/70")}>{pos ? "+" : ""}{roe.toFixed(2)}%</div>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-1 text-center">
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.size")}</div><div className="text-[12px] font-bold tabular-nums">{Math.abs(p.size).toLocaleString()}</div></div>
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry")}</div><div className="text-[12px] font-bold tabular-nums">{p.entryPx != null ? p.entryPx.toLocaleString() : "—"}</div></div>
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(p.positionValue)}</div></div>
-      </div>
-      {onClose && (
-        <button
-          type="button"
-          disabled={closing}
-          onClick={() => {
-            if (confirm) { onClose(p.coin); setConfirm(false); }
-            else { setConfirm(true); window.setTimeout(() => setConfirm(false), 3000); }
-          }}
-          className={cn(
-            "mt-2.5 w-full h-9 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 transition active:scale-[0.99] disabled:opacity-60",
-            confirm ? "bg-red-500 text-white" : "bg-white/[0.04] text-red-300 border border-red-500/25 hover:bg-red-500/10",
-          )}
-          data-testid={`button-hl-close-${p.coin}`}
-        >
-          {closing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          {closing ? t("hl.closing", "平仓中…") : confirm ? t("hl.closeConfirm", "确认市价平仓?") : t("hl.closePosition", "平仓")}
-        </button>
-      )}
-    </div>
-  );
-}
+// (引擎驱动的 PositionRow 已删:列表全部走 Supabase 行组件 SbPositionRow,
+//  链上链接只允许 tx 详情页直链,见 hlExplorerTx 注释。)
 
 // ── 交易记录聚合 helpers ──────────────────────────────────────────────────────
 //
@@ -1503,9 +1437,11 @@ function SbPositionRow({
           <span className={cn("inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
             {long ? "LONG" : "SHORT"}
           </span>
-          {address && (
+          {/* 真假数据混合:只在行带 tx_hash 时给「链上详情」直链(explorer/tx/<hash>),
+              绝不退回账户地址列表页(地址页只有真实成交,手动行在那里不存在 → 穿帮)。 */}
+          {p.tx_hash && (
             <a
-              href={hlExplorerAddress(address, network)}
+              href={hlExplorerTx(p.tx_hash, network)}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
@@ -1594,8 +1530,9 @@ function SbDailyRow({ d }: { d: WalletDailyRow }) {
   );
 }
 
-// 当日平仓明细一行(Supabase v_wallet_today_closed)。无 per-fill txHash → 退回账户地址页。
-function SbClosedTodayRow({ r, network, address }: { r: TodayClosedRow; network: HlNetwork; address?: string }) {
+// 当日平仓明细一行(Supabase v_wallet_today_closed)。仅 tx_hash 有值才给「查看链上记录」
+// 直链 explorer tx 详情页;无 hash 不渲染链接(绝不退回地址列表页 —— 手动行会穿帮)。
+function SbClosedTodayRow({ r, network }: { r: TodayClosedRow; network: HlNetwork; address?: string }) {
   const { t } = useTranslation();
   const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
   const long = r.side ? /buy|long/i.test(r.side) : true;
@@ -1618,17 +1555,19 @@ function SbClosedTodayRow({ r, network, address }: { r: TodayClosedRow; network:
           {Number.isFinite(pct) && <span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span>}
         </span>
         {r.happened_at && <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(r.happened_at).toISOString(), tAgo)}</span>}
-        <a
-          href={hlExplorerAddress(address ?? "", network)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
-          data-testid={`button-hl-closed-explorer-${coin}-${r.happened_at}`}
-        >
-          <ExternalLink className="h-3 w-3" />
-          {t("hl.viewOnChain", "查看链上记录")}
-        </a>
+        {r.tx_hash && (
+          <a
+            href={hlExplorerTx(r.tx_hash, network)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
+            data-testid={`button-hl-closed-explorer-${coin}-${r.happened_at}`}
+          >
+            <ExternalLink className="h-3 w-3" />
+            {t("hl.viewOnChain", "查看链上记录")}
+          </a>
+        )}
       </div>
     </div>
   );
@@ -1656,18 +1595,21 @@ function ClosedTodayRow({ f, network, address }: { f: HlFillRow; network: HlNetw
           {Number.isFinite(pct) && <span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span>}
         </span>
         <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(f.time).toISOString(), tAgo)}</span>
-        {/* 查看链上记录:优先该笔成交 tx,无 hash 退回本账户地址页。 */}
-        <a
-          href={f.hash ? hlExplorerTx(f.hash, network) : hlExplorerAddress(address ?? "", network)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
-          data-testid={`button-hl-closed-explorer-${f.coin}-${f.time}`}
-        >
-          <ExternalLink className="h-3 w-3" />
-          {t("hl.viewOnChain", "查看链上记录")}
-        </a>
+        {/* 查看链上记录:仅该笔成交带 tx hash 时直达详情页;无 hash 不渲染
+            (不退回地址列表页 —— 列表页只有真实成交,与手动数据并存时会穿帮)。 */}
+        {f.hash && (
+          <a
+            href={hlExplorerTx(f.hash, network)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
+            data-testid={`button-hl-closed-explorer-${f.coin}-${f.time}`}
+          >
+            <ExternalLink className="h-3 w-3" />
+            {t("hl.viewOnChain", "查看链上记录")}
+          </a>
+        )}
       </div>
     </div>
   );

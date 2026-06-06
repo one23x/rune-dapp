@@ -17,7 +17,8 @@ import { copyText } from "@app/lib/copy";
  */
 
 // HL Bridge2 入金合约(Arbitrum One 主网)。发 USDC 到这里 = 入金。
-const HL_BRIDGE2_MAINNET = "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7";
+// (导出给 HlFunding 的 agent 模式 Tab1 直转用:sender=连接钱包=HL 账户。)
+export const HL_BRIDGE2_MAINNET = "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7";
 // 原生 USDC(Arbitrum One)。
 const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 

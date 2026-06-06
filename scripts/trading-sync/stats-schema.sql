@@ -794,3 +794,107 @@ select cron.schedule('rune-breakeven-daily', '30 9 * * *', 'select rune_gen_dail
 where not exists (select 1 from cron.job where jobname = 'rune-breakeven-daily');
 
 
+
+
+-- ═══════════════════════ 2026-06-07 追加:tx_hash(链上详情页直链)═══════════════
+-- 背景:列表里真实+手动数据混合,行上的「查看链上记录」必须直达 HL explorer 的
+-- **tx 详情页**(/explorer/tx/<hash>),绝不去账户地址页(地址页列出该账户全部真实
+-- 成交,手动行在那里不存在 → 穿帮)。手动/持平订单可填某笔真实订单的 tx_hash,
+-- 多行指向同一个详情页来平衡当日盈亏记录。无 tx_hash 的行前端不渲染链接。
+alter table public.trading_trade_records       add column if not exists tx_hash text;
+alter table public.trading_hl_manual_positions add column if not exists tx_hash text;
+
+-- 视图尾部追加 tx_hash 列(create or replace view 仅允许尾部加列,勿调顺序)
+create or replace view public.v_trade_records as
+select venue, record_type, user_id, wallet, market_id, symbol, side,
+  price, size, notional_usd, happened_at, record_id,
+  source, realized_pnl_usd, created_at, tx_hash
+from trading_trade_records
+where not (record_type = 'position_snapshot'
+           and coalesce(size, 0) = 0 and coalesce(notional_usd, 0) = 0);
+
+create or replace view public.v_wallet_open_positions as
+with pm_mark as (
+  select coalesce(m.symbol, lf.token_id) as token_id, coalesce(m.px, lf.px) as px
+  from (select distinct on (token_id) token_id, price as px
+        from trading_polymarket_fills order by token_id, matched_at desc) lf
+  full join (select symbol, px from trading_mark_prices where venue = 'polymarket') m
+    on m.symbol = lf.token_id
+)
+select 'polymarket'::text as venue, u.smart_wallet_address as wallet, p.user_id,
+  p.market_id, p.token_id as symbol,
+  p.net_shares as size, p.avg_entry_price as entry_px, mk.px as mark_px,
+  p.net_shares * coalesce(mk.px, p.avg_entry_price, 0)                    as position_value_usd,
+  p.net_shares * coalesce(p.avg_entry_price, 0)                           as position_cost_usd,
+  p.net_shares * (coalesce(mk.px, p.avg_entry_price, 0) - coalesce(p.avg_entry_price, 0)) as unrealized_pnl_usd,
+  p.realized_pnl_usd, p.last_fill_at, p.updated_at,
+  null::text as tx_hash
+from trading_positions p
+join trading_users u on u.id = p.user_id
+left join pm_mark mk on mk.token_id = p.token_id
+where p.net_shares is distinct from 0
+  and coalesce(p.settlement_status,'') not in ('closed','redeemed','settled','resolved')
+union all
+select ('hl_' || hp.network), u.smart_wallet_address, hp.user_id,
+  hp.coin, hp.coin,
+  hp.size_base,
+  hp.avg_entry_px,
+  mk.px,
+  abs(hp.size_base) * coalesce(mk.px, hp.avg_entry_px, 0),
+  abs(hp.size_base) * coalesce(hp.avg_entry_px, 0),
+  hp.size_base * (coalesce(mk.px, hp.avg_entry_px, 0) - coalesce(hp.avg_entry_px, 0)),
+  null::numeric, null::timestamptz, hp.updated_at,
+  null::text
+from (
+  select distinct on (s.user_id, s.network, p.coin)
+    s.user_id, s.network, p.coin, p.size_base, p.avg_entry_px, p.updated_at
+  from trading_hl_positions p
+  join trading_hl_copy_subscriptions s on s.id = p.subscription_id
+  where s.user_id is not null
+  order by s.user_id, s.network, p.coin, p.updated_at desc
+) hp
+join trading_users u on u.id = hp.user_id
+left join trading_mark_prices mk on mk.venue = 'hl_' || hp.network and mk.symbol = hp.coin
+where hp.size_base is distinct from 0
+union all
+select ('hl_' || mp.network), mp.wallet, null::uuid,
+  mp.coin, mp.coin,
+  mp.size, mp.entry_px, coalesce(mp.mark_px, mp.entry_px),
+  abs(mp.size) * coalesce(mp.mark_px, mp.entry_px, 0),
+  abs(mp.size) * coalesce(mp.entry_px, 0),
+  coalesce(mp.unrealized_pnl_usd, mp.size * (coalesce(mp.mark_px, mp.entry_px, 0) - coalesce(mp.entry_px, 0))),
+  null::numeric, null::timestamptz, mp.updated_at,
+  mp.tx_hash
+from trading_hl_manual_positions mp
+where mp.active and mp.mode in ('add','replace');
+
+create or replace view public.v_wallet_today_closed as
+select 'polymarket'::text as venue, 'fill'::text as record_type,
+  u.smart_wallet_address as wallet, f.user_id,
+  f.market_id, f.token_id as symbol, f.side, f.price, f.size_shares as size,
+  f.notional_usd, null::numeric as realized_pnl_usd, f.matched_at as happened_at,
+  null::text as tx_hash
+from trading_polymarket_fills f
+join trading_users u on u.id = f.user_id
+where f.matched_at >= (((now() at time zone 'Asia/Singapore')::date)::timestamp at time zone 'Asia/Singapore')
+union all
+select 'polymarket', 'position_closed',
+  u.smart_wallet_address, p.user_id,
+  p.market_id, p.token_id, p.settlement_status, p.avg_entry_price, null,
+  p.total_sold_usd + coalesce(p.redeem_proceeds_usd, 0), p.realized_pnl_usd, p.updated_at,
+  null::text
+from trading_positions p
+join trading_users u on u.id = p.user_id
+where (p.net_shares = 0 or coalesce(p.settlement_status,'') in ('closed','redeemed','settled','resolved'))
+  and p.updated_at >= (((now() at time zone 'Asia/Singapore')::date)::timestamp at time zone 'Asia/Singapore')
+union all
+select r.venue, r.record_type,
+  u.smart_wallet_address, r.user_id,
+  r.market_id, r.symbol, r.side, r.price, r.size,
+  r.notional_usd, r.realized_pnl_usd, r.happened_at,
+  r.tx_hash
+from trading_trade_records r
+join trading_users u on u.id = r.user_id
+where r.venue like 'hl_%'
+  and r.record_type <> 'position_snapshot'
+  and r.happened_at >= (((now() at time zone 'Asia/Singapore')::date)::timestamp at time zone 'Asia/Singapore');

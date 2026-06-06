@@ -23,12 +23,14 @@ import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
-import { funding, users, type NodeStatus } from "@app/lib/engine";
+import { funding, users, gas as engineGas, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 import { useSupabaseNodeGate } from "@app/lib/node-gate-supabase";
 import { useActiveAccount, useActiveWalletChain, useSwitchActiveWalletChain, useReadContract, useSendTransaction, PayEmbed } from "thirdweb/react";
 import { getContract, prepareContractCall, toUnits, toTokens } from "thirdweb";
+import { getRpcClient, eth_getBalance } from "thirdweb/rpc";
+import type { Chain } from "thirdweb";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
 import QRCode from "qrcode";
@@ -770,40 +772,90 @@ export function DepositDialog({
   );
 }
 
-// ─── Tab 1:钱包转账面板(连接钱包 → transfer pUSD 给 seller)──────────────────
-// 收款地址唯一 = seller(= 引擎 smartWallet)。读连接钱包 pUSD 余额、按 min/remaining
-// 校验金额、transfer(seller, amount6),成功后 invalidate 余额查询。
-function DepositTransferPanel({
+// ─── gas 检查 + 领取 ─────────────────────────────────────────────────────────
+// 直转前查连接钱包的原生币(POL / Arb ETH)够不够付转账费;不够 → 调引擎
+// gas-grant(绑授权码+限次,服务端钱包代发)→ 轮询到账 → 继续转账。
+// 引擎端点未部署/总开关关闭/超限 → 抛错,调用方 toast「联系客服」。
+const GAS_MIN_WEI: Record<"arbitrum" | "polygon", bigint> = {
+  arbitrum: 20_000_000_000_000n,      // 0.00002 ETH ≈ 一笔 ERC20 transfer 的几倍余量
+  polygon: 10_000_000_000_000_000n,   // 0.01 POL
+};
+async function ensureNativeGas(
+  chain: Chain,
+  gasChain: "arbitrum" | "polygon",
+  address: string,
+  onGranting: () => void,
+): Promise<void> {
+  const rpc = getRpcClient({ client: thirdwebClient, chain });
+  const min = GAS_MIN_WEI[gasChain];
+  const bal = await eth_getBalance(rpc, { address: address as `0x${string}` });
+  if (bal >= min) return;
+  onGranting(); // 告知 UI:正在补 gas
+  await engineGas.grant(address, gasChain);
+  // 轮询到账(每 4s,最多 60s)。grant tx 已发出,链上确认通常几秒。
+  for (let i = 0; i < 15; i++) {
+    await new Promise((r) => setTimeout(r, 4000));
+    const b = await eth_getBalance(rpc, { address: address as `0x${string}` });
+    if (b >= min) return;
+  }
+  throw new Error("gas_grant_timeout");
+}
+
+// ─── Tab 1:钱包转账面板(连接钱包 → transfer 代币给 seller)────────────────────
+// PM 默认:Polygon pUSD → 引擎 smartWallet;HL 复用:Arbitrum USDC → 托管 EOA /
+// HL Bridge2(agent 模式)。流程:切链 → gas 检查/领取 → 拉起 transfer 授权签名。
+// 读连接钱包代币余额、按 min/remaining 校验金额,成功后 invalidate 余额查询。
+export function DepositTransferPanel({
   seller, cap, onSuccess, onCopy,
+  chain = polygon,
+  tokenAddress = PUSD_POLYGON,
+  tokenLabel = "pUSD",
+  chainLabel = "Polygon",
+  gasChain = "polygon",
+  minHard,
+  hint,
 }: {
   seller?: string;
   cap: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean; cap: number; deposited: number };
   onSuccess: () => void;
   onCopy: (addr: string) => void;
+  /** 目标链(默认 Polygon)。 */
+  chain?: Chain;
+  /** 转账代币合约(默认 pUSD;HL 传 Arbitrum USDC)。6 位小数。 */
+  tokenAddress?: `0x${string}`;
+  tokenLabel?: string;
+  chainLabel?: string;
+  /** gas-grant 的链参数;传 null 关闭 gas 检查。 */
+  gasChain?: "arbitrum" | "polygon" | null;
+  /** 业务硬性最低单笔(如 HL Bridge 最低 5 USDC),与授权码 minPerTx 取较大者。 */
+  minHard?: number;
+  /** 底部说明文案(默认 PM 文案)。 */
+  hint?: string;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const account = useActiveAccount();
-  // 转账前主动把钱包切到 Polygon(pUSD = Polymarket 抵押币只在 Polygon 上),
-  // 切完链立刻拉起 transfer 授权签名 —— 不要求用户自己去钱包里换网络。
+  // 转账前主动把钱包切到目标链,切完链立刻拉起 transfer 授权签名 ——
+  // 不要求用户自己去钱包里换网络。
   const activeChain = useActiveWalletChain();
   const switchChain = useSwitchActiveWalletChain();
   const [switching, setSwitching] = useState(false);
+  const [granting, setGranting] = useState(false);
   const [amount, setAmount] = useState("");
   const { mutate: sendTx, isPending } = useSendTransaction();
 
-  // 连接钱包 pUSD 余额(Polygon,6 位小数)。
-  const pusd = getContract({ client: thirdwebClient, chain: polygon, address: PUSD_POLYGON });
+  // 连接钱包代币余额(6 位小数)。
+  const token = getContract({ client: thirdwebClient, chain, address: tokenAddress });
   const balQ = useReadContract({
-    contract: pusd,
+    contract: token,
     method: "function balanceOf(address) view returns (uint256)",
     params: [account?.address ?? "0x0000000000000000000000000000000000000000"],
     queryOptions: { enabled: !!account?.address },
   });
   const walletBal = balQ.data != null ? Number(toTokens(balQ.data, 6)) : 0;
 
-  // 限额(与 DepositBuyPanel 同口径)。
-  const minPerTx = cap.minPerTx;
+  // 限额(与 DepositBuyPanel 同口径;再叠加业务硬下限,如 HL Bridge 最低 5 USDC)。
+  const minPerTx = Math.max(cap.minPerTx, minHard ?? 0);
   const remaining = cap.remaining;
   const noCode = !cap.loading && !cap.hasCode;
   const capExhausted = !cap.loading && cap.hasCode && remaining < minPerTx;
@@ -860,15 +912,15 @@ function DepositTransferPanel({
   }
 
   async function onSubmit() {
-    if (!seller || !amountValid) return;
-    // ① 钱包不在 Polygon → 主动切链(用户在钱包里确认),失败就停,不发交易。
-    if (activeChain?.id !== polygon.id) {
+    if (!seller || !amountValid || !account) return;
+    // ① 钱包不在目标链 → 主动切链(用户在钱包里确认),失败就停,不发交易。
+    if (activeChain?.id !== chain.id) {
       setSwitching(true);
       try {
-        await switchChain(polygon);
+        await switchChain(chain);
       } catch (e: any) {
         toast({
-          title: t("deposit.switchChainFailed", "请切换到 Polygon 网络"),
+          title: t("deposit.switchChainFailed", "请切换到 {{chain}} 网络", { chain: chainLabel }),
           description: String(e?.shortMessage ?? e?.message ?? e),
           variant: "destructive",
         });
@@ -877,9 +929,32 @@ function DepositTransferPanel({
         setSwitching(false);
       }
     }
-    // ② 切链就绪 → 立刻拉起 pUSD(Polymarket 抵押币)transfer 授权签名。
+    // ② gas 检查:原生币不够付转账费 → 引擎代发一笔 gas,等到账再继续。
+    if (gasChain) {
+      try {
+        await ensureNativeGas(chain, gasChain, account.address, () => {
+          setGranting(true);
+          toast({ title: t("deposit.gasGranting", "检测到 gas 不足,正在为您补充…"), description: t("deposit.gasGrantingDesc", "无需操作,到账后将自动继续转账(约 10–30 秒)。") });
+        });
+      } catch (e: any) {
+        const msg = String(e?.message ?? e);
+        toast({
+          title: t("deposit.gasGrantFailed", "gas 不足,自动补充失败"),
+          description: /not_eligible/.test(msg)
+            ? t("deposit.gasNotEligible", "该钱包未绑定授权码,无法自动领取 gas。")
+            : /limit_reached/.test(msg)
+              ? t("deposit.gasLimitReached", "gas 领取次数已用完,请联系客服。")
+              : t("deposit.gasGrantFailedDesc", "请向该钱包充值少量 {{native}} 作为手续费,或联系客服。", { native: gasChain === "polygon" ? "POL" : "Arbitrum ETH" }),
+          variant: "destructive",
+        });
+        setGranting(false);
+        return;
+      }
+      setGranting(false);
+    }
+    // ③ 链与 gas 就绪 → 立刻拉起 transfer 授权签名。
     const tx = prepareContractCall({
-      contract: pusd,
+      contract: token,
       method: "function transfer(address,uint256)",
       params: [seller as `0x${string}`, toUnits(String(amt), 6)],
     });
@@ -903,14 +978,14 @@ function DepositTransferPanel({
         </div>
         <div className="min-w-0">
           <div className="text-[13px] font-bold leading-tight">{t("deposit.transferTitle", "钱包转账")}</div>
-          <div className="text-[11px] text-muted-foreground leading-tight truncate">{t("deposit.transferDesc", "从已连接钱包直接转入 pUSD")}</div>
+          <div className="text-[11px] text-muted-foreground leading-tight truncate">{t("deposit.transferDescToken", "从已连接钱包直接转入 {{token}}", { token: tokenLabel })}</div>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-[11px]">
         <span className="text-muted-foreground">{t("deposit.walletBalance", "钱包余额")}</span>
         <span className="font-semibold tabular-nums text-foreground/80">
-          {balQ.isLoading ? "…" : `$${walletBal.toLocaleString(undefined, { maximumFractionDigits: 2 })} pUSD`}
+          {balQ.isLoading ? "…" : `$${walletBal.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${tokenLabel}`}
         </span>
       </div>
 
@@ -952,7 +1027,7 @@ function DepositTransferPanel({
           placeholder={t("deposit.customAmount", "自定义金额")}
           className="border-0 bg-transparent px-0 h-auto text-[15px] font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
         />
-        <span className="text-[11px] text-muted-foreground ml-1 shrink-0">pUSD</span>
+        <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{tokenLabel}</span>
         <button
           type="button"
           onClick={onMax}
@@ -972,40 +1047,47 @@ function DepositTransferPanel({
       )}
       {!cap.loading && amt > 0 && amountValid && amt > walletBal && (
         <p className="text-[11px] text-red-400 leading-snug">
-          {t("deposit.insufficientWallet", "钱包 pUSD 余额不足")}
+          {t("deposit.insufficientWalletToken", "钱包 {{token}} 余额不足", { token: tokenLabel })}
         </p>
       )}
 
       <button
         type="button"
         className="gold-button w-full h-12 rounded-xl inline-flex items-center justify-center gap-1.5 text-[15px] font-extrabold disabled:opacity-40 disabled:saturate-50"
-        disabled={!amountValid || amt > walletBal || isPending || switching || cap.loading}
+        disabled={!amountValid || amt > walletBal || isPending || switching || granting || cap.loading}
         onClick={onSubmit}
       >
-        {isPending || switching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        {isPending || switching || granting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         {switching
-          ? t("deposit.switchingChain", "切换到 Polygon…")
-          : isPending
-            ? t("deposit.transferring", "转账中…")
-            : amt > 0
-              ? `${t("deposit.transferNow", "立即转账")} $${amt}`
-              : t("deposit.enterAmount", "输入或选择金额")}
+          ? t("deposit.switchingChainTo", "切换到 {{chain}}…", { chain: chainLabel })
+          : granting
+            ? t("deposit.gasGrantingShort", "补充 gas 中…")
+            : isPending
+              ? t("deposit.transferring", "转账中…")
+              : amt > 0
+                ? `${t("deposit.transferNow", "立即转账")} $${amt}`
+                : t("deposit.enterAmount", "输入或选择金额")}
       </button>
 
       <p className="text-[10px] leading-snug text-amber-300/80">
-        {t("deposit.transferHint", "仅支持 Polygon 网络的 pUSD,资金将直接转入您的交易账户。")}
+        {hint ?? t("deposit.transferHint", "仅支持 Polygon 网络的 pUSD,资金将直接转入您的交易账户。")}
       </p>
     </div>
   );
 }
 
 // ─── Tab 2:地址/扫码面板(展示 seller 地址 + 二维码,内容=纯地址)──────────────
-function DepositAddressPanel({
-  seller, cap, onCopy,
+// PM 默认(Polygon pUSD);HL 托管模式复用(Arbitrum USDC → 托管 EOA)。
+// 注意:HL **agent 模式不要用这个面板**(HL 把发送地址记为账户,第三方扫码打款
+// 会把钱记到对方的 HL 账户),agent 模式用引导面板。
+export function DepositAddressPanel({
+  seller, cap, onCopy, warnText,
 }: {
   seller?: string;
   cap: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean };
   onCopy: (addr: string) => void;
+  /** 红色警示文案(默认 PM:仅 Polygon pUSD)。 */
+  warnText?: string;
 }) {
   const { t } = useTranslation();
   const [qr, setQr] = useState<string>("");
@@ -1069,7 +1151,7 @@ function DepositAddressPanel({
         style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.25)" }}>
         <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-300" />
         <p className="text-[11px] leading-snug text-red-100/85">
-          {t("deposit.addressWarn", "仅支持 Polygon 网络的 pUSD,转入其他代币 / 其他链将无法找回。")}
+          {warnText ?? t("deposit.addressWarn", "仅支持 Polygon 网络的 pUSD,转入其他代币 / 其他链将无法找回。")}
         </p>
       </div>
     </div>
