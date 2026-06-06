@@ -147,7 +147,8 @@ export default function CopyTradingPage() {
   if (!userId && !previewMode) {
     return (
       <CopyTradingLayout>
-        <OnboardCard wallet={wallet} />
+        {/* Gate 1 already returned when !wallet && !previewMode, so wallet is set here. */}
+        <OnboardCard wallet={wallet!} />
       </CopyTradingLayout>
     );
   }
@@ -264,7 +265,7 @@ export default function CopyTradingPage() {
               {orderMut.isRedeeming ? <Loader2 size={12} className="animate-spin" /> : <Gift size={12} />}
               {t("copyTrading.redeem", "赎回结算")}
             </button>
-            <Link href="/copy-trading/history" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+            <Link href="/copy-trading/stats" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
               {t("copyTrading.viewAll", "View All")} <ChevronRight size={12} />
             </Link>
           </div>
@@ -344,7 +345,7 @@ export default function CopyTradingPage() {
         <div className="grid grid-cols-2 gap-3">
           <QuickAction href="/copy-trading/auto" icon={Zap} iconColor="#f59e0b" bg="rgba(245,158,11,0.1)" label={t("copyTrading.tabAutoCopy")} />
           <QuickAction href="/copy-trading/signals" icon={Activity} iconColor="#818cf8" bg="rgba(99,102,241,0.1)" label={t("copyTrading.tabSignals")} />
-          <QuickAction href="/copy-trading/history" icon={BarChart2} iconColor="#10b981" bg="rgba(16,185,129,0.1)" label={t("copyTrading.tabHistory")} />
+          <QuickAction href="/copy-trading/stats" icon={BarChart2} iconColor="#10b981" bg="rgba(16,185,129,0.1)" label={t("copyTrading.tabStats", "交易数据")} />
           <QuickAction href="/strategy" icon={Sparkles} iconColor="#38bdf8" bg="rgba(56,189,248,0.1)" label={t("hl.navTitle", "Hyperliquid")} />
         </div>
       </div>

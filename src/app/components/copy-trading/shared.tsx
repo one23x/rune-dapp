@@ -116,7 +116,7 @@ const SUB_TABS = [
   { href: "/copy-trading",         labelKey: "copyTrading.tabOverview", fallback: "Overview",  icon: LayoutDashboard },
   { href: "/copy-trading/auto",    labelKey: "copyTrading.tabAutoCopy", fallback: "Strategy",  icon: Zap },
   { href: "/copy-trading/signals", labelKey: "copyTrading.tabSignals",  fallback: "Signals",   icon: Activity },
-  { href: "/copy-trading/history", labelKey: "copyTrading.tabHistory",  fallback: "History",   icon: HistoryIcon },
+  { href: "/copy-trading/stats",   labelKey: "copyTrading.tabStats",    fallback: "交易数据",   icon: HistoryIcon },
 ] as const;
 
 export function CopyTradingSubNav() {

@@ -45,9 +45,10 @@ import { queryClient } from "@app/lib/queryClient";
 import { useToast } from "@app/hooks/use-toast";
 import { arbitrum } from "@/lib/thirdweb/chains";
 import {
-  useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs, useHlSubMutations, useHlClose,
+  useEngineUser, useHlLeaders, useHlSignals, useHlSubs, useHlSubMutations, useHlClose,
   useConsolePacks,
 } from "@app/lib/engine-hooks";
+import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import { hyperliquid, users } from "@app/lib/engine";
 import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
 import { AiDecisionCards } from "./ai-decision-cards";
@@ -1255,7 +1256,8 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
   const engineEoa = hlUser?.engineEoaAddress;
   const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
-  const acctQ = useHlAccount(hlAddress, network);
+  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
+  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
@@ -1427,7 +1429,8 @@ export function HlCopySection() {
   const agentMode = hlUser?.hlMode === "agent";
   const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
 
-  const acctQ = useHlAccount(hlAddress, network);
+  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
+  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
 
@@ -1891,7 +1894,8 @@ export function HlHubPage() {
   // 非托管 agent 模式:净值/持仓读 master(自己钱包);custodial 读托管 EOA。
   const agentMode = hlUser?.hlMode === "agent";
   const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
-  const acctQ = useHlAccount(hlAddress, network);
+  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
+  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
   const packsQ = useConsolePacks();
