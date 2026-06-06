@@ -553,7 +553,7 @@
     "customAmount": "自定義金額",
     "enterAmount": "輸入或選擇金額",
     "manualTransfer": "或轉帳到地址",
-    "onchainWaitPm": "僅支援 Polygon 網路 USDC。鏈上確認約需 2–5 分鐘到帳，到帳後餘額會自動刷新，請耐心等待。"
+    "onchainWaitPm": "僅支援 Polygon 網路 pUSD。鏈上確認約需 2–5 分鐘到帳，到帳後餘額會自動刷新，請耐心等待。"
   },
   "ma": {
     "chartArea": "面积",

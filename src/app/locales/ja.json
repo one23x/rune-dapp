@@ -553,7 +553,7 @@
     "customAmount": "カスタム金額",
     "enterAmount": "金額を入力または選択",
     "manualTransfer": "またはアドレスへ送金",
-    "onchainWaitPm": "Polygon の USDC のみ。オンチェーン確認に約 2〜5 分かかります。着金後に残高が自動更新されます。お待ちください。"
+    "onchainWaitPm": "Polygon の pUSD のみ。オンチェーン確認に約 2〜5 分かかります。着金後に残高が自動更新されます。お待ちください。"
   },
   "ma": {
     "chartArea": "エリア",

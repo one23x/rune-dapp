@@ -553,7 +553,7 @@
     "customAmount": "Montant personnalisé",
     "enterAmount": "Saisissez ou sélectionnez un montant",
     "manualTransfer": "Ou transférez à l’adresse",
-    "onchainWaitPm": "USDC Polygon uniquement. La confirmation on-chain prend ~2–5 min ; ton solde se met à jour automatiquement à l'arrivée — patiente."
+    "onchainWaitPm": "pUSD Polygon uniquement. La confirmation on-chain prend ~2–5 min ; ton solde se met à jour automatiquement à l'arrivée — patiente."
   },
   "ma": {
     "chartArea": "Zone",

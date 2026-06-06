@@ -553,7 +553,7 @@
     "customAmount": "Cantidad personalizada",
     "enterAmount": "Introduce o selecciona una cantidad",
     "manualTransfer": "O transfiere a la dirección",
-    "onchainWaitPm": "Solo USDC en Polygon. La confirmación on-chain tarda ~2–5 min; tu saldo se actualiza automáticamente al llegar — espera por favor."
+    "onchainWaitPm": "Solo pUSD en Polygon. La confirmación on-chain tarda ~2–5 min; tu saldo se actualiza automáticamente al llegar — espera por favor."
   },
   "ma": {
     "chartArea": "Área",

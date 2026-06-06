@@ -553,7 +553,7 @@
     "customAmount": "Custom amount",
     "enterAmount": "Enter or select an amount",
     "manualTransfer": "Or transfer to address",
-    "onchainWaitPm": "Polygon USDC only. On-chain confirmation takes ~2–5 min; your balance auto-refreshes once it arrives — please wait.",
+    "onchainWaitPm": "Polygon pUSD only. On-chain confirmation takes ~2–5 min; your balance auto-refreshes once it arrives — please wait.",
     "capChecking": "Checking your limit…",
     "capRange": "Min ${{min}} per deposit · up to ${{max}} this time",
     "capBelowMin": "Each deposit must be at least ${{min}}",

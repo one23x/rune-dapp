@@ -553,7 +553,7 @@
     "customAmount": "Số tiền tùy chỉnh",
     "enterAmount": "Nhập hoặc chọn một số tiền",
     "manualTransfer": "Hoặc chuyển tới địa chỉ",
-    "onchainWaitPm": "Chỉ USDC trên Polygon. Xác nhận on-chain mất ~2–5 phút; số dư tự động làm mới khi nhận được — vui lòng đợi."
+    "onchainWaitPm": "Chỉ pUSD trên Polygon. Xác nhận on-chain mất ~2–5 phút; số dư tự động làm mới khi nhận được — vui lòng đợi."
   },
   "ma": {
     "chartArea": "Vùng",

@@ -553,7 +553,7 @@
     "customAmount": "Eigener Betrag",
     "enterAmount": "Betrag eingeben oder auswählen",
     "manualTransfer": "Oder an Adresse überweisen",
-    "onchainWaitPm": "Nur Polygon-USDC. Die On-Chain-Bestätigung dauert ca. 2–5 Min.; dein Guthaben aktualisiert sich automatisch nach Eingang — bitte warten."
+    "onchainWaitPm": "Nur Polygon-pUSD. Die On-Chain-Bestätigung dauert ca. 2–5 Min.; dein Guthaben aktualisiert sich automatisch nach Eingang — bitte warten."
   },
   "ma": {
     "chartArea": "Fläche",

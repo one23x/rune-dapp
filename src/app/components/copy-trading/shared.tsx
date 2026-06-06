@@ -644,10 +644,11 @@ export function DepositDialog({
         const addrObj = val?.address ?? val;
         let rows: { chain: string; address: string }[] = [];
         if (addrObj && typeof addrObj === "object" && !Array.isArray(addrObj)) {
-          // 只保留一个充值地址(EVM = Polygon USDC,最常用);多链地址会让用户困惑。
+          // 只保留一个充值地址(EVM = Polygon)。币种是 **pUSD**(0xC011a7…,Polymarket V2 抵押币;
+          // USDC.e 已弃用)—— 标成笼统 "USDC" 会让用户充原生 USDC,Polymarket 不收 → 卡住拿不回。
           const evm = (addrObj as Record<string, unknown>).evm;
           if (typeof evm === "string" && evm.length > 0) {
-            rows = [{ chain: "USDC", address: evm }];
+            rows = [{ chain: "pUSD", address: evm }];
           } else {
             rows = Object.entries(addrObj)
               .filter(([, a]) => typeof a === "string" && (a as string).length > 0)
