@@ -8,6 +8,10 @@
 - **环境布局**:美东 `us-east-1` = 生产(one-engine 部署地);新加坡 `ap-southeast-1`(`13.250.210.12`)= 开发;爱尔兰 `eu-west-1` 旧栈**已退役删除**(2026-05-30)。
 - 基础设施:Terraform 在 `infra/terraform/`。
 
+## 项目征程(必读)
+- **`docs/journey/`** = 共同记忆:`ROADMAP.md`(当前阶段目标)/ `daily/`(每日战报)/ `LESSONS.md`(编号经验库)。**会话开始先读 ROADMAP 当前阶段 + 最近一篇 daily;踩坑前先 grep LESSONS;修完非平凡问题立即追加 LESSONS;收尾写 daily。**
+- 技术负责人:**Alps**(称呼 Alps,平等协作)。
+
 ## 与 Claude 的配合规范(精简;详见 docs/ops/COLLABORATION.md)
 1. **单一进度源 = `docs/ops/PROGRESS.md`**。里程碑勾 `- [x]`,Stop hook 自动推 Slack(每阶段一条);详细每步记「任务流水」。
 2. **危险操作必先确认**:删除 / 生产部署 / 改生产网络或 RDS,执行前列清单让用户拍板;不可逆操作留回滚(如 RDS final snapshot)。
