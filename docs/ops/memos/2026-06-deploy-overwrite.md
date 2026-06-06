@@ -36,6 +36,13 @@
 - 中期:恢复 GitHub 后回到「单一 main 分支 → CI 部署」,禁止双机直推 CF;
   明确唯一 CF Pages 项目(rune-final 还是 rune-lastest,二选一,另一个下线)。
 
+## 🔒 当前部署基线(2026-06-06 17:40,部署前必读)
+| 系统 | 线上版本 | 对应 git | 部署前要求 |
+|---|---|---|---|
+| dapp(rune-ai.io,CF `rune-lastest`) | entry `index-C8qqBuq4.js` | `1cecf82` @ feat-node-gating-pm-deposit(已推 GitHub) | 工作树必须包含 1cecf82(toast/QC/balanceUsd 修复),部署后 grep 线上 shared chunk `"balanceUsd"` ≥1 |
+| one-agents 生产容器(52.86.40.41) | 4abb291 + onboard 三连修 | `b0a2352` @ main(已推 GitHub) | 远端另有 `3d6a03a`(HL mid-price)未进容器;rebuild 会一并带上,需顺带 smoke /v1/hl |
+| 本机→GitHub | 本机账号仍 suspended | — | 推送走 SG 中转:`git bundle` → scp 13.250.210.12 → `~/projects/rune-dapp` fetch+push |
+
 ## 进度
 - [x] 2026-06-06:本机树集齐(余额 + 门控 + toast + queryClient)重新部署上线,
       entry `index-C8qqBuq4.js` / shared `shared-CF1Iz8Qv.js`(含 balanceUsd),
