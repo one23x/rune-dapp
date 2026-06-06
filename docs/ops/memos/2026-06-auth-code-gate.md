@@ -24,7 +24,9 @@
 `rune-admin-codes` 面板 → 引擎 `/admin/node/*` → **RDS `rune.trading.auth_codes`**(码格式 `OAN-*`),
 而 dapp 兑码走 Supabase `rune_auth_codes` RPC → 后台新建的码全部 `code_not_found`。
 - 临时解:把未兑码镜像进 Supabase(2026-06-06 已镜像 21 个 OAN 码;node_id=601-100*level,缺省额度 1000/10)。
-- 长期解(待做,二选一):① admin 面板改写 Supabase;② sync 脚本加 RDS→Supabase 的 auth_codes 持续镜像。
+- ~~长期解(待做)~~ **已解(2026-06-06)**:prod 机 `~/trading-sync/node-access-sync.mjs` 每轮先跑
+  RDS `trading.auth_codes` → Supabase `rune_auth_codes` 镜像(ON CONFLICT DO NOTHING,
+  Supabase 认领状态为唯一真源不被覆盖;E2E 已验证)。admin 建码 ≤2 分钟可兑。
 - 另:`redeem_auth_code` RPC 已改大小写不敏感(upper(trim) 归一化,2026-06-06)——手机键盘小写输入此前全军覆没。
 
 ## 快速诊断
