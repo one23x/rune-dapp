@@ -20,6 +20,13 @@
 - ❌ node_access 同步写进 `postgres` 库 —— 引擎读 `rune` 库,看见 0 行
   (见 [2026-06-engine-db-rune-not-postgres.md](2026-06-engine-db-rune-not-postgres.md))。
 
+## ⚠️ 第三个劈叉源:admin 建码后台写引擎库(2026-06-06 发现)
+`rune-admin-codes` 面板 → 引擎 `/admin/node/*` → **RDS `rune.trading.auth_codes`**(码格式 `OAN-*`),
+而 dapp 兑码走 Supabase `rune_auth_codes` RPC → 后台新建的码全部 `code_not_found`。
+- 临时解:把未兑码镜像进 Supabase(2026-06-06 已镜像 21 个 OAN 码;node_id=601-100*level,缺省额度 1000/10)。
+- 长期解(待做,二选一):① admin 面板改写 Supabase;② sync 脚本加 RDS→Supabase 的 auth_codes 持续镜像。
+- 另:`redeem_auth_code` RPC 已改大小写不敏感(upper(trim) 归一化,2026-06-06)——手机键盘小写输入此前全军覆没。
+
 ## 快速诊断
 ```bash
 # RPC 活着吗(错码应秒回 code_not_found)
