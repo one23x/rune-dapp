@@ -18,6 +18,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@app/lib/utils";
 import { copyText } from "@app/lib/copy";
 import { useToast } from "@app/hooks/use-toast";
@@ -26,13 +27,15 @@ import { funding, users, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 import { useSupabaseNodeGate } from "@app/lib/node-gate-supabase";
-import { useActiveAccount, PayEmbed } from "thirdweb/react";
+import { useActiveAccount, useReadContract, useSendTransaction, PayEmbed } from "thirdweb/react";
+import { getContract, prepareContractCall, toUnits, toTokens } from "thirdweb";
 import { thirdwebClient } from "@/lib/thirdweb/client";
 import { polygon } from "@/lib/thirdweb/chains";
+import QRCode from "qrcode";
 import {
   LayoutDashboard, Zap, Activity, History as HistoryIcon,
   Wallet, Copy, CheckCircle2, Circle, Loader2, ArrowDownToLine, ArrowUpFromLine, AlertTriangle,
-  ShieldCheck, KeyRound, ShoppingCart,
+  ShieldCheck, KeyRound, ShoppingCart, QrCode, Send,
 } from "lucide-react";
 
 // Polymarket pUSD @ Polygon — 跨链/买币直充入金的目标代币(无 AA:连接钱包=交易钱包)。
@@ -684,14 +687,27 @@ export function DepositDialog({
     onOpenChange(v);
   }
 
+  function afterDeposit() {
+    queryClient.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
+    queryClient.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
+  }
+
   async function onCopy(addr: string) {
     const ok = await copyText(addr);
     toast(ok ? { title: t("common.copied") } : { title: t("common.error"), variant: "destructive" });
   }
 
+  // 三个 Tab 的收款地址来源 —— 红线:唯一合法地址 = seller prop(= 引擎
+  // pusd-balance.smartWallet,用户专属入金钱包)。
+  //   Tab1 钱包转账  → transfer(seller, amount)         ← smartWalletAddress
+  //   Tab2 地址/扫码  → 展示/二维码 = seller             ← smartWalletAddress
+  //   Tab3 跨链充值   → PayEmbed sellerAddress = seller  ← smartWalletAddress
+  // seller 未就绪 → 各 Tab 内显示「地址准备中」守卫(DepositBuyPanel / 转账面板 / 扫码面板各自处理)。
+  const seller = smartWalletAddress;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-card border-border w-[calc(100vw-1.5rem)] max-w-md p-4 rounded-2xl max-h-[88dvh] overflow-y-auto">
+      <DialogContent className="bg-card border-border w-[calc(100vw-1.5rem)] max-w-md p-4 rounded-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
@@ -704,66 +720,334 @@ export function DepositDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-3 mt-1">
-          {/* 主路径:用卡 / 跨链一键买入(冲动买单)。
-              seller 必须 = user.smartWalletAddress —— 后端从该地址读 pUSD 余额/交易
-              (trade-polymarket.ts: pusdBalance(getAddress(user.smartWalletAddress)))。
-              一旦 smartWalletAddress 与连接钱包不同(PM 入金钱包建好后),打到连接钱包就
-              「充值未到账」。smartWalletAddress 缺失才回退连接钱包(seller 不传)。
-              买入成功后必须主动失效余额查询,否则入金到账但余额不刷新。 */}
-          <DepositBuyPanel
-            chain={polygon}
-            token={PUSD_POLYGON}
-            seller={smartWalletAddress}
-            assetLabel="pUSD"
-            cap={cap}
-            onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
-              queryClient.invalidateQueries({ queryKey: ["engine", "open-orders", userId] });
-              // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),余额已失效→重读。
-              window.setTimeout(() => handleOpenChange(false), 1500);
-            }}
-          />
+        <Tabs defaultValue="transfer" className="mt-1">
+          <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+            <TabsTrigger value="transfer" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
+              <Wallet className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t("deposit.tabTransfer", "钱包转账")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="address" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
+              <QrCode className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t("deposit.tabAddress", "地址/扫码")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="bridge" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
+              <Zap className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t("deposit.tabBridge", "跨链充值")}</span>
+            </TabsTrigger>
+          </TabsList>
 
-          {/* 次路径:转账到地址 */}
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
-            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70">
-              <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-              {t("deposit.manualTransfer", "或转账到地址")}
-            </div>
-            <p className="text-[10px] leading-snug text-amber-300/80">
-              {t("deposit.onchainWaitPm", "仅支持 Polygon 网络 USDC。链上确认约需 2–5 分钟到账,到账后余额会自动刷新,请耐心等待。")}
-            </p>
-            {load.isPending ? (
-              <div className="py-5 text-center"><Loader2 className="h-5 w-5 text-amber-300 animate-spin mx-auto" /></div>
-            ) : addresses.length > 0 ? (
-              <div className="space-y-2">
-                {addresses.map((a) => (
-                  <div key={a.chain + a.address} className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
-                    {a.chain && <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">{a.chain}</div>}
-                    <div className="flex items-center gap-2">
-                      <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0">{a.address}</code>
-                      <button onClick={() => onCopy(a.address)} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors">
-                        <Copy className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {assets.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {assets.map((a) => (
-                      <Badge key={a} variant="outline" className="text-[11px] no-default-hover-elevate no-default-active-elevate">{a}</Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-[12px] text-muted-foreground text-center py-3">{t("copyTrading.noDepositAddress")}</p>
-            )}
-          </div>
-        </div>
+          {/* Tab 1 — 钱包转账:连接钱包直接把 pUSD transfer 给 seller。 */}
+          <TabsContent value="transfer" className="space-y-3">
+            <DepositTransferPanel seller={seller} cap={cap} onSuccess={afterDeposit} onCopy={onCopy} />
+          </TabsContent>
+
+          {/* Tab 2 — 地址/扫码:展示 seller 地址 + 二维码(内容=纯地址)。 */}
+          <TabsContent value="address" className="space-y-3">
+            <DepositAddressPanel seller={seller} cap={cap} onCopy={onCopy} />
+          </TabsContent>
+
+          {/* Tab 3 — 跨链充值:现有 PayEmbed 流程原样搬入。
+              seller 必须 = user.smartWalletAddress(后端从该地址读 pUSD 余额/交易),
+              缺失则面板内显示「地址准备中」守卫,绝不回退到连接钱包。 */}
+          <TabsContent value="bridge" className="space-y-3">
+            <DepositBuyPanel
+              chain={polygon}
+              token={PUSD_POLYGON}
+              seller={seller}
+              assetLabel="pUSD"
+              cap={cap}
+              onSuccess={() => {
+                afterDeposit();
+                // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),余额已失效→重读。
+                window.setTimeout(() => handleOpenChange(false), 1500);
+              }}
+            />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Tab 1:钱包转账面板(连接钱包 → transfer pUSD 给 seller)──────────────────
+// 收款地址唯一 = seller(= 引擎 smartWallet)。读连接钱包 pUSD 余额、按 min/remaining
+// 校验金额、transfer(seller, amount6),成功后 invalidate 余额查询。
+function DepositTransferPanel({
+  seller, cap, onSuccess, onCopy,
+}: {
+  seller?: string;
+  cap: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean; cap: number; deposited: number };
+  onSuccess: () => void;
+  onCopy: (addr: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const account = useActiveAccount();
+  const [amount, setAmount] = useState("");
+  const { mutate: sendTx, isPending } = useSendTransaction();
+
+  // 连接钱包 pUSD 余额(Polygon,6 位小数)。
+  const pusd = getContract({ client: thirdwebClient, chain: polygon, address: PUSD_POLYGON });
+  const balQ = useReadContract({
+    contract: pusd,
+    method: "function balanceOf(address) view returns (uint256)",
+    params: [account?.address ?? "0x0000000000000000000000000000000000000000"],
+    queryOptions: { enabled: !!account?.address },
+  });
+  const walletBal = balQ.data != null ? Number(toTokens(balQ.data, 6)) : 0;
+
+  // 限额(与 DepositBuyPanel 同口径)。
+  const minPerTx = cap.minPerTx;
+  const remaining = cap.remaining;
+  const noCode = !cap.loading && !cap.hasCode;
+  const capExhausted = !cap.loading && cap.hasCode && remaining < minPerTx;
+  const capBlocked = noCode || capExhausted;
+
+  const amt = Number(amount);
+  const amountValid = amt > 0 && !cap.loading && amt >= minPerTx && amt <= remaining;
+  // 「全部」= min(钱包余额, 剩余额度),向下取整到 2 位小数避免余额不足。
+  const maxFill = Math.min(walletBal, remaining);
+
+  function onMax() {
+    const v = Math.floor(maxFill * 100) / 100;
+    setAmount(v > 0 ? String(v) : "");
+  }
+
+  if (!account) {
+    return (
+      <div className="rounded-2xl p-3.5 text-[12px] text-muted-foreground text-center"
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        {t("deposit.connectFirst", "请先连接钱包")}
+      </div>
+    );
+  }
+  if (!seller) {
+    return (
+      <div className="rounded-2xl p-3.5 flex items-center gap-2 text-[12px] text-muted-foreground"
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}
+        data-testid="deposit-addr-preparing">
+        <Loader2 className="h-4 w-4 animate-spin text-amber-300 shrink-0" />
+        {t("deposit.addrPreparing", "正在准备充值地址,请稍候…")}
+      </div>
+    );
+  }
+  if (capBlocked) {
+    return (
+      <div className="rounded-2xl p-3.5 space-y-2"
+        style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}
+        data-testid="deposit-cap-blocked">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-300" />
+          <div className="min-w-0">
+            <div className="text-[13px] font-bold text-red-200">
+              {noCode ? t("deposit.capNoCodeTitle", "暂不可充值") : t("deposit.capReachedTitle", "已达充值上限")}
+            </div>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-red-100/80">
+              {noCode
+                ? t("deposit.capNoCodeDesc", "该钱包尚未绑定授权码,请先购买节点 / 绑定授权码后再充值。")
+                : t("deposit.capReachedDesc", "已达到授权码允许的累计充值上限,无法继续充值。")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function onSubmit() {
+    if (!seller || !amountValid) return;
+    const tx = prepareContractCall({
+      contract: pusd,
+      method: "function transfer(address,uint256)",
+      params: [seller as `0x${string}`, toUnits(String(amt), 6)],
+    });
+    sendTx(tx, {
+      onSuccess: () => {
+        toast({ title: t("deposit.transferSent", "转账已提交"), description: t("deposit.transferSentDesc", "链上确认后余额将自动刷新") });
+        setAmount("");
+        // 立即 + 轮询刷新,容忍链上确认延迟(复用跨链充值同款轮询)。
+        startDepositRefreshPolling(onSuccess);
+      },
+      onError: (e: any) => toast({ title: t("common.error"), description: String(e?.shortMessage ?? e?.message ?? e), variant: "destructive" }),
+    });
+  }
+
+  return (
+    <div className="rounded-2xl p-3.5 space-y-3"
+      style={{ background: "linear-gradient(155deg, rgba(251,191,36,0.10), rgba(245,158,11,0.02))", border: "1px solid rgba(251,191,36,0.20)" }}>
+      <div className="flex items-center gap-2">
+        <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 grid place-items-center shrink-0">
+          <Send className="h-3.5 w-3.5 text-black" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-bold leading-tight">{t("deposit.transferTitle", "钱包转账")}</div>
+          <div className="text-[11px] text-muted-foreground leading-tight truncate">{t("deposit.transferDesc", "从已连接钱包直接转入 pUSD")}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px]">
+        <span className="text-muted-foreground">{t("deposit.walletBalance", "钱包余额")}</span>
+        <span className="font-semibold tabular-nums text-foreground/80">
+          {balQ.isLoading ? "…" : `$${walletBal.toLocaleString(undefined, { maximumFractionDigits: 2 })} pUSD`}
+        </span>
+      </div>
+
+      {!cap.loading && (
+        <div className="text-[11px] text-foreground/55 leading-snug tabular-nums" data-testid="deposit-cap-hint">
+          {t("deposit.capRange", "单笔 ≥ ${{min}},本次最多可充 ${{max}}", { min: minPerTx, max: Math.floor(remaining) })}
+        </div>
+      )}
+
+      <div className="grid grid-cols-4 gap-1.5">
+        {BUY_PRESETS.map((p) => {
+          const presetDisabled = !cap.loading && (p < minPerTx || p > remaining);
+          return (
+            <button
+              key={p}
+              type="button"
+              disabled={presetDisabled}
+              onClick={() => setAmount(String(p))}
+              className={cn(
+                "h-11 rounded-xl text-[13px] font-bold tabular-nums transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed",
+                amt === p
+                  ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-black border border-amber-400"
+                  : "bg-white/[0.04] text-foreground/80 border border-white/10 hover:border-amber-400/40",
+              )}
+            >
+              ${p}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center rounded-xl bg-background/60 border border-white/10 px-3 h-11 focus-within:border-amber-400/50 transition-colors">
+        <span className="text-[13px] text-muted-foreground mr-1">$</span>
+        <Input
+          type="number"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder={t("deposit.customAmount", "自定义金额")}
+          className="border-0 bg-transparent px-0 h-auto text-[15px] font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+        <span className="text-[11px] text-muted-foreground ml-1 shrink-0">pUSD</span>
+        <button
+          type="button"
+          onClick={onMax}
+          disabled={maxFill < minPerTx}
+          className="ml-2 shrink-0 text-[11px] font-bold text-amber-300 hover:underline disabled:opacity-30 disabled:no-underline"
+        >
+          {t("deposit.max", "全部")}
+        </button>
+      </div>
+
+      {!cap.loading && amt > 0 && !amountValid && (
+        <p className="text-[11px] text-red-400 leading-snug" data-testid="deposit-cap-error">
+          {amt < minPerTx
+            ? t("deposit.capBelowMin", "单笔充值不能低于 ${{min}}", { min: minPerTx })
+            : t("deposit.capAboveRemaining", "超出可充额度(最多 ${{max}})", { max: Math.floor(remaining) })}
+        </p>
+      )}
+      {!cap.loading && amt > 0 && amountValid && amt > walletBal && (
+        <p className="text-[11px] text-red-400 leading-snug">
+          {t("deposit.insufficientWallet", "钱包 pUSD 余额不足")}
+        </p>
+      )}
+
+      <button
+        type="button"
+        className="gold-button w-full h-12 rounded-xl inline-flex items-center justify-center gap-1.5 text-[15px] font-extrabold disabled:opacity-40 disabled:saturate-50"
+        disabled={!amountValid || amt > walletBal || isPending || cap.loading}
+        onClick={onSubmit}
+      >
+        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        {isPending
+          ? t("deposit.transferring", "转账中…")
+          : amt > 0
+            ? `${t("deposit.transferNow", "立即转账")} $${amt}`
+            : t("deposit.enterAmount", "输入或选择金额")}
+      </button>
+
+      <p className="text-[10px] leading-snug text-amber-300/80">
+        {t("deposit.transferHint", "仅支持 Polygon 网络的 pUSD,资金将直接转入您的交易账户。")}
+      </p>
+    </div>
+  );
+}
+
+// ─── Tab 2:地址/扫码面板(展示 seller 地址 + 二维码,内容=纯地址)──────────────
+function DepositAddressPanel({
+  seller, cap, onCopy,
+}: {
+  seller?: string;
+  cap: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean };
+  onCopy: (addr: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [qr, setQr] = useState<string>("");
+
+  // 二维码内容 = 纯地址字符串(钱包扫码识别为收款地址)。seller 变化时重生成。
+  useEffect(() => {
+    let alive = true;
+    if (!seller) { setQr(""); return; }
+    QRCode.toDataURL(seller, { width: 220, margin: 1 })
+      .then((url) => { if (alive) setQr(url); })
+      .catch(() => { if (alive) setQr(""); });
+    return () => { alive = false; };
+  }, [seller]);
+
+  if (!seller) {
+    return (
+      <div className="rounded-2xl p-3.5 flex items-center gap-2 text-[12px] text-muted-foreground"
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}
+        data-testid="deposit-addr-preparing">
+        <Loader2 className="h-4 w-4 animate-spin text-amber-300 shrink-0" />
+        {t("deposit.addrPreparing", "正在准备充值地址,请稍候…")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 space-y-3">
+      {/* 二维码居中。 */}
+      <div className="flex justify-center">
+        {qr ? (
+          <div className="rounded-xl bg-white p-2.5">
+            <img src={qr} alt={t("deposit.tabAddress", "地址/扫码")} className="h-[180px] w-[180px] sm:h-[200px] sm:w-[200px]" />
+          </div>
+        ) : (
+          <div className="h-[180px] w-[180px] grid place-items-center rounded-xl bg-white/[0.03]">
+            <Loader2 className="h-5 w-5 text-amber-300 animate-spin" />
+          </div>
+        )}
+      </div>
+
+      {/* 地址(等宽、换行 break-all、一键复制)。 */}
+      <div className="rounded-xl p-2.5 bg-white/[0.03] border border-white/[0.06]">
+        <div className="text-[10px] uppercase tracking-wide text-amber-300/70 mb-1">{t("deposit.depositAddress", "充值地址")}</div>
+        <div className="flex items-center gap-2">
+          <code className="text-[11px] font-mono text-foreground/80 break-all flex-1 min-w-0">{seller}</code>
+          <button onClick={() => onCopy(seller)} aria-label={t("common.copy", "复制")} className="shrink-0 h-9 w-9 grid place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors">
+            <Copy className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 剩余可充额度提示。 */}
+      {!cap.loading && cap.hasCode && (
+        <div className="text-[11px] text-foreground/55 leading-snug tabular-nums" data-testid="deposit-cap-hint">
+          {t("deposit.remainingHint", "剩余可充额度:${{max}}", { max: Math.floor(cap.remaining) })}
+        </div>
+      )}
+
+      {/* 显著警示。 */}
+      <div className="rounded-xl p-2.5 flex items-start gap-2"
+        style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.25)" }}>
+        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-300" />
+        <p className="text-[11px] leading-snug text-red-100/85">
+          {t("deposit.addressWarn", "仅支持 Polygon 网络的 pUSD,转入其他代币 / 其他链将无法找回。")}
+        </p>
+      </div>
+    </div>
   );
 }
 
