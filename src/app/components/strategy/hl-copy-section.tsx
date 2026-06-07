@@ -49,7 +49,7 @@ import {
 } from "@app/lib/engine-hooks";
 import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import {
-  useWalletOpenPositions, useWalletTodayClosed, useWalletDailyHistory,
+  useWalletOpenPositions, useWalletTodayClosed, useWalletDailyHistory, useWalletTodayStats,
   fmtPct as fmtStatsPct, numOrZero,
   type StatsVenue, type OpenPositionRow, type TodayClosedRow, type WalletDailyRow,
 } from "@app/lib/trading-stats-hooks";
@@ -1292,6 +1292,9 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   // 列表(当前持仓 / 历史 / 当日平仓 / 交易记录)统一走共享 TradeRecordsDetail
   // (venueScope=hl_<network>,全 Supabase 视图;admin overwrite 即时一致;与 PM stats 同一组件)。
   const venue: StatsVenue = (`hl_${network}` as StatsVenue);
+  // 顶部统计台的盈亏类(当日/已平仓/持仓价值/未实现)读 Supabase 当日视图(= overwrite 后展示值),
+  // 与下方列表口径统一;现金类(保证金/可用)才取引擎实时账户(Supabase 无现金概念)。
+  const todayStatsQ = useWalletTodayStats(wallet);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
@@ -1317,24 +1320,25 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const av = acct?.accountValue ?? 0;
   // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
   const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
+  // 该 venue 的当日统计行(Supabase v_wallet_today_stats,展示值 = coalesce(manual,真实))。
+  const today = (todayStatsQ.data ?? []).find((d) => d.venue === venue);
   // 顶部"持仓价值"取自合并层 acct.positions(引擎+overrides);列表在共享组件内自取 Supabase。
   const acctHoldValue = (acct?.positions ?? []).reduce((s, p) => s + p.positionValue, 0);
 
   return (
     <div className="space-y-3">
-      {/* 顶部账户统计(每个金额旁带 %)— 引擎实时 + trading_hl_overrides 覆盖合并层。 */}
-      {acct && (
-        <div className="glass-panel p-3">
-          <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
-            <StatCell label={t("hl.todayPnl", "当日盈亏")} value={acct.todayPnl ?? 0} pct={pctOfAv(acct.todayPnl ?? 0)} tone="pnl" />
-            <StatCell label={t("hl.realized", "已平仓")} value={acct.realizedPnl} pct={pctOfAv(acct.realizedPnl)} tone="pnl" />
-            <StatCell label={t("hl.statHoldValue", "持仓价值")} value={acctHoldValue} pct={pctOfAv(acctHoldValue)} tone="neutral" />
-            <StatCell label={t("hl.marginUsed", "保证金")} value={acct.marginUsed ?? 0} pct={pctOfAv(acct.marginUsed ?? 0)} tone="neutral" />
-            <StatCell label={t("hl.available", "可用")} value={acct.withdrawable} pct={pctOfAv(acct.withdrawable)} tone="neutral" />
-            <StatCell label={t("hl.unrealized", "未实现盈亏")} value={acct.unrealizedPnl} pct={pctOfAv(acct.unrealizedPnl)} tone="pnl" />
-          </div>
+      {/* 顶部账户统计:盈亏类(当日/已平仓/持仓价值/未实现)= Supabase 当日视图(overwrite 后,
+          与下方列表一致);现金类(保证金/可用)= 引擎实时账户。这样 admin 调控的当日盈亏会同步到顶部。 */}
+      <div className="glass-panel p-3">
+        <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
+          <StatCell label={t("hl.todayPnl", "当日盈亏")} value={numOrZero(today?.day_pnl_usd)} pct={today?.day_pnl_pct ?? null} tone="pnl" />
+          <StatCell label={t("hl.realized", "已平仓")} value={numOrZero(today?.realized_pnl_day_usd)} pct={today?.realized_day_pct ?? null} tone="pnl" />
+          <StatCell label={t("hl.statHoldValue", "持仓价值")} value={numOrZero(today?.position_value_usd)} pct={today?.position_share_pct ?? null} tone="neutral" />
+          <StatCell label={t("hl.marginUsed", "保证金")} value={acct?.marginUsed ?? 0} pct={pctOfAv(acct?.marginUsed ?? 0)} tone="neutral" />
+          <StatCell label={t("hl.available", "可用")} value={acct?.withdrawable ?? 0} pct={pctOfAv(acct?.withdrawable ?? 0)} tone="neutral" />
+          <StatCell label={t("hl.unrealized", "未实现盈亏")} value={numOrZero(today?.unrealized_pnl_usd)} pct={today?.unrealized_pct ?? null} tone="pnl" />
         </div>
-      )}
+      </div>
       {/* 持仓/历史/当日平仓/交易记录 — 与 PM stats 同一共享组件,数据全 Supabase。 */}
       <TradeRecordsDetail
         wallet={wallet}
