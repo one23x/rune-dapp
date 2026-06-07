@@ -34,6 +34,7 @@
 - [ ] 多 leader 策略包体系化(pack_key 落库,告别参数指纹判定)
 - [ ] PM 跟单链路同等打通与验证
 - [ ] 风控升级:daily-supervisor 熔断启用、按节点等级差异化风控
+- [~] **AI 跟单排序器(hl-copy-ranker)**:首个自研 ML 模型已训练(test AUC 0.657)+ serverless 部署 + 接入 copy-executor(2026-06-07,shadow)。待:shadow 验证后开 gate(`HL_COPY_MIN_RANKER_SCORE`)、配额批后云端自动重训
 - [ ] 运营工具:批量授权码、数据看板、客服 SOP
 - [ ] 安全审计:treasury/gas-grant/划转路径第三方过目
 
