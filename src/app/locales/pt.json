@@ -1824,7 +1824,17 @@
     "noTodayClosed": "Sem encerramentos hoje",
     "viewOnchain": "Ver on-chain",
     "viewOnPolygonscan": "Ver no Polygonscan",
-    "noOnchainRecord": "Sem registro on-chain"
+    "noOnchainRecord": "Sem registro on-chain",
+    "statsTitle": "Dados de negociação",
+    "statsAllVenues": "Tudo",
+    "statsConnectWallet": "Conecte sua carteira para ver seus dados de negociação",
+    "statsNoClosed": "Sem fechamentos hoje",
+    "statsNoDaily": "Ainda sem dados diários (gerados diariamente)",
+    "statsNoOpen": "Sem posições abertas",
+    "statsNoRecords": "Sem registros de negociação",
+    "statsTabRecords": "Registros",
+    "venueHlMainnet": "HL Mainnet",
+    "venueHlTestnet": "HL Testnet"
   },
   "exchange": {
     "account": "Conta",
@@ -2350,7 +2360,8 @@
       "testnetTitle": "Depósito na testnet da Hyperliquid",
       "testnetDesc": "Na testnet, use o faucet oficial para obter/adicionar USDC de teste:"
     },
-    "deposit": "Depositar"
+    "deposit": "Depositar",
+    "mtdPnl": "P&L do mês"
   },
   "pmLab": {
     "title": "Laboratório de IA de Previsão",

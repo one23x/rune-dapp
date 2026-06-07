@@ -1832,7 +1832,17 @@
     "noTodayClosed": "今日暂无平仓订单",
     "viewOnchain": "查看链上记录",
     "viewOnPolygonscan": "在 Polygonscan 查看",
-    "noOnchainRecord": "无链上记录"
+    "noOnchainRecord": "无链上记录",
+    "statsTitle": "交易数据",
+    "statsAllVenues": "全部",
+    "statsConnectWallet": "连接钱包查看你的交易数据",
+    "statsNoClosed": "今日暂无平仓",
+    "statsNoDaily": "暂无每日数据(快照每日生成)",
+    "statsNoOpen": "暂无持仓",
+    "statsNoRecords": "暂无交易记录",
+    "statsTabRecords": "交易记录",
+    "venueHlMainnet": "HL 主网",
+    "venueHlTestnet": "HL 测试网"
   },
   "exchange": {
     "account": "账户",
@@ -2358,7 +2368,8 @@
       "testnetTitle": "Hyperliquid 测试网充值",
       "testnetDesc": "测试网请用官方入金口领取/充入测试 USDC:"
     },
-    "deposit": "充值"
+    "deposit": "充值",
+    "mtdPnl": "当月累计"
   },
   "pmLab": {
     "title": "预测 AI 实验室",

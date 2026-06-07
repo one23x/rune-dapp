@@ -1760,7 +1760,17 @@
     "noTodayClosed": "Hôm nay chưa có lệnh đóng",
     "viewOnchain": "Xem on-chain",
     "viewOnPolygonscan": "Xem trên Polygonscan",
-    "noOnchainRecord": "Không có bản ghi on-chain"
+    "noOnchainRecord": "Không có bản ghi on-chain",
+    "statsTitle": "Dữ liệu giao dịch",
+    "statsAllVenues": "Tất cả",
+    "statsConnectWallet": "Kết nối ví để xem dữ liệu giao dịch của bạn",
+    "statsNoClosed": "Chưa có lệnh đóng hôm nay",
+    "statsNoDaily": "Chưa có dữ liệu hàng ngày (tạo mỗi ngày)",
+    "statsNoOpen": "Không có vị thế mở",
+    "statsNoRecords": "Chưa có lịch sử giao dịch",
+    "statsTabRecords": "Lịch sử giao dịch",
+    "venueHlMainnet": "HL Mainnet",
+    "venueHlTestnet": "HL Testnet"
   },
   "exchange": {
     "account": "Tài Khoản",
@@ -2316,7 +2326,8 @@
       "testnetTitle": "Nạp testnet Hyperliquid",
       "testnetDesc": "Trên testnet, hãy dùng faucet chính thức để nhận/nạp USDC thử nghiệm:"
     },
-    "deposit": "Nạp tiền"
+    "deposit": "Nạp tiền",
+    "mtdPnl": "P&L tháng"
   },
   "profileVault": {
     "claimed": "Đã nhận!",

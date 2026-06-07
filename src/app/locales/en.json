@@ -1832,7 +1832,17 @@
     "noTodayClosed": "No closes today",
     "viewOnchain": "View on-chain",
     "viewOnPolygonscan": "View on Polygonscan",
-    "noOnchainRecord": "No on-chain record"
+    "noOnchainRecord": "No on-chain record",
+    "statsTitle": "Trading Data",
+    "statsAllVenues": "All",
+    "statsConnectWallet": "Connect your wallet to view your trading data",
+    "statsNoClosed": "No closes today",
+    "statsNoDaily": "No daily data yet (snapshots generate daily)",
+    "statsNoOpen": "No open positions",
+    "statsNoRecords": "No trade records",
+    "statsTabRecords": "Trade Records",
+    "venueHlMainnet": "HL Mainnet",
+    "venueHlTestnet": "HL Testnet"
   },
   "exchange": {
     "account": "Account",
@@ -2358,7 +2368,8 @@
       "testnetTitle": "Hyperliquid testnet deposit",
       "testnetDesc": "On testnet, use the official faucet to get/add test USDC:"
     },
-    "deposit": "Deposit"
+    "deposit": "Deposit",
+    "mtdPnl": "MTD P&L"
   },
   "pmLab": {
     "title": "Prediction AI Lab",

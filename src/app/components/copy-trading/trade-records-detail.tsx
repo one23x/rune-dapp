@@ -30,11 +30,12 @@ import { DailyStatRow } from "@app/components/copy-trading/daily-stat-row";
 type Tab = "open" | "history" | "todayClosed" | "daily" | "records";
 type VenueFilter = "ALL" | StatsVenue;
 
-const VENUE_LABEL: Record<StatsVenue, string> = {
-  polymarket: "Polymarket",
-  hl_mainnet: "HL 主网",
-  hl_testnet: "HL 测试网",
-};
+/** venue 显示名(走 i18n;Polymarket 是品牌名不翻)。 */
+type Tr = (key: string, defaultValue: string) => string;
+const venueLabel = (t: Tr, v: StatsVenue): string =>
+  v === "polymarket" ? "Polymarket"
+  : v === "hl_mainnet" ? t("copyTrading.venueHlMainnet", "HL 主网")
+  : t("copyTrading.venueHlTestnet", "HL 测试网");
 const VENUE_COLOR: Record<StatsVenue, string> = {
   polymarket: "bg-sky-500/10 text-sky-400",
   hl_mainnet: "bg-emerald-500/10 text-emerald-400",
@@ -42,9 +43,10 @@ const VENUE_COLOR: Record<StatsVenue, string> = {
 };
 
 function VenueChip({ venue }: { venue: StatsVenue }) {
+  const { t } = useTranslation();
   return (
     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${VENUE_COLOR[venue]}`}>
-      {VENUE_LABEL[venue]}
+      {venueLabel(t, venue)}
     </span>
   );
 }
@@ -81,7 +83,7 @@ function RecordsTab({ wallet, venueScope }: { wallet: string; venueScope?: Stats
                 venue === v ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : "text-muted-foreground hover:text-foreground"
               }`}
               style={venue !== v ? { background: "rgba(18,16,12,0.8)", border: "1px solid rgba(34,31,24,1)" } : {}}>
-              {v === "ALL" ? t("copyTrading.statsAllVenues", "全部") : VENUE_LABEL[v as StatsVenue]}
+              {v === "ALL" ? t("copyTrading.statsAllVenues", "全部") : venueLabel(t, v as StatsVenue)}
             </button>
           ))}
         </div>
@@ -130,7 +132,7 @@ function DailyTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVe
   const rows = (q.data ?? []).filter((d) => !venueScope || d.venue === venueScope);
   return rows.length === 0
     ? <SectionEmpty icon={CalendarDays} title={t("copyTrading.statsNoDaily", "暂无每日数据(快照每日生成)")} />
-    : <div className="space-y-2">{rows.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} venueLabel={venueScope ? undefined : VENUE_LABEL[d.venue]} />)}</div>;
+    : <div className="space-y-2">{rows.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} venueLabel={venueScope ? undefined : venueLabel(t, d.venue)} />)}</div>;
 }
 
 /* ── Tab 3: 当前持仓(当日统计 + 持仓明细)──────────────────────────────── */
@@ -149,7 +151,7 @@ function OpenTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVen
     <div className="space-y-4">
       {stats.length > 0 && (
         <div className="grid grid-cols-1 gap-2">
-          {stats.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} venueLabel={venueScope ? undefined : VENUE_LABEL[d.venue]} />)}
+          {stats.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} venueLabel={venueScope ? undefined : venueLabel(t, d.venue)} />)}
         </div>
       )}
 

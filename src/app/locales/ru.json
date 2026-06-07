@@ -1760,7 +1760,17 @@
     "noTodayClosed": "Сегодня нет закрытых ордеров",
     "viewOnchain": "Смотреть в сети",
     "viewOnPolygonscan": "Смотреть на Polygonscan",
-    "noOnchainRecord": "Нет записи в сети"
+    "noOnchainRecord": "Нет записи в сети",
+    "statsTitle": "Торговые данные",
+    "statsAllVenues": "Все",
+    "statsConnectWallet": "Подключите кошелёк, чтобы увидеть ваши торговые данные",
+    "statsNoClosed": "Сегодня закрытий нет",
+    "statsNoDaily": "Дневных данных пока нет (формируются ежедневно)",
+    "statsNoOpen": "Нет открытых позиций",
+    "statsNoRecords": "Нет торговых записей",
+    "statsTabRecords": "Записи сделок",
+    "venueHlMainnet": "HL Mainnet",
+    "venueHlTestnet": "HL Testnet"
   },
   "exchange": {
     "account": "Аккаунт",
@@ -2316,7 +2326,8 @@
       "testnetTitle": "Пополнение тестнета Hyperliquid",
       "testnetDesc": "В тестнете используйте официальный faucet, чтобы получить/добавить тестовые USDC:"
     },
-    "deposit": "Депозит"
+    "deposit": "Депозит",
+    "mtdPnl": "P&L за месяц"
   },
   "profileVault": {
     "claimed": "Получено!",

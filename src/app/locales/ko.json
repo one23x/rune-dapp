@@ -1760,7 +1760,17 @@
     "noTodayClosed": "당일 청산 주문 없음",
     "viewOnchain": "온체인 보기",
     "viewOnPolygonscan": "Polygonscan에서 보기",
-    "noOnchainRecord": "온체인 기록 없음"
+    "noOnchainRecord": "온체인 기록 없음",
+    "statsTitle": "거래 데이터",
+    "statsAllVenues": "전체",
+    "statsConnectWallet": "지갑을 연결하여 거래 데이터를 확인하세요",
+    "statsNoClosed": "오늘 청산 내역 없음",
+    "statsNoDaily": "일별 데이터 없음(매일 생성)",
+    "statsNoOpen": "보유 포지션 없음",
+    "statsNoRecords": "거래 기록 없음",
+    "statsTabRecords": "거래 기록",
+    "venueHlMainnet": "HL 메인넷",
+    "venueHlTestnet": "HL 테스트넷"
   },
   "exchange": {
     "account": "계정",
@@ -2316,7 +2326,8 @@
       "testnetTitle": "Hyperliquid 테스트넷 입금",
       "testnetDesc": "테스트넷에서는 공식 faucet에서 테스트 USDC를 받거나 입금하세요:"
     },
-    "deposit": "입금"
+    "deposit": "입금",
+    "mtdPnl": "월 누적"
   },
   "profileVault": {
     "claimed": "수령 완료!",

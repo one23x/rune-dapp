@@ -1824,7 +1824,17 @@
     "noTodayClosed": "Sin cierres hoy",
     "viewOnchain": "Ver en cadena",
     "viewOnPolygonscan": "Ver en Polygonscan",
-    "noOnchainRecord": "Sin registro en cadena"
+    "noOnchainRecord": "Sin registro en cadena",
+    "statsTitle": "Datos de trading",
+    "statsAllVenues": "Todo",
+    "statsConnectWallet": "Conecta tu billetera para ver tus datos de trading",
+    "statsNoClosed": "Sin cierres hoy",
+    "statsNoDaily": "Aún sin datos diarios (se generan a diario)",
+    "statsNoOpen": "Sin posiciones abiertas",
+    "statsNoRecords": "Sin registros de trading",
+    "statsTabRecords": "Registros",
+    "venueHlMainnet": "HL Mainnet",
+    "venueHlTestnet": "HL Testnet"
   },
   "exchange": {
     "account": "Cuenta",
@@ -2350,7 +2360,8 @@
       "testnetTitle": "Depósito en la testnet de Hyperliquid",
       "testnetDesc": "En la testnet, usa el faucet oficial para obtener/añadir USDC de prueba:"
     },
-    "deposit": "Depositar"
+    "deposit": "Depositar",
+    "mtdPnl": "P&L del mes"
   },
   "pmLab": {
     "title": "Laboratorio de IA de Predicción",

@@ -1824,7 +1824,17 @@
     "noTodayClosed": "本日の決済注文はありません",
     "viewOnchain": "オンチェーンで表示",
     "viewOnPolygonscan": "Polygonscanで表示",
-    "noOnchainRecord": "オンチェーン記録なし"
+    "noOnchainRecord": "オンチェーン記録なし",
+    "statsTitle": "取引データ",
+    "statsAllVenues": "すべて",
+    "statsConnectWallet": "ウォレットを接続して取引データを表示",
+    "statsNoClosed": "本日の決済はありません",
+    "statsNoDaily": "日次データはまだありません(毎日生成)",
+    "statsNoOpen": "ポジションはありません",
+    "statsNoRecords": "取引履歴はありません",
+    "statsTabRecords": "取引履歴",
+    "venueHlMainnet": "HL メインネット",
+    "venueHlTestnet": "HL テストネット"
   },
   "exchange": {
     "account": "アカウント",
@@ -2350,7 +2360,8 @@
       "testnetTitle": "Hyperliquid テストネット入金",
       "testnetDesc": "テストネットでは公式 faucet からテスト用 USDC を取得/入金してください:"
     },
-    "deposit": "入金"
+    "deposit": "入金",
+    "mtdPnl": "月間累計"
   },
   "pmLab": {
     "title": "予測 AI ラボ",

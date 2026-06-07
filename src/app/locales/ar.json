@@ -1760,7 +1760,17 @@
     "noTodayClosed": "لا توجد أوامر إغلاق اليوم",
     "viewOnchain": "عرض على السلسلة",
     "viewOnPolygonscan": "عرض على Polygonscan",
-    "noOnchainRecord": "لا يوجد سجل على السلسلة"
+    "noOnchainRecord": "لا يوجد سجل على السلسلة",
+    "statsTitle": "بيانات التداول",
+    "statsAllVenues": "الكل",
+    "statsConnectWallet": "اربط محفظتك لعرض بيانات التداول الخاصة بك",
+    "statsNoClosed": "لا إغلاقات اليوم",
+    "statsNoDaily": "لا توجد بيانات يومية بعد (تُنشأ يومياً)",
+    "statsNoOpen": "لا توجد مراكز مفتوحة",
+    "statsNoRecords": "لا توجد سجلات تداول",
+    "statsTabRecords": "سجلات التداول",
+    "venueHlMainnet": "HL الشبكة الرئيسية",
+    "venueHlTestnet": "HL شبكة الاختبار"
   },
   "exchange": {
     "account": "الحساب",
@@ -2316,7 +2326,8 @@
       "testnetTitle": "إيداع شبكة اختبار Hyperliquid",
       "testnetDesc": "على شبكة الاختبار، استخدم الصنبور الرسمي للحصول على/إضافة USDC تجريبي:"
     },
-    "deposit": "إيداع"
+    "deposit": "إيداع",
+    "mtdPnl": "تراكمي الشهر"
   },
   "profileVault": {
     "claimed": "تم الاستلام!",

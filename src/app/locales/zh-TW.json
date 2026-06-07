@@ -1760,7 +1760,17 @@
     "noTodayClosed": "今日暫無平倉訂單",
     "viewOnchain": "查看鏈上記錄",
     "viewOnPolygonscan": "在 Polygonscan 查看",
-    "noOnchainRecord": "無鏈上記錄"
+    "noOnchainRecord": "無鏈上記錄",
+    "statsTitle": "交易數據",
+    "statsAllVenues": "全部",
+    "statsConnectWallet": "連接錢包查看你的交易數據",
+    "statsNoClosed": "今日暫無平倉",
+    "statsNoDaily": "暫無每日數據(快照每日生成)",
+    "statsNoOpen": "暫無持倉",
+    "statsNoRecords": "暫無交易記錄",
+    "statsTabRecords": "交易記錄",
+    "venueHlMainnet": "HL 主網",
+    "venueHlTestnet": "HL 測試網"
   },
   "exchange": {
     "account": "帳戶",
@@ -2316,7 +2326,8 @@
       "testnetTitle": "Hyperliquid 測試網充值",
       "testnetDesc": "測試網請用官方入金口領取/充入測試 USDC:"
     },
-    "deposit": "充值"
+    "deposit": "充值",
+    "mtdPnl": "當月累計"
   },
   "hlVaults": {
     "title": "推薦金庫",

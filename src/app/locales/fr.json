@@ -1760,7 +1760,17 @@
     "noTodayClosed": "Aucune clôture aujourd'hui",
     "viewOnchain": "Voir on-chain",
     "viewOnPolygonscan": "Voir sur Polygonscan",
-    "noOnchainRecord": "Aucun enregistrement on-chain"
+    "noOnchainRecord": "Aucun enregistrement on-chain",
+    "statsTitle": "Données de trading",
+    "statsAllVenues": "Tout",
+    "statsConnectWallet": "Connectez votre portefeuille pour voir vos données de trading",
+    "statsNoClosed": "Aucune clôture aujourd'hui",
+    "statsNoDaily": "Pas encore de données quotidiennes (générées chaque jour)",
+    "statsNoOpen": "Aucune position ouverte",
+    "statsNoRecords": "Aucun historique de trading",
+    "statsTabRecords": "Historique",
+    "venueHlMainnet": "HL Mainnet",
+    "venueHlTestnet": "HL Testnet"
   },
   "exchange": {
     "account": "Compte",
@@ -2316,7 +2326,8 @@
       "testnetTitle": "Dépôt sur le testnet Hyperliquid",
       "testnetDesc": "Sur le testnet, utilisez le faucet officiel pour obtenir/ajouter des USDC de test :"
     },
-    "deposit": "Déposer"
+    "deposit": "Déposer",
+    "mtdPnl": "P&L mensuel"
   },
   "profileVault": {
     "claimed": "Réclamé !",
