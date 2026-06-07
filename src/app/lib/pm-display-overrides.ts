@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@app/lib/supabase-client";
 import { usePusdBalance } from "@app/lib/engine-hooks";
 
+// (RPC 直读在 admin 面板侧;dapp 本层只叠 Supabase 覆盖,真实余额仍走引擎。)
 interface PmOverrideRow {
   wallet: string;
   balance_usd: number | null;
