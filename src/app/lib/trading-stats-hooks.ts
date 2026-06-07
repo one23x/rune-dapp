@@ -75,6 +75,9 @@ export interface OpenPositionRow {
   updated_at: string | null;
   /** 仅 admin 手动持仓行有值;直达 explorer tx 详情页(不去地址列表页防穿帮)。 */
   tx_hash: string | null;
+  /** admin 手动行标记(视图尾列)。dapp 的「平仓」按钮只给真实行 —— 手动行
+   *  没有引擎仓位可平,平它只能走 admin 调控台。 */
+  is_manual?: boolean | null;
 }
 
 export interface TodayClosedRow {
