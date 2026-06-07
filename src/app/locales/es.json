@@ -1443,7 +1443,10 @@
     "winRate": "Win Rate",
     "totalTrades": "Trades",
     "nodesPageTitle": "Mis nodos",
-    "nodesPageSubtitle": "Beneficios de nodo · Recompensas por referidos directos · En cadena en tiempo real"
+    "nodesPageSubtitle": "Beneficios de nodo · Recompensas por referidos directos · En cadena en tiempo real",
+    "todayPnl": "P&L de hoy",
+    "unrealizedPnl": "No realizado",
+    "openPositions": "Posiciones"
   },
   "market": {
     "marketAnalysis": "Análisis de Mercado",

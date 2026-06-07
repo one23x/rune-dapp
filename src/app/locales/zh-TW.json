@@ -1379,7 +1379,10 @@
     "winRate": "勝率",
     "totalTrades": "筆交易",
     "nodesPageTitle": "我的節點",
-    "nodesPageSubtitle": "節點權益 · 直推獎勵 · 即時上鏈"
+    "nodesPageSubtitle": "節點權益 · 直推獎勵 · 即時上鏈",
+    "todayPnl": "當日盈虧",
+    "unrealizedPnl": "未實現盈虧",
+    "openPositions": "持倉數"
   },
   "market": {
     "marketAnalysis": "市場分析",

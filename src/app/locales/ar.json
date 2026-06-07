@@ -1379,7 +1379,10 @@
     "totalTrades": "Trades",
     "myNodesDesc": "عرض مستوى عقدتي وفريقي",
     "nodesPageTitle": "عُقدي",
-    "nodesPageSubtitle": "مزايا العقدة · مكافآت الإحالة المباشرة · على السلسلة فوريًا"
+    "nodesPageSubtitle": "مزايا العقدة · مكافآت الإحالة المباشرة · على السلسلة فوريًا",
+    "todayPnl": "ربح/خسارة اليوم",
+    "unrealizedPnl": "غير محقق",
+    "openPositions": "المراكز"
   },
   "market": {
     "marketAnalysis": "تحليل السوق",

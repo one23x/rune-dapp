@@ -1379,7 +1379,10 @@
     "totalTrades": "Trades",
     "myNodesDesc": "Voir mon niveau de nœud et mon équipe",
     "nodesPageTitle": "Mes nœuds",
-    "nodesPageSubtitle": "Avantages des nœuds · Récompenses de parrainage direct · On-chain en temps réel"
+    "nodesPageSubtitle": "Avantages des nœuds · Récompenses de parrainage direct · On-chain en temps réel",
+    "todayPnl": "P&L du jour",
+    "unrealizedPnl": "Latent",
+    "openPositions": "Positions"
   },
   "market": {
     "marketAnalysis": "Analyse de Marché",

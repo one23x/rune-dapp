@@ -13,10 +13,12 @@ import { useTranslation } from "react-i18next";
 import { usePersonalStats } from "@/hooks/rune/use-team";
 import { buildReferralUrl } from "@/hooks/rune/use-referral-param";
 import {
-  useEngineUser, useOrders, useCopySubs, useHlAccount, useHlSubs,
+  useEngineUser, useCopySubs, useHlSubs,
 } from "@app/lib/engine-hooks";
+import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
-import { asArray, pusdAmount, normalizeOrder, isClosed, fmtUsd } from "@app/components/copy-trading/shared";
+import { useWalletTodayStats, numOrZero } from "@app/lib/trading-stats-hooks";
+import { asArray, pusdAmount, fmtUsd } from "@app/components/copy-trading/shared";
 import { Activity, Layers } from "lucide-react";
 
 // MENU_ITEMS deliberately omits the "Referral & Team" entry — it lives
@@ -88,23 +90,33 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
 
+  // HL 账户地址解析(custodial = 托管 EOA;agent = 用户主账户)—— 与 hl-copy-section 同范式,
+  // 不能直接拿连接钱包当 HL 地址(custodial 用户 HL 账户不在连接钱包上 → 会查到空账户)。
+  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
+  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : hlUser?.engineEoaAddress;
+
   const balanceQ = usePusdBalanceAdjusted(userId, wallet);
-  const ordersQ = useOrders(userId);
   const pmSubsQ = useCopySubs(userId);
-  const hlAcctQ = useHlAccount(wallet, "mainnet");
   const hlSubsQ = useHlSubs(userId);
+  // 账户净值走 overwrite 合并层(引擎实时 + trading_hl_overrides);统计三格走 Supabase 当日视图。
+  const hlAcctQ = useHlAccountAdjusted(hlAddress, "mainnet", wallet);
+  const statsQ = useWalletTodayStats(wallet);
 
   const pusd = pusdAmount(balanceQ.data);
-  const orders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
-  const closed = orders.filter(isClosed).filter((o) => o.pnl != null);
-  const wins = closed.filter((o) => (o.pnl ?? 0) > 0).length;
-  const winRate = closed.length > 0 ? (wins / closed.length) * 100 : 0;
-  const realizedPnl = closed.reduce((s, o) => s + (o.pnl ?? 0), 0);
+  // 跨 venue(PM + HL 主/测网)当日统计汇总 —— 全部 coalesce(manual,真实)展示值,admin 调控即时联动。
+  const agg = useMemo(() => (statsQ.data ?? []).reduce(
+    (a, d) => ({
+      dayPnl: a.dayPnl + numOrZero(d.day_pnl_usd),
+      unreal: a.unreal + numOrZero(d.unrealized_pnl_usd),
+      open: a.open + numOrZero(d.open_positions),
+    }),
+    { dayPnl: 0, unreal: 0, open: 0 },
+  ), [statsQ.data]);
 
   const pmSubCount = asArray(pmSubsQ.data).filter((s: any) => s?.status !== "stopped").length;
   const hlSubCount = (hlSubsQ.data?.subscriptions ?? []).filter((s: any) => s?.status !== "stopped").length;
   const hlAcctVal = hlAcctQ.data?.accountValue ?? 0;
-  const hlOpen = hlAcctQ.data?.positions.length ?? 0;
+  const hlOpen = agg.open;
 
   // While the engine user is resolving, hold a slot so the card doesn't pop in.
   if (userQ.isLoading) return <div className="glass-panel h-40" />;
@@ -143,19 +155,23 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
           </div>
         </div>
 
-        {/* Copy-trading performance summary (from local order history) */}
+        {/* 当日表现汇总(跨 PM + HL 主/测网,Supabase 当日统计 = coalesce(manual,真实))*/}
         <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/10">
           <div className="text-center">
-            <div className={`text-sm font-bold tabular-nums ${realizedPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtUsd(realizedPnl)}</div>
-            <div className="text-[9px] text-white/40 mt-1 uppercase tracking-wide">{t("profile.realizedPnl", "Realized PnL")}</div>
+            <div className={`text-sm font-bold tabular-nums ${agg.dayPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {agg.dayPnl >= 0 ? "+" : ""}{fmtUsd(agg.dayPnl)}
+            </div>
+            <div className="text-[9px] text-white/40 mt-1 uppercase tracking-wide">{t("profile.todayPnl", "Today PnL")}</div>
           </div>
           <div className="text-center">
-            <div className="text-sm font-bold text-white tabular-nums">{closed.length > 0 ? `${winRate.toFixed(0)}%` : "—"}</div>
-            <div className="text-[9px] text-white/40 mt-1 uppercase tracking-wide">{t("profile.winRate", "Win Rate")}</div>
+            <div className={`text-sm font-bold tabular-nums ${agg.unreal >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {agg.unreal >= 0 ? "+" : ""}{fmtUsd(agg.unreal)}
+            </div>
+            <div className="text-[9px] text-white/40 mt-1 uppercase tracking-wide">{t("profile.unrealizedPnl", "Unrealized")}</div>
           </div>
           <div className="text-center">
-            <div className="text-sm font-bold text-white tabular-nums">{orders.length}</div>
-            <div className="text-[9px] text-white/40 mt-1 uppercase tracking-wide">{t("profile.totalTrades", "Trades")}</div>
+            <div className="text-sm font-bold text-white tabular-nums">{hlOpen}</div>
+            <div className="text-[9px] text-white/40 mt-1 uppercase tracking-wide">{t("profile.openPositions", "Positions")}</div>
           </div>
         </div>
         <div className="mt-3 text-[10px] text-center text-white/50">

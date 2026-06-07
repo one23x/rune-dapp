@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@app/lib/utils";
 import {
-  useEngineUser, useHlLeaders, useHlSignals, useHlAccount, useHlSubs,
+  useEngineUser, useHlLeaders, useHlSignals, useHlSubs,
 } from "@app/lib/engine-hooks";
+import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import type { HlNetwork } from "@app/lib/engine";
 import {
   TIER_META, tierOf, shortAddr, fmtUsd, fmtHold, fmtScore,
@@ -38,7 +39,11 @@ export default function StrategyVault({ network, address }: { network: string; a
   const leadersQ = useHlLeaders(net);
   const leader = (leadersQ.data?.leaders ?? []).find((l) => l.address.toLowerCase() === addrLc);
 
-  const acctQ = useHlAccount(wallet, net);
+  // HL 账户地址解析(custodial=托管 EOA / agent=主账户)+ overwrite 合并层 —— 不能拿连接钱包
+  // 当 HL 地址(custodial 用户 HL 账户不在连接钱包上),否则账户净值/浮盈/可提全显示 0。
+  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
+  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : hlUser?.engineEoaAddress;
+  const acctQ = useHlAccountAdjusted(hlAddress, net, wallet);
   const acct = acctQ.data;
 
   const subsQ = useHlSubs(userId);

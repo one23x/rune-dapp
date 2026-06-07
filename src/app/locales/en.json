@@ -1451,7 +1451,10 @@
     "winRate": "Win Rate",
     "totalTrades": "Trades",
     "nodesPageTitle": "My Nodes",
-    "nodesPageSubtitle": "Node benefits · Direct referral rewards · Real-time on-chain"
+    "nodesPageSubtitle": "Node benefits · Direct referral rewards · Real-time on-chain",
+    "todayPnl": "Today P&L",
+    "unrealizedPnl": "Unrealized",
+    "openPositions": "Positions"
   },
   "market": {
     "marketAnalysis": "Market Analysis",

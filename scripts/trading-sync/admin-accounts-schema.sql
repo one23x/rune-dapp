@@ -411,3 +411,10 @@ from trading_trade_records r
 where not (record_type = 'position_snapshot'
            and coalesce(size, 0) = 0 and coalesce(notional_usd, 0) = 0)
   and not exists (select 1 from trading_record_hidden h where h.record_id = r.record_id);
+
+-- ═══════════════════════ 2026-06-07 审计修复(见 fix-views-2026-06-07-audit.sql,已 apply prod)═══
+-- ⚠️ 重跑本文件后必须再跑 fix-views-2026-06-07-audit.sql,否则下列修复被旧定义覆盖:
+--   B1 v_wallet_daily_history.wallet:COALESCE(hl_master,smart)→smart_wallet_address
+--      (custodial 用户 dapp 用连接钱包=smart 查,发 master 会查不到当日统计 → "看不到数据"根因)
+--   B4 v_wallet_today_closed HL 段补 NOT EXISTS trading_record_hidden(隐藏记录当日平仓仍漏出)
+--   B5 v_trade_records 排除所有 position_snapshot(非空快照混入用户「交易记录」列表)

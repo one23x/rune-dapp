@@ -1379,7 +1379,10 @@
     "totalTrades": "Trades",
     "myNodesDesc": "내 노드 등급 및 팀 보기",
     "nodesPageTitle": "내 노드",
-    "nodesPageSubtitle": "노드 혜택 · 직접 추천 보상 · 실시간 온체인"
+    "nodesPageSubtitle": "노드 혜택 · 직접 추천 보상 · 실시간 온체인",
+    "todayPnl": "당일 손익",
+    "unrealizedPnl": "미실현 손익",
+    "openPositions": "포지션 수"
   },
   "market": {
     "marketAnalysis": "시장 분석",

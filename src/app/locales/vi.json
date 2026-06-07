@@ -1379,7 +1379,10 @@
     "totalTrades": "Trades",
     "myNodesDesc": "Xem cấp node và đội nhóm của tôi",
     "nodesPageTitle": "Nút của tôi",
-    "nodesPageSubtitle": "Quyền lợi nút · Thưởng giới thiệu trực tiếp · On-chain thời gian thực"
+    "nodesPageSubtitle": "Quyền lợi nút · Thưởng giới thiệu trực tiếp · On-chain thời gian thực",
+    "todayPnl": "P&L hôm nay",
+    "unrealizedPnl": "Chưa thực hiện",
+    "openPositions": "Vị thế"
   },
   "market": {
     "marketAnalysis": "Phân tích thị trường",

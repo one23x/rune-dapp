@@ -1443,7 +1443,10 @@
     "winRate": "Win Rate",
     "totalTrades": "Trades",
     "nodesPageTitle": "マイノード",
-    "nodesPageSubtitle": "ノード特典 · 直接紹介報酬 · リアルタイムオンチェーン"
+    "nodesPageSubtitle": "ノード特典 · 直接紹介報酬 · リアルタイムオンチェーン",
+    "todayPnl": "本日損益",
+    "unrealizedPnl": "未実現損益",
+    "openPositions": "ポジション数"
   },
   "market": {
     "marketAnalysis": "市場分析",

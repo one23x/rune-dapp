@@ -1379,7 +1379,10 @@
     "totalTrades": "Trades",
     "myNodesDesc": "Meine Node-Stufe & Team ansehen",
     "nodesPageTitle": "Meine Nodes",
-    "nodesPageSubtitle": "Node-Vorteile · Direkte Empfehlungsprämien · Echtzeit on-chain"
+    "nodesPageSubtitle": "Node-Vorteile · Direkte Empfehlungsprämien · Echtzeit on-chain",
+    "todayPnl": "Heute G&V",
+    "unrealizedPnl": "Unrealisiert",
+    "openPositions": "Positionen"
   },
   "market": {
     "marketAnalysis": "Marktanalyse",

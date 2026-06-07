@@ -55,7 +55,7 @@ import {
 } from "@app/lib/trading-stats-hooks";
 import { hyperliquid, users } from "@app/lib/engine";
 import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
-import { DailyStatRow } from "@app/components/copy-trading/daily-stat-row";
+import { TradeRecordsDetail } from "@app/components/copy-trading/trade-records-detail";
 import { AiDecisionCards } from "./ai-decision-cards";
 import { HlVaultsPanel } from "./hl-vaults-panel";
 import { AiLab } from "./ai-lab";
@@ -102,22 +102,27 @@ function AddressLine({ address, label }: { address: string; label?: string }) {
     if (ok) { setCopied(true); window.setTimeout(() => setCopied(false), 1400); }
     else toast({ title: t("common.copyFailed", "复制失败"), variant: "destructive" });
   }
+  // label 独立一行(原先 label shrink-0 与地址同行,英文 label 长 → 手机上把地址挤成竖条)。
   return (
     <button
       type="button"
       onClick={copy}
       aria-label={t("common.copy", "复制")}
-      className="group w-full flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/[0.07] px-3 py-2 text-left transition active:scale-[0.995] hover:border-amber-400/30"
+      className="group w-full rounded-xl bg-white/[0.03] border border-white/[0.07] px-3 py-2 text-left transition active:scale-[0.995] hover:border-amber-400/30"
     >
-      {label && <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wider text-amber-300/70">{label}</span>}
-      <code className="flex-1 min-w-0 font-mono text-[11px] leading-relaxed text-foreground/80 break-all">{address}</code>
-      <span
-        className={cn(
-          "shrink-0 grid h-7 w-7 place-items-center rounded-lg transition",
-          copied ? "text-emerald-400" : "text-muted-foreground/70 group-hover:text-amber-300 group-hover:bg-white/5",
-        )}
-      >
-        {copied ? <CheckCircle2 className="h-4 w-4 animate-copy-pop" /> : <Copy className="h-4 w-4" />}
+      {label && (
+        <span className="block text-[9px] font-semibold uppercase tracking-wider text-amber-300/70 mb-1">{label}</span>
+      )}
+      <span className="flex items-center gap-2">
+        <code className="flex-1 min-w-0 font-mono text-[11px] leading-relaxed text-foreground/80 break-all">{address}</code>
+        <span
+          className={cn(
+            "shrink-0 grid h-7 w-7 place-items-center rounded-lg transition",
+            copied ? "text-emerald-400" : "text-muted-foreground/70 group-hover:text-amber-300 group-hover:bg-white/5",
+          )}
+        >
+          {copied ? <CheckCircle2 className="h-4 w-4 animate-copy-pop" /> : <Copy className="h-4 w-4" />}
+        </span>
       </span>
     </button>
   );
@@ -1284,31 +1289,9 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
   // 顶部账户统计(净值/今日盈亏/浮盈/已实现/可用/保证金)仍走引擎+overrides 合并层。
   const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
-  // 三个列表(当前持仓 / 历史每日 / 当日平仓)改读 Supabase stats 视图,按连接钱包过滤,
-  // venue = hl_<network>。这样 admin 在 Supabase 改的手动持仓 / 持平订单 / manual_* 在此即时一致。
+  // 列表(当前持仓 / 历史 / 当日平仓 / 交易记录)统一走共享 TradeRecordsDetail
+  // (venueScope=hl_<network>,全 Supabase 视图;admin overwrite 即时一致;与 PM stats 同一组件)。
   const venue: StatsVenue = (`hl_${network}` as StatsVenue);
-  const openQ = useWalletOpenPositions(wallet);
-  const closedQ = useWalletTodayClosed(wallet);
-  const dailyQ = useWalletDailyHistory(wallet);
-  const openPositions = useMemo<OpenPositionRow[]>(
-    () => (openQ.data ?? []).filter((r) => r.venue === venue), [openQ.data, venue]);
-  const closedToday = useMemo<TodayClosedRow[]>(
-    () => (closedQ.data ?? []).filter((r) => r.venue === venue), [closedQ.data, venue]);
-  const dailyHistory = useMemo<WalletDailyRow[]>(
-    () => (dailyQ.data ?? []).filter((r) => r.venue === venue), [dailyQ.data, venue]);
-  // 当日平仓汇总:笔数 + 实现盈亏合计,从 Supabase 行求和(替代客户端 recentFills 现算)。
-  const closedSummary = useMemo(() => {
-    const closes = closedToday.length;
-    const realized = closedToday.reduce((s, r) => s + numOrZero(r.realized_pnl_usd), 0);
-    const notional = closedToday.reduce((s, r) => s + numOrZero(r.notional_usd), 0);
-    const wins = closedToday.filter((r) => numOrZero(r.realized_pnl_usd) >= 0).length;
-    return {
-      closes,
-      realized,
-      winRate: closes > 0 ? (wins / closes) * 100 : 0,
-      realizedPct: notional > 0 ? (realized / notional) * 100 : null,
-    };
-  }, [closedToday]);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
@@ -1334,82 +1317,32 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const av = acct?.accountValue ?? 0;
   // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
   const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
-  // 顶部"持仓价值"仍取自合并层 acct.positions(顶部统计不动);三个列表已改读 Supabase。
+  // 顶部"持仓价值"取自合并层 acct.positions(引擎+overrides);列表在共享组件内自取 Supabase。
   const acctHoldValue = (acct?.positions ?? []).reduce((s, p) => s + p.positionValue, 0);
-  const listLoading = openQ.isLoading || closedQ.isLoading || dailyQ.isLoading;
 
   return (
-    <Tabs defaultValue="positions" className="w-full">
-      <TabsList className="w-full grid grid-cols-3 mb-3">
-        <TabsTrigger value="positions" className="text-xs">{t("hl.tabPositions", "当前持仓")}</TabsTrigger>
-        <TabsTrigger value="history" className="text-xs">{t("hl.tabHistory", "历史记录")}</TabsTrigger>
-        <TabsTrigger value="closedToday" className="text-xs">{t("hl.tabClosedToday", "当日平仓")}</TabsTrigger>
-      </TabsList>
-
-      {/* Tab1 当前持仓:统计格(每个金额旁带 %)+ 持仓列表。 */}
-      <TabsContent value="positions" className="space-y-2 mt-0">
-        {acct && (
-          <div className="glass-panel p-3">
-            <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
-              <StatCell label={t("hl.todayPnl", "当日盈亏")} value={acct.todayPnl ?? 0} pct={pctOfAv(acct.todayPnl ?? 0)} tone="pnl" />
-              <StatCell label={t("hl.realized", "已平仓")} value={acct.realizedPnl} pct={pctOfAv(acct.realizedPnl)} tone="pnl" />
-              <StatCell label={t("hl.statHoldValue", "持仓价值")} value={acctHoldValue} pct={pctOfAv(acctHoldValue)} tone="neutral" />
-              <StatCell label={t("hl.marginUsed", "保证金")} value={acct.marginUsed ?? 0} pct={pctOfAv(acct.marginUsed ?? 0)} tone="neutral" />
-              <StatCell label={t("hl.available", "可用")} value={acct.withdrawable} pct={pctOfAv(acct.withdrawable)} tone="neutral" />
-              <StatCell label={t("hl.unrealized", "未实现盈亏")} value={acct.unrealizedPnl} pct={pctOfAv(acct.unrealizedPnl)} tone="pnl" />
-            </div>
-          </div>
-        )}
-        {listLoading ? (
-          <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
-        ) : openQ.isError ? (
-          <HlEmpty icon={Layers} title={t("hl.acctError")} desc={t("hl.acctErrorDesc")} />
-        ) : openPositions.length === 0 ? (
-          <HlEmpty icon={Layers} title={t("hl.noPositions")} desc={t("hl.noPositionsDesc")} />
-        ) : (
-          openPositions.map((p, i) => <SbPositionRow key={`${p.symbol}-${i}`} p={p} network={network} address={acct?.address} onClose={onClosePosition} closing={closingCoin === (p.symbol ?? "")} />)
-        )}
-      </TabsContent>
-
-      {/* Tab2 历史记录:Supabase v_wallet_daily_history(coalesce manual)按日一行。 */}
-      <TabsContent value="history" className="space-y-2 mt-0">
-        {listLoading ? (
-          <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
-        ) : dailyQ.isError ? (
-          <HlEmpty icon={HistoryIcon} title={t("hl.acctError")} desc={t("hl.acctErrorDesc")} />
-        ) : dailyHistory.length === 0 ? (
-          <HlEmpty icon={HistoryIcon} title={t("hl.noHistory")} desc={t("hl.noHistoryDesc")} />
-        ) : (
-          dailyHistory.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} />)
-        )}
-      </TabsContent>
-
-      {/* Tab3 当日平仓:Supabase v_wallet_today_closed,汇总(笔数/实现盈亏合计)由行求和。 */}
-      <TabsContent value="closedToday" className="space-y-2 mt-0">
+    <div className="space-y-3">
+      {/* 顶部账户统计(每个金额旁带 %)— 引擎实时 + trading_hl_overrides 覆盖合并层。 */}
+      {acct && (
         <div className="glass-panel p-3">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
-            <div className="min-w-0">
-              <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statTodayClosed", "已平仓笔数")}</div>
-              <div className="text-[13px] font-bold tabular-nums text-foreground/85">{closedSummary.closes}</div>
-            </div>
-            <StatCell label={t("hl.statTodayRealized", "当日已实现盈亏")} value={closedSummary.realized} pct={closedSummary.realizedPct} tone="pnl" />
-            <div className="min-w-0">
-              <div className="text-[8px] text-muted-foreground uppercase tracking-wide truncate">{t("hl.statWinRate", "赢率")}</div>
-              <div className="text-[13px] font-bold tabular-nums num-gold">{closedSummary.winRate.toFixed(2)}%</div>
-            </div>
+          <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
+            <StatCell label={t("hl.todayPnl", "当日盈亏")} value={acct.todayPnl ?? 0} pct={pctOfAv(acct.todayPnl ?? 0)} tone="pnl" />
+            <StatCell label={t("hl.realized", "已平仓")} value={acct.realizedPnl} pct={pctOfAv(acct.realizedPnl)} tone="pnl" />
+            <StatCell label={t("hl.statHoldValue", "持仓价值")} value={acctHoldValue} pct={pctOfAv(acctHoldValue)} tone="neutral" />
+            <StatCell label={t("hl.marginUsed", "保证金")} value={acct.marginUsed ?? 0} pct={pctOfAv(acct.marginUsed ?? 0)} tone="neutral" />
+            <StatCell label={t("hl.available", "可用")} value={acct.withdrawable} pct={pctOfAv(acct.withdrawable)} tone="neutral" />
+            <StatCell label={t("hl.unrealized", "未实现盈亏")} value={acct.unrealizedPnl} pct={pctOfAv(acct.unrealizedPnl)} tone="pnl" />
           </div>
         </div>
-        {listLoading ? (
-          <div className="space-y-1.5">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
-        ) : closedQ.isError ? (
-          <HlEmpty icon={HistoryIcon} title={t("hl.acctError")} desc={t("hl.acctErrorDesc")} />
-        ) : closedToday.length === 0 ? (
-          <HlEmpty icon={HistoryIcon} title={t("hl.noClosedToday", "今日暂无平仓")} desc={t("hl.noClosedTodayDesc", "今天还没有平仓记录,平仓后会在此显示。")} />
-        ) : (
-          closedToday.map((r, i) => <SbClosedTodayRow key={`${r.symbol}-${r.happened_at}-${i}`} r={r} network={network} address={acct?.address} />)
-        )}
-      </TabsContent>
-    </Tabs>
+      )}
+      {/* 持仓/历史/当日平仓/交易记录 — 与 PM stats 同一共享组件,数据全 Supabase。 */}
+      <TradeRecordsDetail
+        wallet={wallet}
+        venueScope={venue}
+        onClosePosition={(coin) => void onClosePosition(coin)}
+        closingSymbol={closingCoin}
+      />
+    </div>
   );
 }
 
@@ -1418,117 +1351,6 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
 // + venue=hl_<network> 过滤;admin 在 Supabase 改的手动持仓/持平/manual_* 在此即时一致。
 
 // 当前持仓一行(Supabase v_wallet_open_positions)。无 leverage/ROE 字段 → 用持仓价值占比表达。
-function SbPositionRow({
-  p, network, address, onClose, closing,
-}: { p: OpenPositionRow; network: HlNetwork; address?: string; onClose?: (coin: string) => void; closing?: boolean }) {
-  const { t } = useTranslation();
-  const [confirm, setConfirm] = useState(false);
-  const coin = p.symbol ?? p.market_id ?? "—";
-  const size = numOrZero(p.size);
-  const long = size >= 0;
-  const cost = numOrZero(p.position_cost_usd);
-  const upnl = numOrZero(p.unrealized_pnl_usd);
-  const roe = cost > 0 ? (upnl / cost) * 100 : 0;
-  const pos = upnl >= 0;
-  return (
-    <div className="glass-panel p-3">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[13px] font-bold text-foreground/90">{coin}</span>
-          <span className={cn("inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>
-            {long ? "LONG" : "SHORT"}
-          </span>
-          {/* 真假数据混合:只在行带 tx_hash 时给「链上详情」直链(explorer/tx/<hash>),
-              绝不退回账户地址列表页(地址页只有真实成交,手动行在那里不存在 → 穿帮)。 */}
-          {p.tx_hash && (
-            <a
-              href={hlExplorerTx(p.tx_hash, network)}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")}
-              title={t("hl.viewOnExplorer", "区块链浏览器查看")}
-              className="h-6 w-6 grid place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition shrink-0"
-            >
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
-        </div>
-        <div className="text-right shrink-0">
-          <div className={cn("text-[12px] font-bold tabular-nums", pos ? "text-emerald-400" : "text-red-400")}>{pos ? "+" : ""}{fmtUsd(upnl)}</div>
-          {cost > 0 && <div className={cn("text-[10px] tabular-nums", pos ? "text-emerald-400/70" : "text-red-400/70")}>{pos ? "+" : ""}{roe.toFixed(2)}%</div>}
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-1 text-center">
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.size")}</div><div className="text-[12px] font-bold tabular-nums">{Math.abs(size).toLocaleString()}</div></div>
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry")}</div><div className="text-[12px] font-bold tabular-nums">{p.entry_px != null ? Number(p.entry_px).toLocaleString() : "—"}</div></div>
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(numOrZero(p.position_value_usd))}</div></div>
-      </div>
-      {onClose && p.symbol && (
-        <button
-          type="button"
-          disabled={closing}
-          onClick={() => {
-            if (confirm) { onClose(p.symbol!); setConfirm(false); }
-            else { setConfirm(true); window.setTimeout(() => setConfirm(false), 3000); }
-          }}
-          className={cn(
-            "mt-2.5 w-full h-9 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 transition active:scale-[0.99] disabled:opacity-60",
-            confirm ? "bg-red-500 text-white" : "bg-white/[0.04] text-red-300 border border-red-500/25 hover:bg-red-500/10",
-          )}
-          data-testid={`button-hl-close-${coin}`}
-        >
-          {closing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          {closing ? t("hl.closing", "平仓中…") : confirm ? t("hl.closeConfirm", "确认市价平仓?") : t("hl.closePosition", "平仓")}
-        </button>
-      )}
-    </div>
-  );
-}
-
-// 历史记录每日一行(Supabase v_wallet_daily_history)。当日盈亏/已实现/浮盈/赢率直接取自该行。
-// 当日平仓明细一行(Supabase v_wallet_today_closed)。仅 tx_hash 有值才给「查看链上记录」
-// 直链 explorer tx 详情页;无 hash 不渲染链接(绝不退回地址列表页 —— 手动行会穿帮)。
-function SbClosedTodayRow({ r, network }: { r: TodayClosedRow; network: HlNetwork; address?: string }) {
-  const { t } = useTranslation();
-  const tAgo = t as Parameters<typeof fmtTimeAgo>[1];
-  const long = r.side ? /buy|long/i.test(r.side) : true;
-  const realized = numOrZero(r.realized_pnl_usd);
-  const pnlPos = realized >= 0;
-  const notional = numOrZero(r.notional_usd);
-  const pct = notional > 0 ? (realized / notional) * 100 : NaN;
-  const coin = r.symbol ?? r.market_id ?? "—";
-  return (
-    <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <div className="flex items-center gap-2 min-w-0">
-        <span className={cn("font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0", long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10")}>{long ? "LONG" : "SHORT"}</span>
-        <span className="text-[12px] font-bold text-foreground/85 truncate">{coin}</span>
-        <Badge className="text-[8px] px-1 py-0 border-0 bg-white/[0.06] text-foreground/50 no-default-hover-elevate no-default-active-elevate">{t("hl.close")}</Badge>
-      </div>
-      <div className="flex items-center gap-2.5 shrink-0">
-        {notional > 0 && <span className="text-[11px] tabular-nums num-gold">{fmtUsd(notional)}</span>}
-        <span className={cn("text-[11px] tabular-nums", pnlPos ? "text-emerald-400" : "text-red-400")}>
-          {pnlPos ? "+" : ""}{fmtUsd(realized)}
-          {Number.isFinite(pct) && <span className="text-[9px] opacity-70"> ({pnlPos ? "+" : ""}{pct.toFixed(2)}%)</span>}
-        </span>
-        {r.happened_at && <span className="text-[10px] text-muted-foreground/60">{fmtTimeAgo(new Date(r.happened_at).toISOString(), tAgo)}</span>}
-        {r.tx_hash && (
-          <a
-            href={hlExplorerTx(r.tx_hash, network)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[10px] font-semibold text-amber-300/90 border border-amber-500/25 hover:bg-amber-500/10 transition"
-            data-testid={`button-hl-closed-explorer-${coin}-${r.happened_at}`}
-          >
-            <ExternalLink className="h-3 w-3" />
-            {t("hl.viewOnChain", "查看链上记录")}
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // 当日平仓明细一行 —— 基于 HistoryRow,显式给出「查看链上记录」按钮(优先 tx,无 hash 退回地址页)。
 function ClosedTodayRow({ f, network, address }: { f: HlFillRow; network: HlNetwork; address?: string }) {
   const { t } = useTranslation();

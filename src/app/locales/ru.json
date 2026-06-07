@@ -1379,7 +1379,10 @@
     "totalTrades": "Trades",
     "myNodesDesc": "Посмотреть уровень моей ноды и команду",
     "nodesPageTitle": "Мои ноды",
-    "nodesPageSubtitle": "Преимущества ноды · Награды за прямых рефералов · Ончейн в реальном времени"
+    "nodesPageSubtitle": "Преимущества ноды · Награды за прямых рефералов · Ончейн в реальном времени",
+    "todayPnl": "P&L за день",
+    "unrealizedPnl": "Нереализ.",
+    "openPositions": "Позиции"
   },
   "market": {
     "marketAnalysis": "Анализ Рынка",

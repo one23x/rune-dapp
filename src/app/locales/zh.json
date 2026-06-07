@@ -1451,7 +1451,10 @@
     "winRate": "胜率",
     "totalTrades": "笔交易",
     "nodesPageTitle": "我的节点",
-    "nodesPageSubtitle": "节点权益 · 直推奖励 · 实时上链"
+    "nodesPageSubtitle": "节点权益 · 直推奖励 · 实时上链",
+    "todayPnl": "当日盈亏",
+    "unrealizedPnl": "未实现盈亏",
+    "openPositions": "持仓数"
   },
   "market": {
     "marketAnalysis": "市场分析",

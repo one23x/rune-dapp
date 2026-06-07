@@ -1443,7 +1443,10 @@
     "winRate": "Win Rate",
     "totalTrades": "Trades",
     "nodesPageTitle": "Meus nós",
-    "nodesPageSubtitle": "Benefícios do nó · Recompensas de indicação direta · On-chain em tempo real"
+    "nodesPageSubtitle": "Benefícios do nó · Recompensas de indicação direta · On-chain em tempo real",
+    "todayPnl": "P&L de hoje",
+    "unrealizedPnl": "Não realizado",
+    "openPositions": "Posições"
   },
   "market": {
     "marketAnalysis": "Análise de Mercado",
