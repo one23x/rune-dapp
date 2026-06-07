@@ -264,10 +264,13 @@ begin
     left join pm_mark mk on mk.token_id = p.token_id
     group by p.user_id
   ),
-  -- admin 手动 PM 记录:累计实现盈亏 + 当日平仓笔数(被隐藏的记录视同不存在)
+  -- admin 手动 PM 记录:累计实现盈亏 + 当日平仓笔数(被隐藏的记录视同不存在)。
+  -- manual_cum_b4 = 今天之前的手动累计 —— 首日(无 prev 快照)的差分基准要用它,
+  -- 否则当天补的手动单只进总实现、当日恒 0。
   pm_manual as (
     select r.user_id,
       sum(coalesce(r.realized_pnl_usd, 0)) filter (where r.happened_at < v_end)        as manual_cum,
+      sum(coalesce(r.realized_pnl_usd, 0)) filter (where r.happened_at < v_start)      as manual_cum_b4,
       count(*) filter (where r.record_type = 'position_closed'
                and r.happened_at >= v_start and r.happened_at < v_end)                 as manual_closed_today
     from trading_trade_records r
@@ -288,6 +291,7 @@ begin
       coalesce(pos.cost_usd, 0)   as cost_usd,
       coalesce(pos.value_usd, 0) - coalesce(pos.cost_usd, 0) as unrealized,
       coalesce(pos.realized_cum, 0) + coalesce(mn.manual_cum, 0) as realized_cum,
+      coalesce(pos.realized_cum, 0) + coalesce(mn.manual_cum_b4, 0) as realized_cum_b4, -- 首日差分基准
       coalesce(pos.open_cnt, 0)   as open_cnt,
       coalesce(pos.closed_today, 0) + coalesce(mn.manual_closed_today, 0) as closed_today,
       coalesce(fl.fills_cnt, 0)   as fills_cnt,
@@ -302,8 +306,8 @@ begin
      open_positions, closed_today, fills_today, fills_notional_today_usd, snapped_at)
   select pm.user_id, 'polymarket', v_day, pm.value_usd, pm.cost_usd, pm.unrealized,
     pm.realized_cum,
-    pm.realized_cum - coalesce(prev.realized_pnl_cum_usd, pm.realized_cum),
-    (pm.realized_cum - coalesce(prev.realized_pnl_cum_usd, pm.realized_cum))
+    pm.realized_cum - coalesce(prev.realized_pnl_cum_usd, pm.realized_cum_b4),
+    (pm.realized_cum - coalesce(prev.realized_pnl_cum_usd, pm.realized_cum_b4))
       + (pm.unrealized - coalesce(prev.unrealized_pnl_usd, pm.unrealized)),
     pm.open_cnt, pm.closed_today, pm.fills_cnt, pm.fills_notional, now()
   from pm
