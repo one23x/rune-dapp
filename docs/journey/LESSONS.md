@@ -26,3 +26,4 @@
 
 **L011 | AA 代付的边界** → 钱包抽象只代付手续费,变不出本金:gas-grant 发 POL 必须 0x36f8 真持有 POL → **"无 gas 体验"≠"无成本",弹药钱包要有余额监控(已入晨检)。**
 **L012 | 多会话同仓开发 = 部署互盖的新形态** → 同一天:另一会话在本机 RUNE workspace 重做 admin 交易账户页推上 GitHub 并部署;本会话在 SG 检出(不含其提交)上另写一版并部署 → 互盖两次(对方盖 dapp b295bca 时我没察觉;我盖 admin 时以为线上还是 16h 前旧版)。修复 = 以 GitHub main 为基底功能合并(各取所长:engine 代理余额/批量开户 + 复制×N/recalc 联动/user_id 修复)→ **动手前先 `git fetch origin` 比对;部署前 deployment list 的 Source commit 必须在本地历史里;同模块开工前在 PROGRESS 流水占座声明。**
+**L013 | "real" 列名会骗人** → 旧 rollup 把 source='manual'(生成/复制单)全额算进 real 列,"真实 vs 展示"成假对照(HL 尤甚:无 follower 成交流水,real 几乎全是合成单)。订单驱动架构必须显式拆 `sync_*`(只 source=sync)与 show(主列=sync+manual)→ **双轨统计的"真实"轨必须按 source 过滤,别用"主列减覆盖"反推。**
