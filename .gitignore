@@ -28,6 +28,8 @@ one-agents/
 admin-panel/
 slack-agent/
 *.pem
+# demo/假数据 seed 脚本 — 绝不入库(仅测试期 prod 本地用)
+scripts/trading-sync/demo-seed-*.mjs
 *.tfstate
 *.tfstate.*
 *.pdf

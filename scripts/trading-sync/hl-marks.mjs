@@ -26,14 +26,26 @@ const SOURCES = [
   { venue: "hl_testnet", url: "https://api.hyperliquid-testnet.xyz/info" },
 ];
 
-async function fetchMids(url) {
+async function fetchMids(url, dex) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ type: "allMids" }),
+    body: JSON.stringify(dex ? { type: "allMids", dex } : { type: "allMids" }),
   });
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
-  return res.json(); // { BTC: "97123.0", ... } (含 @<index> 的现货对,跳过)
+  return res.json(); // 主 dex: { BTC: "97123.0", ... };builder dex: { "xyz:BRENTOIL": "95.0", ... }(coin 已带前缀)
+}
+
+// 列出该网络的 builder dex 名(perpDexs[0]=null 是主 dex,其余有 .name,如 "xyz")
+async function fetchBuilderDexs(url) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "perpDexs" }),
+  });
+  if (!res.ok) throw new Error(`${url} perpDexs → HTTP ${res.status}`);
+  const arr = await res.json();
+  return (Array.isArray(arr) ? arr : []).filter(Boolean).map((d) => d?.name).filter(Boolean);
 }
 
 async function runOnce() {
@@ -43,10 +55,19 @@ async function runOnce() {
   const report = {};
   try {
     for (const { venue, url } of SOURCES) {
-      const mids = await fetchMids(url);
-      const rows = Object.entries(mids)
+      const toRows = (mids) => Object.entries(mids)
         .filter(([coin, px]) => !coin.startsWith("@") && Number.isFinite(Number(px)))
         .map(([coin, px]) => [coin, Number(px)]);
+      // 主 perp dex
+      const rows = toRows(await fetchMids(url));
+      // builder dex(HIP-3,如 xyz:BRENTOIL)——allMids 不带 dex 拿不到,需逐 dex 查
+      let builderCount = 0;
+      try {
+        for (const dex of await fetchBuilderDexs(url)) {
+          try { const br = toRows(await fetchMids(url, dex)); rows.push(...br); builderCount += br.length; }
+          catch (e) { console.error(`  ${venue} dex=${dex} mids error: ${e.message}`); }
+        }
+      } catch (e) { console.error(`  ${venue} perpDexs error: ${e.message}`); }
       const CHUNK = 500;
       for (let i = 0; i < rows.length; i += CHUNK) {
         const slice = rows.slice(i, i + CHUNK);
@@ -61,7 +82,7 @@ async function runOnce() {
           params,
         );
       }
-      report[venue] = rows.length;
+      report[venue] = { total: rows.length, builder: builderCount };
     }
   } finally {
     await dst.end().catch(() => {});
