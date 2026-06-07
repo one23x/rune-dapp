@@ -1773,7 +1773,8 @@
     "statsNoRecords": "暫無交易記錄",
     "statsTabRecords": "交易記錄",
     "venueHlMainnet": "HL 主網",
-    "venueHlTestnet": "HL 測試網"
+    "venueHlTestnet": "HL 測試網",
+    "tabStats": "交易數據"
   },
   "exchange": {
     "account": "帳戶",

@@ -1773,7 +1773,8 @@
     "statsNoRecords": "Chưa có lịch sử giao dịch",
     "statsTabRecords": "Lịch sử giao dịch",
     "venueHlMainnet": "HL Mainnet",
-    "venueHlTestnet": "HL Testnet"
+    "venueHlTestnet": "HL Testnet",
+    "tabStats": "Dữ liệu"
   },
   "exchange": {
     "account": "Tài Khoản",

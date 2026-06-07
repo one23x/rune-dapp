@@ -1773,7 +1773,8 @@
     "statsNoRecords": "Aucun historique de trading",
     "statsTabRecords": "Historique",
     "venueHlMainnet": "HL Mainnet",
-    "venueHlTestnet": "HL Testnet"
+    "venueHlTestnet": "HL Testnet",
+    "tabStats": "Données"
   },
   "exchange": {
     "account": "Compte",

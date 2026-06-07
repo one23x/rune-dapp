@@ -1845,7 +1845,8 @@
     "statsNoRecords": "暂无交易记录",
     "statsTabRecords": "交易记录",
     "venueHlMainnet": "HL 主网",
-    "venueHlTestnet": "HL 测试网"
+    "venueHlTestnet": "HL 测试网",
+    "tabStats": "交易数据"
   },
   "exchange": {
     "account": "账户",

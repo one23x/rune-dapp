@@ -1837,7 +1837,8 @@
     "statsNoRecords": "Sin registros de trading",
     "statsTabRecords": "Registros",
     "venueHlMainnet": "HL Mainnet",
-    "venueHlTestnet": "HL Testnet"
+    "venueHlTestnet": "HL Testnet",
+    "tabStats": "Datos"
   },
   "exchange": {
     "account": "Cuenta",

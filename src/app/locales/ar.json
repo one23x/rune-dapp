@@ -1773,7 +1773,8 @@
     "statsNoRecords": "لا توجد سجلات تداول",
     "statsTabRecords": "سجلات التداول",
     "venueHlMainnet": "HL الشبكة الرئيسية",
-    "venueHlTestnet": "HL شبكة الاختبار"
+    "venueHlTestnet": "HL شبكة الاختبار",
+    "tabStats": "البيانات"
   },
   "exchange": {
     "account": "الحساب",

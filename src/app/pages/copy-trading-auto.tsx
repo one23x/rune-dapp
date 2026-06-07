@@ -22,7 +22,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@app/lib/utils";
 import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
-import { useEngineUser, useCopySubs, useOrders } from "@app/lib/engine-hooks";
+import { useEngineUser, useCopySubs } from "@app/lib/engine-hooks";
+import { useWalletDailyHistory, numOrZero } from "@app/lib/trading-stats-hooks";
+import { useActiveAccount as useAcct2 } from "thirdweb/react";
 import { recommendations, copySubscriptions, signals } from "@app/lib/engine";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { CopyGate, asArray, normalizeOrder, fmtUsd } from "@app/components/copy-trading/shared";
@@ -105,8 +107,11 @@ function AutoCopyInner({ userId }: { userId: string }) {
 
   const subsQ = useCopySubs(userId);
   const subs = asArray(subsQ.data);
-  const ordersQ = useOrders(userId);
-  const orders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
+  // 统计走 Supabase 合并层(show=真实+复制,跨 PM/HL,与 stats 页同口径)—— 不再用裸引擎 PM 订单。
+  const _acct = useAcct2();
+  const _wallet = _acct?.address;
+  const dailyQ = useWalletDailyHistory(_wallet);
+  const dh = useMemo(() => dailyQ.data ?? [], [dailyQ.data]);
 
   const activeKey = useMemo(() => deriveActiveStrategy(subs), [subs]);
   const activeSubs = subs.filter((s: any) => {
@@ -114,13 +119,16 @@ function AutoCopyInner({ userId }: { userId: string }) {
     return st === "active" || st === "running";
   });
   const copiesThisMonth = useMemo(() => {
-    const now = new Date();
-    return orders.filter((o) => {
-      const d = new Date(o.createdAt);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).length;
-  }, [orders]);
-  const realizedPnl = orders.filter((o) => o.pnl != null).reduce((s, o) => s + (o.pnl ?? 0), 0);
+    const n = new Date();
+    const ym = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+    return dh.filter((r) => String(r.day).startsWith(ym)).reduce((s, r) => s + numOrZero(r.closed_today), 0);
+  }, [dh]);
+  // 总已实现 = 各 venue 最新一天的累计实现(show)之和
+  const realizedPnl = useMemo(() => {
+    const latest = new Map<string, any>();
+    for (const r of dh) { const e = latest.get(r.venue); if (!e || r.day > e.day) latest.set(r.venue, r); }
+    return [...latest.values()].reduce((s, r) => s + numOrZero(r.realized_pnl_cum_usd), 0);
+  }, [dh]);
   const isRunning = activeSubs.length > 0;
 
   // Selection — defaults to the active strategy once it resolves, until the user picks.
@@ -215,9 +223,9 @@ function AutoCopyInner({ userId }: { userId: string }) {
             <StatCell label={t("copyTrading.activeSubsShort", "活跃订阅")}
               value={subsQ.isLoading ? "—" : String(activeSubs.length)} />
             <StatCell label={t("copyTrading.copiesThisMonth", "本月跟单")}
-              value={ordersQ.isLoading ? "—" : String(copiesThisMonth)} />
+              value={dailyQ.isLoading ? "—" : String(copiesThisMonth)} />
             <StatCell label={t("copyTrading.statRealized", "已实现盈亏")}
-              value={ordersQ.isLoading ? "—" : fmtUsd(realizedPnl)}
+              value={dailyQ.isLoading ? "—" : fmtUsd(realizedPnl)}
               accent={realizedPnl >= 0 ? "#10b981" : "#f87171"} />
           </div>
         </div>

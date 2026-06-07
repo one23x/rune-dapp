@@ -1837,7 +1837,8 @@
     "statsNoRecords": "取引履歴はありません",
     "statsTabRecords": "取引履歴",
     "venueHlMainnet": "HL メインネット",
-    "venueHlTestnet": "HL テストネット"
+    "venueHlTestnet": "HL テストネット",
+    "tabStats": "取引データ"
   },
   "exchange": {
     "account": "アカウント",

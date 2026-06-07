@@ -1845,7 +1845,8 @@
     "statsNoRecords": "No trade records",
     "statsTabRecords": "Trade Records",
     "venueHlMainnet": "HL Mainnet",
-    "venueHlTestnet": "HL Testnet"
+    "venueHlTestnet": "HL Testnet",
+    "tabStats": "Trade Data"
   },
   "exchange": {
     "account": "Account",

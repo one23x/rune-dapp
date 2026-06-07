@@ -1773,7 +1773,8 @@
     "statsNoRecords": "거래 기록 없음",
     "statsTabRecords": "거래 기록",
     "venueHlMainnet": "HL 메인넷",
-    "venueHlTestnet": "HL 테스트넷"
+    "venueHlTestnet": "HL 테스트넷",
+    "tabStats": "거래 데이터"
   },
   "exchange": {
     "account": "계정",

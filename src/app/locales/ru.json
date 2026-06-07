@@ -1773,7 +1773,8 @@
     "statsNoRecords": "Нет торговых записей",
     "statsTabRecords": "Записи сделок",
     "venueHlMainnet": "HL Mainnet",
-    "venueHlTestnet": "HL Testnet"
+    "venueHlTestnet": "HL Testnet",
+    "tabStats": "Данные"
   },
   "exchange": {
     "account": "Аккаунт",
