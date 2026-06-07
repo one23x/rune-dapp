@@ -561,7 +561,34 @@
     "capNoCodeTitle": "Deposit unavailable",
     "capNoCodeDesc": "This wallet has no authorization code yet. Buy a node / bind a code before depositing.",
     "capReachedTitle": "Deposit limit reached",
-    "capReachedDesc": "You have reached the cumulative deposit limit allowed by your authorization code and cannot deposit further."
+    "capReachedDesc": "You have reached the cumulative deposit limit allowed by your authorization code and cannot deposit further.",
+    "addrPreparing": "Preparing deposit address, please wait…",
+    "addressWarn": "Only pUSD on the Polygon network. Sending other assets or networks may cause permanent loss.",
+    "connectFirst": "Connect your wallet first",
+    "depositAddress": "Deposit address",
+    "gasGrantFailed": "Insufficient gas, auto top-up failed",
+    "gasGrantFailedDesc": "Please send a small amount of {{native}} to this wallet for gas.",
+    "gasGranting": "Insufficient gas detected, topping up for you…",
+    "gasGrantingDesc": "No action needed — the transfer continues automatically once received (~10–30s).",
+    "gasGrantingShort": "Topping up gas…",
+    "gasLimitReached": "Gas claim limit reached, please contact support.",
+    "gasNotEligible": "This wallet has no auth code bound, cannot auto-claim gas.",
+    "insufficientWalletToken": "Insufficient wallet {{token}} balance",
+    "max": "Max",
+    "remainingHint": "Remaining deposit limit: ${{max}}",
+    "switchChainFailed": "Please switch to the {{chain}} network",
+    "switchingChainTo": "Switching to {{chain}}…",
+    "tabAddress": "Address / QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "Wallet Transfer",
+    "transferDescToken": "Transfer {{token}} directly from your connected wallet",
+    "transferHint": "Only pUSD on Polygon. Funds go to your deposit address.",
+    "transferNow": "Transfer Now",
+    "transferSent": "Transfer submitted",
+    "transferSentDesc": "Balance refreshes automatically after on-chain confirmation",
+    "transferTitle": "Wallet Transfer",
+    "transferring": "Transferring…",
+    "walletBalance": "Wallet balance"
   },
   "ma": {
     "chartArea": "Area",
@@ -2373,7 +2400,12 @@
       "testnetDesc": "On testnet, use the official faucet to get/add test USDC:"
     },
     "deposit": "Deposit",
-    "mtdPnl": "MTD P&L"
+    "mtdPnl": "MTD P&L",
+    "addressWarn": "Only USDC on the Arbitrum network. Sending other assets may cause permanent loss.",
+    "bridge2Warn": "Never send to Bridge2 directly from an exchange or someone else's wallet.",
+    "tabDepositGuide": "Deposit Guide",
+    "transferHintAgent": "USDC will be sent from your connected wallet directly to HL Bridge2.",
+    "transferHintCustodial": "Only USDC on the Arbitrum network. Funds go to your custodial address."
   },
   "pmLab": {
     "title": "Prediction AI Lab",
@@ -2471,7 +2503,8 @@
       "ADVANCED": "Higher daily caps and full copy-trading access.",
       "MID": "Mid-tier limits suited for active traders.",
       "INITIAL": "Entry tier — unlocks account opening and basic copy-trading."
-    }
+    },
+    "connectFirst": "Connect your wallet first"
   },
   "arbNode": {
     "tab": "Arbitrum",

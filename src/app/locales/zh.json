@@ -561,7 +561,34 @@
     "capNoCodeTitle": "暂不可充值",
     "capNoCodeDesc": "该钱包尚未绑定授权码,请先购买节点 / 绑定授权码后再充值。",
     "capReachedTitle": "已达充值上限",
-    "capReachedDesc": "已达到授权码允许的累计充值上限,无法继续充值。"
+    "capReachedDesc": "已达到授权码允许的累计充值上限,无法继续充值。",
+    "addrPreparing": "正在准备充值地址,请稍候…",
+    "addressWarn": "仅支持 Polygon 网络的 pUSD,转入其他代币 / 其他链将无法找回。",
+    "connectFirst": "请先连接钱包",
+    "depositAddress": "充值地址",
+    "gasGrantFailed": "gas 不足,自动补充失败",
+    "gasGrantFailedDesc": "请向该钱包充值少量 {{native}} 作为手续费,或联系客服。",
+    "gasGranting": "检测到 gas 不足,正在为您补充…",
+    "gasGrantingDesc": "无需操作,到账后将自动继续转账(约 10–30 秒)。",
+    "gasGrantingShort": "补充 gas 中…",
+    "gasLimitReached": "gas 领取次数已用完,请联系客服。",
+    "gasNotEligible": "该钱包未绑定授权码,无法自动领取 gas。",
+    "insufficientWalletToken": "钱包 {{token}} 余额不足",
+    "max": "全部",
+    "remainingHint": "剩余可充额度:${{max}}",
+    "switchChainFailed": "请切换到 {{chain}} 网络",
+    "switchingChainTo": "切换到 {{chain}}…",
+    "tabAddress": "地址/扫码",
+    "tabBridge": "跨链充值",
+    "tabTransfer": "钱包转账",
+    "transferDescToken": "从已连接钱包直接转入 {{token}}",
+    "transferHint": "仅支持 Polygon 网络的 pUSD,资金将直接转入您的交易账户。",
+    "transferNow": "立即转账",
+    "transferSent": "转账已提交",
+    "transferSentDesc": "链上确认后余额将自动刷新",
+    "transferTitle": "钱包转账",
+    "transferring": "转账中…",
+    "walletBalance": "钱包余额"
   },
   "ma": {
     "chartArea": "面积",
@@ -2373,7 +2400,12 @@
       "testnetDesc": "测试网请用官方入金口领取/充入测试 USDC:"
     },
     "deposit": "充值",
-    "mtdPnl": "当月累计"
+    "mtdPnl": "当月累计",
+    "addressWarn": "仅支持 Arbitrum 网络的 USDC,转入其他代币 / 其他链将无法找回。",
+    "bridge2Warn": "切勿从交易所或他人钱包直接向 Bridge2 转账 —— HL 会把「发送地址」记为入金账户,资金会进入对方的 HL 账户且无法找回。请使用「钱包转账」由本人连接的钱包发出。",
+    "tabDepositGuide": "充值引导",
+    "transferHintAgent": "USDC 将由你连接的钱包直接发往 HL Bridge2,HL 会把发送地址(=你的钱包)记为你的 HL 账户。最低 5 USDC,约 1 分钟到账。",
+    "transferHintCustodial": "仅支持 Arbitrum 网络的 USDC,资金将进入你的托管交易地址并自动转入 HL 账户。最低 5 USDC。"
   },
   "pmLab": {
     "title": "预测 AI 实验室",
@@ -2471,7 +2503,8 @@
       "ADVANCED": "更高每日额度,完整跟单权限。",
       "MID": "中档额度,适合活跃交易者。",
       "INITIAL": "入门档位 —— 解锁开户与基础跟单。"
-    }
+    },
+    "connectFirst": "请先连接钱包"
   },
   "arbNode": {
     "tab": "Arbitrum",
