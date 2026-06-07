@@ -13,8 +13,9 @@ import { useTranslation } from "react-i18next";
 import { usePersonalStats } from "@/hooks/rune/use-team";
 import { buildReferralUrl } from "@/hooks/rune/use-referral-param";
 import {
-  useEngineUser, usePusdBalance, useOrders, useCopySubs, useHlAccount, useHlSubs,
+  useEngineUser, useOrders, useCopySubs, useHlAccount, useHlSubs,
 } from "@app/lib/engine-hooks";
+import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
 import { asArray, pusdAmount, normalizeOrder, isClosed, fmtUsd } from "@app/components/copy-trading/shared";
 import { Activity, Layers } from "lucide-react";
 
@@ -87,7 +88,7 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
 
-  const balanceQ = usePusdBalance(userId);
+  const balanceQ = usePusdBalanceAdjusted(userId, wallet);
   const ordersQ = useOrders(userId);
   const pmSubsQ = useCopySubs(userId);
   const hlAcctQ = useHlAccount(wallet, "mainnet");

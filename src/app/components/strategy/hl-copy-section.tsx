@@ -55,6 +55,7 @@ import {
 } from "@app/lib/trading-stats-hooks";
 import { hyperliquid, users } from "@app/lib/engine";
 import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
+import { DailyStatRow } from "@app/components/copy-trading/daily-stat-row";
 import { AiDecisionCards } from "./ai-decision-cards";
 import { HlVaultsPanel } from "./hl-vaults-panel";
 import { AiLab } from "./ai-lab";
@@ -1379,7 +1380,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         ) : dailyHistory.length === 0 ? (
           <HlEmpty icon={HistoryIcon} title={t("hl.noHistory")} desc={t("hl.noHistoryDesc")} />
         ) : (
-          dailyHistory.map((d) => <SbDailyRow key={`${d.venue}-${d.day}`} d={d} />)
+          dailyHistory.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} />)
         )}
       </TabsContent>
 
@@ -1485,51 +1486,6 @@ function SbPositionRow({
 }
 
 // 历史记录每日一行(Supabase v_wallet_daily_history)。当日盈亏/已实现/浮盈/赢率直接取自该行。
-function SbDailyRow({ d }: { d: WalletDailyRow }) {
-  const { t } = useTranslation();
-  const dayPnl = numOrZero(d.day_pnl_usd);
-  const dayPos = dayPnl >= 0;
-  const realized = numOrZero(d.realized_pnl_day_usd);
-  const realizedPos = realized >= 0;
-  const closes = numOrZero(d.closed_today);
-  const fills = numOrZero(d.fills_today);
-  return (
-    <div className="glass-panel p-3">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[12px] font-bold text-foreground/85 tabular-nums">{d.day}</span>
-        </div>
-        <div className="text-right shrink-0">
-          <div className={cn("text-[12px] font-bold tabular-nums", dayPos ? "text-emerald-400" : "text-red-400")}>
-            {dayPos ? "+" : ""}{fmtUsd(dayPnl)}
-            {d.day_pnl_pct != null && <span className="text-[9px] opacity-70"> ({fmtStatsPct(d.day_pnl_pct)})</span>}
-          </div>
-          <div className="text-[9px] text-muted-foreground/60">{t("hl.statDayPnl", "当日盈亏")}</div>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-1 text-center">
-        <div>
-          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statClosed", "已平仓")}</div>
-          <div className={cn("text-[12px] font-bold tabular-nums", realizedPos ? "text-emerald-400" : "text-red-400")}>
-            {realizedPos ? "+" : ""}{fmtUsd(realized)}
-            {d.realized_day_pct != null && <span className="text-[8px] opacity-70"> ({fmtStatsPct(d.realized_day_pct)})</span>}
-          </div>
-        </div>
-        <div>
-          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.statTrades", "交易单数")}</div>
-          <div className="text-[12px] font-bold tabular-nums text-foreground/80">{fills || closes}</div>
-        </div>
-        <div>
-          <div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.mtdPnl", "当月累计")}</div>
-          <div className={cn("text-[12px] font-bold tabular-nums", numOrZero(d.mtd_pnl_usd) >= 0 ? "text-emerald-400" : "text-red-400")}>
-            {numOrZero(d.mtd_pnl_usd) >= 0 ? "+" : ""}{fmtUsd(numOrZero(d.mtd_pnl_usd))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // 当日平仓明细一行(Supabase v_wallet_today_closed)。仅 tx_hash 有值才给「查看链上记录」
 // 直链 explorer tx 详情页;无 hash 不渲染链接(绝不退回地址列表页 —— 手动行会穿帮)。
 function SbClosedTodayRow({ r, network }: { r: TodayClosedRow; network: HlNetwork; address?: string }) {

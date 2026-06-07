@@ -13,7 +13,6 @@
  */
 
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ListOrdered, CalendarDays, Activity, Layers, History as HistoryIcon, TrendingUp,
@@ -24,8 +23,9 @@ import { SectionEmpty, SectionError, fmtUsd } from "@app/components/copy-trading
 import {
   useTradeRecords, useWalletDailyHistory, useWalletOpenPositions,
   useWalletTodayClosed, useWalletTodayStats,
-  fmtPct, numOrZero, type StatsVenue, type WalletDailyRow,
+  fmtPct, numOrZero, type StatsVenue,
 } from "@app/lib/trading-stats-hooks";
+import { DailyStatRow } from "@app/components/copy-trading/daily-stat-row";
 
 type Tab = "open" | "history" | "todayClosed" | "daily" | "records";
 type VenueFilter = "ALL" | StatsVenue;
@@ -61,10 +61,11 @@ function PnlText({ v, pct, className = "" }: { v: number | null | undefined; pct
 }
 
 /* ── Tab 1: 交易记录(polymarket / hl_mainnet / hl_testnet)──────────────── */
-function RecordsTab({ wallet }: { wallet: string }) {
+function RecordsTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVenue }) {
   const { t } = useTranslation();
   const [venue, setVenue] = useState<VenueFilter>("ALL");
-  const q = useTradeRecords(wallet, venue === "ALL" ? undefined : venue);
+  const effective = venueScope ?? (venue === "ALL" ? undefined : venue);
+  const q = useTradeRecords(wallet, effective);
 
   if (q.isLoading) return <ListSkeleton />;
   if (q.isError) return <SectionError onRetry={() => q.refetch()} />;
@@ -72,17 +73,19 @@ function RecordsTab({ wallet }: { wallet: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {(["ALL", "polymarket", "hl_mainnet", "hl_testnet"] as VenueFilter[]).map((v) => (
-          <button key={v} onClick={() => setVenue(v)}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap ${
-              venue === v ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : "text-muted-foreground hover:text-foreground"
-            }`}
-            style={venue !== v ? { background: "rgba(18,16,12,0.8)", border: "1px solid rgba(34,31,24,1)" } : {}}>
-            {v === "ALL" ? t("copyTrading.statsAllVenues", "全部") : VENUE_LABEL[v as StatsVenue]}
-          </button>
-        ))}
-      </div>
+      {!venueScope && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {(["ALL", "polymarket", "hl_mainnet", "hl_testnet"] as VenueFilter[]).map((v) => (
+            <button key={v} onClick={() => setVenue(v)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap ${
+                venue === v ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : "text-muted-foreground hover:text-foreground"
+              }`}
+              style={venue !== v ? { background: "rgba(18,16,12,0.8)", border: "1px solid rgba(34,31,24,1)" } : {}}>
+              {v === "ALL" ? t("copyTrading.statsAllVenues", "全部") : VENUE_LABEL[v as StatsVenue]}
+            </button>
+          ))}
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <SectionEmpty icon={ListOrdered} title={t("copyTrading.statsNoRecords", "暂无交易记录")} />
@@ -93,7 +96,7 @@ function RecordsTab({ wallet }: { wallet: string }) {
               style={{ background: "rgba(18,16,12,0.98)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex justify-between items-center mb-1.5 gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <VenueChip venue={r.venue} />
+                  {!venueScope && <VenueChip venue={r.venue} />}
                   <span className="text-[13px] font-medium text-foreground/85 truncate">{r.symbol ?? r.market_id ?? "—"}</span>
                 </div>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
@@ -110,9 +113,6 @@ function RecordsTab({ wallet }: { wallet: string }) {
                 </span>
                 <span>{r.happened_at ? new Date(r.happened_at).toLocaleString() : "—"}</span>
               </div>
-              {r.source === "manual" && (
-                <div className="mt-1 text-[10px] text-amber-400/80">{t("copyTrading.statsManualRecord", "手动补录")}</div>
-              )}
             </div>
           ))}
         </div>
@@ -121,55 +121,20 @@ function RecordsTab({ wallet }: { wallet: string }) {
   );
 }
 
-/* ── Tab 2: 每日历史(每项金额 + 百分比 + 当月累计)──────────────────────── */
-function DailyRow({ d }: { d: WalletDailyRow }) {
-  const { t } = useTranslation();
-  return (
-    <div className="rounded-xl px-3.5 py-3 space-y-2"
-      style={{ background: "rgba(18,16,12,0.98)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5">
-          <VenueChip venue={d.venue} />
-          <span className="text-[12px] font-mono text-foreground/80">{d.day}</span>
-        </div>
-        <PnlText v={d.day_pnl_usd} pct={d.day_pnl_pct} className="text-[13px]" />
-      </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-        <Metric label={t("copyTrading.statsPosValue", "持仓金额")}
-          value={<>{fmtUsd(numOrZero(d.position_value_usd))}<span className="ml-1 text-[10px] text-muted-foreground">({d.position_share_pct ?? 0}%)</span></>} />
-        <Metric label={t("copyTrading.statsRealizedDay", "当日实现")}
-          value={<PnlText v={d.realized_pnl_day_usd} pct={d.realized_day_pct} className="text-[11px]" />} />
-        <Metric label={t("copyTrading.statsUnrealized", "当日浮盈亏")}
-          value={<PnlText v={d.unrealized_pnl_usd} pct={d.unrealized_pct} className="text-[11px]" />} />
-        <Metric label={t("copyTrading.statsMtdPnl", "当月累计")}
-          value={<PnlText v={d.mtd_pnl_usd} pct={d.mtd_pnl_pct} className="text-[11px]" />} />
-      </div>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex justify-between items-center gap-2">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="font-mono text-foreground/85 text-right">{value}</span>
-    </div>
-  );
-}
-
-function DailyTab({ wallet }: { wallet: string }) {
+/* ── Tab 2: 每日历史 —— 统一用 DailyStatRow(与 HL 区同设计)────────────── */
+function DailyTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVenue }) {
   const { t } = useTranslation();
   const q = useWalletDailyHistory(wallet);
   if (q.isLoading) return <ListSkeleton />;
   if (q.isError) return <SectionError onRetry={() => q.refetch()} />;
-  const rows = q.data ?? [];
+  const rows = (q.data ?? []).filter((d) => !venueScope || d.venue === venueScope);
   return rows.length === 0
     ? <SectionEmpty icon={CalendarDays} title={t("copyTrading.statsNoDaily", "暂无每日数据(快照每日生成)")} />
-    : <div className="space-y-2">{rows.map((d) => <DailyRow key={`${d.venue}-${d.day}`} d={d} />)}</div>;
+    : <div className="space-y-2">{rows.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} venueLabel={venueScope ? undefined : VENUE_LABEL[d.venue]} />)}</div>;
 }
 
 /* ── Tab 3: 当前持仓(当日统计 + 持仓明细)──────────────────────────────── */
-function OpenTab({ wallet }: { wallet: string }) {
+function OpenTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVenue }) {
   const { t } = useTranslation();
   const statsQ = useWalletTodayStats(wallet);
   const openQ = useWalletOpenPositions(wallet);
@@ -177,14 +142,14 @@ function OpenTab({ wallet }: { wallet: string }) {
   if (statsQ.isLoading || openQ.isLoading) return <ListSkeleton />;
   if (openQ.isError) return <SectionError onRetry={() => openQ.refetch()} />;
 
-  const stats = statsQ.data ?? [];
-  const open = openQ.data ?? [];
+  const stats = (statsQ.data ?? []).filter((d) => !venueScope || d.venue === venueScope);
+  const open = (openQ.data ?? []).filter((p) => !venueScope || p.venue === venueScope);
 
   return (
     <div className="space-y-4">
       {stats.length > 0 && (
         <div className="grid grid-cols-1 gap-2">
-          {stats.map((d) => <DailyRow key={`${d.venue}-${d.day}`} d={d} />)}
+          {stats.map((d) => <DailyStatRow key={`${d.venue}-${d.day}`} d={d} venueLabel={venueScope ? undefined : VENUE_LABEL[d.venue]} />)}
         </div>
       )}
 
@@ -196,7 +161,7 @@ function OpenTab({ wallet }: { wallet: string }) {
             <div key={`${p.venue}-${p.symbol}-${i}`} className="rounded-xl px-3.5 py-2.5 flex justify-between items-center gap-2"
               style={{ background: "rgba(18,16,12,0.98)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center gap-1.5 min-w-0">
-                <VenueChip venue={p.venue} />
+                {!venueScope && <VenueChip venue={p.venue} />}
                 <div className="min-w-0">
                   <div className="text-[12px] font-medium text-foreground/85 truncate">{p.symbol ?? p.market_id}</div>
                   <div className="text-[10px] font-mono text-muted-foreground">
@@ -217,12 +182,12 @@ function OpenTab({ wallet }: { wallet: string }) {
 }
 
 /* ── Tab 4: 当日平仓 / 成交 ─────────────────────────────────────────────── */
-function TodayClosedTab({ wallet }: { wallet: string }) {
+function TodayClosedTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVenue }) {
   const { t } = useTranslation();
   const q = useWalletTodayClosed(wallet);
   if (q.isLoading) return <ListSkeleton />;
   if (q.isError) return <SectionError onRetry={() => q.refetch()} />;
-  const closed = q.data ?? [];
+  const closed = (q.data ?? []).filter((r) => !venueScope || r.venue === venueScope);
 
   return closed.length === 0 ? (
     <SectionEmpty icon={HistoryIcon} title={t("copyTrading.statsNoClosed", "今日暂无平仓")} />
@@ -232,7 +197,7 @@ function TodayClosedTab({ wallet }: { wallet: string }) {
         <div key={i} className="rounded-xl px-3.5 py-2.5 flex justify-between items-center gap-2"
           style={{ background: "rgba(18,16,12,0.98)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center gap-1.5 min-w-0">
-            <VenueChip venue={r.venue} />
+            {!venueScope && <VenueChip venue={r.venue} />}
             <div className="min-w-0">
               <div className="text-[12px] font-medium text-foreground/85 truncate">{r.symbol ?? r.market_id}</div>
               <div className="text-[10px] text-muted-foreground">{r.record_type} · {r.happened_at ? new Date(r.happened_at).toLocaleTimeString() : "—"}</div>
@@ -262,7 +227,7 @@ function ListSkeleton() {
  * stats-page tabs + the overview PM 三-Tab):
  *   当前持仓 / 当日平仓 / 历史记录(每日) / 交易记录(三分类).
  */
-export function TradeRecordsDetail({ wallet }: { wallet?: string }) {
+export function TradeRecordsDetail({ wallet, venueScope }: { wallet?: string; venueScope?: StatsVenue }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("open");
 
@@ -293,13 +258,13 @@ export function TradeRecordsDetail({ wallet }: { wallet?: string }) {
           <p className="text-[12px] text-muted-foreground">{t("copyTrading.statsConnectWallet", "连接钱包查看你的交易数据")}</p>
         </PremiumCard>
       ) : tab === "open" ? (
-        <OpenTab wallet={wallet} />
+        <OpenTab wallet={wallet} venueScope={venueScope} />
       ) : tab === "todayClosed" ? (
-        <TodayClosedTab wallet={wallet} />
+        <TodayClosedTab wallet={wallet} venueScope={venueScope} />
       ) : tab === "history" ? (
-        <DailyTab wallet={wallet} />
+        <DailyTab wallet={wallet} venueScope={venueScope} />
       ) : (
-        <RecordsTab wallet={wallet} />
+        <RecordsTab wallet={wallet} venueScope={venueScope} />
       )}
     </div>
   );

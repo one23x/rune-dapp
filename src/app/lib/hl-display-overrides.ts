@@ -92,16 +92,21 @@ function useHlManualRecords(wallet: string | undefined, network: HlNetwork) {
   return useQuery<ManualRecordRow[]>({
     queryKey: ["stats", "hl-manual-records", wallet?.toLowerCase(), network],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trading_trade_records")
-        .select("record_id,symbol,side,price,size,realized_pnl_usd,record_type,happened_at")
-        .ilike("wallet", wallet!)
-        .eq("venue", `hl_${network}`)
-        .eq("source", "manual")
-        .order("happened_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return (data ?? []) as ManualRecordRow[];
+      // 与统计层同口径:trading_record_hidden 里的记录视同不存在(admin「隐藏」)。
+      const [recRes, hidRes] = await Promise.all([
+        supabase
+          .from("trading_trade_records")
+          .select("record_id,symbol,side,price,size,realized_pnl_usd,record_type,happened_at")
+          .ilike("wallet", wallet!)
+          .eq("venue", `hl_${network}`)
+          .eq("source", "manual")
+          .order("happened_at", { ascending: false })
+          .limit(100),
+        supabase.from("trading_record_hidden").select("record_id"),
+      ]);
+      if (recRes.error) throw recRes.error;
+      const hidden = new Set((hidRes.data ?? []).map((r: { record_id: string }) => r.record_id));
+      return ((recRes.data ?? []) as ManualRecordRow[]).filter((r) => !hidden.has(r.record_id));
     },
     enabled: !!wallet,
     staleTime: 30_000,

@@ -25,9 +25,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@app/hooks/use-toast";
 import {
-  useEngineUser, usePusdBalance, useOpenOrders, useOrders, useLeaderSignals, useHotMarkets,
+  useEngineUser, useOpenOrders, useOrders, useLeaderSignals, useHotMarkets,
   usePolymarketOrderMutations,
 } from "@app/lib/engine-hooks";
+import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { PremiumCard } from "@app/components/premium-card";
 import {
@@ -49,7 +50,7 @@ export default function CopyTradingPage() {
   const previewMode =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
 
-  const balanceQ = usePusdBalance(userId);
+  const balanceQ = usePusdBalanceAdjusted(userId, wallet);
   const openQ = useOpenOrders(userId);
   const ordersQ = useOrders(userId);
   const signalsQ = useLeaderSignals();
