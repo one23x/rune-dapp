@@ -1,0 +1,134 @@
+// hl-account-state.mjs — Hyperliquid 账户现金状态 → Supabase trading_hl_account_state。
+// 跑在美东生产机(与 hl-marks/sync 同目录,复用同一 .env 的 SUPABASE_DB_URL)。
+// 直接 POST HL 公共 info API({type:"clearinghouseState"}),免费、不经引擎、不受引擎 cap。
+// pm2 单实例,每 ACCT_INTERVAL_MS(默认 120s)对去重后的 (address, network) 全量 upsert。
+//
+// 解析查询地址集:trading_hl_copy_subscriptions(active) join trading_users,
+//   HL 账户地址 = hl_mode='agent' ? hl_master_address : engine_eoa_address(custodial),
+//   network 取 sub.network('mainnet'/'testnet')。按 (address, network) 去重。
+// env:
+//   SUPABASE_DB_URL   postgresql://postgres:***@db.<ref>.supabase.co:5432/postgres
+//   ACCT_INTERVAL_MS  默认 120000(2 分钟);ONCE=1 跑一次即退出。
+//   ACCT_CONCURRENCY  并发上限,默认 5。
+//   ACCT_SUB_STATUSES 纳入的订阅状态(逗号分隔),默认 'active'。生产建议 'active,paused'
+//                     以覆盖 paused-但已注资 的账户(admin 余额面板也要显示),成本极小。
+import pg from "pg";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const __dir = dirname(fileURLToPath(import.meta.url));
+try {
+  for (const raw of readFileSync(resolve(__dir, ".env"), "utf8").split("\n")) {
+    const l = raw.trim(); if (!l || l.startsWith("#")) continue;
+    const i = l.indexOf("="); if (i === -1) continue;
+    const k = l.slice(0, i).trim(); if (!(k in process.env)) process.env[k] = l.slice(i + 1).trim();
+  }
+} catch {}
+
+const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
+const INTERVAL_MS = Number(process.env.ACCT_INTERVAL_MS || 120000);
+const CONCURRENCY = Math.max(1, Number(process.env.ACCT_CONCURRENCY || 5));
+const SUB_STATUSES = (process.env.ACCT_SUB_STATUSES || "active")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+const ONCE = process.env.ONCE === "1";
+if (!SUPABASE_DB_URL) { console.error("FATAL: need SUPABASE_DB_URL"); process.exit(1); }
+
+const INFO_HOST = {
+  mainnet: "https://api.hyperliquid.xyz/info",
+  testnet: "https://api.hyperliquid-testnet.xyz/info",
+};
+
+const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// 单地址最多重试一次(应对 HL info 偶发 429),退避 800ms。
+async function fetchStateRetry(wallet, network) {
+  try { return await fetchState(wallet, network); }
+  catch (e) { if (!/HTTP 429/.test(e.message)) throw e; await sleep(800); return fetchState(wallet, network); }
+}
+
+// 从 Supabase 读去重后的 (address, network)。地址按 dapp 口径解析,统一小写。
+async function loadTargets(dst) {
+  const { rows } = await dst.query(`
+    select distinct
+      lower(case when u.hl_mode = 'agent' then u.hl_master_address else u.engine_eoa_address end) as wallet,
+      s.network as network
+    from public.trading_hl_copy_subscriptions s
+    join public.trading_users u on u.id = s.user_id
+    where s.status = any($1::text[])
+      and (case when u.hl_mode = 'agent' then u.hl_master_address else u.engine_eoa_address end) is not null
+      and s.network in ('mainnet','testnet')
+  `, [SUB_STATUSES]);
+  return rows.filter((r) => r.wallet && r.wallet.startsWith("0x"));
+}
+
+async function fetchState(address, network) {
+  const url = INFO_HOST[network];
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "clearinghouseState", user: address }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const d = await res.json();
+  const ms = d.marginSummary || {};
+  return {
+    account_value_usd: num(ms.accountValue),
+    withdrawable_usd: num(d.withdrawable),
+    margin_used_usd: num(ms.totalMarginUsed),
+    total_ntl_pos_usd: num(ms.totalNtlPos),
+  };
+}
+
+async function upsertOne(dst, wallet, network, s) {
+  await dst.query(
+    `insert into public.trading_hl_account_state
+       (wallet, network, account_value_usd, withdrawable_usd, margin_used_usd, total_ntl_pos_usd, as_of)
+     values ($1,$2,$3,$4,$5,$6,now())
+     on conflict (wallet, network) do update set
+       account_value_usd = excluded.account_value_usd,
+       withdrawable_usd  = excluded.withdrawable_usd,
+       margin_used_usd   = excluded.margin_used_usd,
+       total_ntl_pos_usd = excluded.total_ntl_pos_usd,
+       as_of             = now()`,
+    [wallet, network, s.account_value_usd, s.withdrawable_usd, s.margin_used_usd, s.total_ntl_pos_usd],
+  );
+}
+
+// 小并发池跑 HTTP 拉取(≤CONCURRENCY 并发,单地址失败 try/catch 跳过不中断整轮);
+// DB upsert 全程串行走单连接(避免 pg 单 client 并发查询告警)。
+async function fetchAll(targets) {
+  const results = []; let i = 0, fail = 0;
+  async function next() {
+    while (i < targets.length) {
+      const t = targets[i++];
+      try { results.push({ ...t, state: await fetchStateRetry(t.wallet, t.network) }); }
+      catch (e) { fail++; console.error(`  skip ${t.wallet}/${t.network}: ${e.message}`); }
+      await sleep(120); // 轻微间隔,HL info 公共 API 友好限速
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, next));
+  return { results, fail };
+}
+
+async function runOnce() {
+  const t0 = Date.now();
+  const dst = new pg.Client({ connectionString: SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
+  await dst.connect();
+  try {
+    const targets = await loadTargets(dst);
+    const { results, fail } = await fetchAll(targets);
+    for (const { wallet, network, state } of results) await upsertOne(dst, wallet, network, state);
+    console.log(`[${new Date().toISOString()}] acct ${Date.now() - t0}ms`,
+      JSON.stringify({ targets: targets.length, ok: results.length, fail }));
+  } finally {
+    await dst.end().catch(() => {});
+  }
+}
+
+async function loop() {
+  try { await runOnce(); } catch (e) { console.error(`[${new Date().toISOString()}] acct error:`, e.message); }
+  if (ONCE) return;
+  setTimeout(loop, INTERVAL_MS);
+}
+loop();
