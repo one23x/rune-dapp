@@ -25,3 +25,4 @@
 **L010 | 双机/多会话部署互盖** → 多个出口对同一 CF 项目/生产机部署,后部署者盖掉前者 → dapp:部署前 `wrangler pages deployment list`;引擎:生产代码备份 GitHub `prod-live` 分支,生产机禁 `git pull main`;变更冻结窗口 → **部署出口收敛到一个,部署前先看"最近谁部过"。**
 
 **L011 | AA 代付的边界** → 钱包抽象只代付手续费,变不出本金:gas-grant 发 POL 必须 0x36f8 真持有 POL → **"无 gas 体验"≠"无成本",弹药钱包要有余额监控(已入晨检)。**
+**L012 | 多会话同仓开发 = 部署互盖的新形态** → 同一天:另一会话在本机 RUNE workspace 重做 admin 交易账户页推上 GitHub 并部署;本会话在 SG 检出(不含其提交)上另写一版并部署 → 互盖两次(对方盖 dapp b295bca 时我没察觉;我盖 admin 时以为线上还是 16h 前旧版)。修复 = 以 GitHub main 为基底功能合并(各取所长:engine 代理余额/批量开户 + 复制×N/recalc 联动/user_id 修复)→ **动手前先 `git fetch origin` 比对;部署前 deployment list 的 Source commit 必须在本地历史里;同模块开工前在 PROGRESS 流水占座声明。**
