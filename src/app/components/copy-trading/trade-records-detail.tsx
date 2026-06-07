@@ -125,13 +125,27 @@ function RecordsTab({ wallet, venueScope }: { wallet: string; venueScope?: Stats
                   : "bg-white/5 text-muted-foreground"
                 }`}>{r.side ?? r.record_type}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] text-muted-foreground">
-                <span className="font-mono">
+              <div className="flex justify-between items-center text-[11px] text-muted-foreground gap-2">
+                <span className="font-mono min-w-0 truncate">
                   {r.price != null && `$${Number(r.price).toLocaleString()}`}
                   {r.size != null && ` × ${Number(r.size).toLocaleString()}`}
                   {r.notional_usd != null && ` = ${fmtUsd(Number(r.notional_usd))}`}
                 </span>
-                <span>{r.happened_at ? new Date(r.happened_at).toLocaleString() : "—"}</span>
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span>{r.happened_at ? new Date(r.happened_at).toLocaleString() : "—"}</span>
+                  {/* 链上详情:仅有 tx_hash 才渲染(HL → explorer/tx;PM 恒 null 不显示,防退回地址页穿帮)。 */}
+                  {(() => {
+                    const tx = r.tx_hash ? explorerTx(r.tx_hash, r.venue) : null;
+                    return tx ? (
+                      <a href={tx} target="_blank" rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={t("hl.viewOnChain", "查看链上记录")} title={t("hl.viewOnChain", "查看链上记录")}
+                        className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground/60 hover:text-amber-300 hover:bg-white/5 transition">
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null;
+                  })()}
+                </span>
               </div>
             </div>
           ))}
