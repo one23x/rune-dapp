@@ -1345,6 +1345,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         venueScope={venue}
         onClosePosition={(coin) => void onClosePosition(coin)}
         closingSymbol={closingCoin}
+        hlAddress={hlAddress ?? acct?.address}
       />
     </div>
   );

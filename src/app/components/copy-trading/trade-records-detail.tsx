@@ -68,6 +68,12 @@ function explorerTx(hash: string, venue: StatsVenue): string | null {
   if (venue === "hl_testnet") return `https://app.hyperliquid-testnet.xyz/explorer/tx/${hash}`;
   return null;
 }
+/** HL 账户 explorer 页 —— 仅给「真实」持仓行用(地址页有真实持仓,能对上;手动行不能给,会穿帮)。 */
+function explorerAddr(addr: string, venue: StatsVenue): string | null {
+  if (venue === "hl_mainnet") return `https://app.hyperliquid.xyz/explorer/address/${addr}`;
+  if (venue === "hl_testnet") return `https://app.hyperliquid-testnet.xyz/explorer/address/${addr}`;
+  return null;
+}
 
 function PnlText({ v, pct, className = "" }: { v: number | null | undefined; pct?: number | null; className?: string }) {
   const n = numOrZero(v);
@@ -168,9 +174,10 @@ function DailyTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVe
 }
 
 /* ── Tab 3: 当前持仓(当日统计 + 持仓明细)──────────────────────────────── */
-function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol }: {
+function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress }: {
   wallet: string; venueScope?: StatsVenue;
   onClosePosition?: (symbol: string) => void; closingSymbol?: string | null;
+  hlAddress?: string;
 }) {
   const { t } = useTranslation();
   const statsQ = useWalletTodayStats(wallet);
@@ -201,6 +208,7 @@ function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol }: {
               showVenue={!venueScope}
               onClose={onClosePosition}
               closing={closingSymbol != null && closingSymbol === p.symbol}
+              hlAddress={hlAddress}
             />
           ))}
         </div>
@@ -259,11 +267,12 @@ function TodayClosedTab({ wallet, venueScope }: { wallet: string; venueScope?: S
 
 /** 当前持仓一行:LONG/SHORT 徽章 + 浮盈$/ROE% + 三列(数量/入场价/持仓价值)。
  *  仅真实行 + 传入 onClose 时给「平仓」(双击确认);tx_hash 仅 HL 给详情页直链。 */
-function PositionCard({ p, showVenue, onClose, closing }: {
+function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
   p: import("@app/lib/trading-stats-hooks").OpenPositionRow;
   showVenue?: boolean;
   onClose?: (symbol: string) => void;
   closing?: boolean;
+  hlAddress?: string;
 }) {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
@@ -274,7 +283,13 @@ function PositionCard({ p, showVenue, onClose, closing }: {
   const upnl = numOrZero(p.unrealized_pnl_usd);
   const roe = cost > 0 ? (upnl / cost) * 100 : 0;
   const pos = upnl >= 0;
-  const tx = p.tx_hash ? explorerTx(p.tx_hash, p.venue) : null;
+  // 链上详情:① 有 tx_hash → tx 详情页(手动单可填真实 tx);② 真实 HL 持仓(无单笔 tx)
+  //          → 该账户 explorer 页(地址页有真实持仓,能对上)。手动行不回退地址页(防穿帮)。
+  const tx = p.tx_hash
+    ? explorerTx(p.tx_hash, p.venue)
+    : (!p.is_manual && hlAddress && (p.venue === "hl_mainnet" || p.venue === "hl_testnet")
+        ? explorerAddr(hlAddress, p.venue)
+        : null);
   const closable = !!onClose && !!p.symbol && !p.is_manual;
   return (
     <div className="glass-panel p-3">
@@ -372,11 +387,13 @@ function ListSkeleton() {
  * stats-page tabs + the overview PM 三-Tab):
  *   当前持仓 / 当日平仓 / 历史记录(每日) / 交易记录(三分类).
  */
-export function TradeRecordsDetail({ wallet, venueScope, onClosePosition, closingSymbol }: {
+export function TradeRecordsDetail({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress }: {
   wallet?: string; venueScope?: StatsVenue;
   /** 传入即在真实持仓行显示「平仓」按钮(双击确认)— HL 区用引擎市价平仓。 */
   onClosePosition?: (symbol: string) => void;
   closingSymbol?: string | null;
+  /** HL 账户地址(custodial EOA / agent master)— 真实持仓行回退到 explorer 账户页用。 */
+  hlAddress?: string;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("open");
@@ -408,7 +425,7 @@ export function TradeRecordsDetail({ wallet, venueScope, onClosePosition, closin
           <p className="text-[12px] text-muted-foreground">{t("copyTrading.statsConnectWallet", "连接钱包查看你的交易数据")}</p>
         </PremiumCard>
       ) : tab === "open" ? (
-        <OpenTab wallet={wallet} venueScope={venueScope} onClosePosition={onClosePosition} closingSymbol={closingSymbol} />
+        <OpenTab wallet={wallet} venueScope={venueScope} onClosePosition={onClosePosition} closingSymbol={closingSymbol} hlAddress={hlAddress} />
       ) : tab === "todayClosed" ? (
         <TodayClosedTab wallet={wallet} venueScope={venueScope} />
       ) : tab === "history" ? (
