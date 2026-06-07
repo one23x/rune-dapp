@@ -57,7 +57,10 @@ export const bscTestnetReliable: Chain = defineChain({
 export const polygon: Chain = defineChain({
   id: 137,
   name: "Polygon",
-  rpc: (import.meta.env.VITE_POLYGON_RPC as string | undefined) ?? "https://polygon-rpc.com",
+  // polygon-rpc.com 已停用(返回 "API key disabled / tenant disabled"),导致所有
+  // Polygon 读取(连接钱包 pUSD 余额、approve/transfer 充值)失败 → 误报"余额不足"。
+  // 换成稳定的无密钥公共 RPC。可被 VITE_POLYGON_RPC 覆盖。
+  rpc: (import.meta.env.VITE_POLYGON_RPC as string | undefined) ?? "https://polygon-bor-rpc.publicnode.com",
   nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
   blockExplorers: [{ name: "PolygonScan", url: "https://polygonscan.com", apiUrl: "https://api.polygonscan.com/api" }],
 });
