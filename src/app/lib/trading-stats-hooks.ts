@@ -3,15 +3,19 @@
  * (scripts/trading-sync/stats-schema.sql) — the views the frontend reads
  * instead of the raw synced trading_* tables or engine endpoints:
  *
- *   v_trade_records        交易记录(venue: polymarket / hl_mainnet / hl_testnet)
- *   v_wallet_daily_history 按钱包·历史每日(金额 + 百分比 + 当月累计)
- *   v_wallet_open_positions 按钱包·当前持仓明细
- *   v_wallet_today_closed  按钱包·当日平仓/成交
- *   v_wallet_today_stats   按钱包·当日统计
- *   v_loss_monitor_today   当日浮亏/实现亏损账户监控(全账户)
+ *   v_trade_records          交易记录(venue: polymarket / hl_mainnet / hl_testnet)
+ *   v_wallet_daily_history   按钱包·历史每日(金额 + 百分比 + 当月累计)
+ *   v_wallet_open_positions  按钱包·当前持仓明细
+ *   v_wallet_today_closed    按钱包·当日平仓/成交
+ *   v_wallet_today_stats     按钱包·当日统计
+ *   v_wallet_account_summary 按 (wallet, venue)·账户汇总(净值/保证金/可用,admin 覆盖优先)
+ *   v_loss_monitor_today     当日浮亏/实现亏损账户监控(全账户)
  *
- * Wallet matching is case-insensitive (`ilike`) — DB stores checksummed
- * smart_wallet_address while thirdweb may hand back any casing.
+ * ⚠ 归属匹配(根因修复):会员**连接登录钱包**(master)≠ 引擎派生的 smart_wallet,
+ * 而这些视图的 `wallet` 列 = smart_wallet → 只按 `wallet` 匹配会全空。视图末尾已补
+ * `login_wallet`(= trading_users.hl_master_address,会员登录钱包)与 `engine_eoa_address`,
+ * 因此按连接钱包查 = 对 {wallet, login_wallet, engine_eoa_address} 任一做大小写不敏感
+ * 等值匹配(PostgREST `.or()` + `ilike.<addr>`,地址是完整 0x hex → 即等值忽略大小写)。
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -78,6 +82,12 @@ export interface OpenPositionRow {
   /** admin 手动行标记(视图尾列)。dapp 的「平仓」按钮只给真实行 —— 手动行
    *  没有引擎仓位可平,平它只能走 admin 调控台。 */
   is_manual?: boolean | null;
+  /** 杠杆(真实/手动行有值;PM custodial=NULL)。仅有值才渲染杠杆徽章。视图尾列。 */
+  leverage?: number | null;
+  /** 会员登录钱包(= trading_users.hl_master_address);视图尾列,用于按连接钱包匹配。 */
+  login_wallet?: string | null;
+  /** 引擎托管 EOA 地址;视图尾列,用于按连接钱包匹配。 */
+  engine_eoa_address?: string | null;
 }
 
 export interface TodayClosedRow {
@@ -114,6 +124,31 @@ export interface LossMonitorRow {
 
 const num = (v: unknown): number | null => (v == null ? null : Number(v));
 
+/** 按 (wallet, venue) 聚合的账户汇总。admin 覆盖优先 —— account_value_usd 未设 = NULL,
+ *  前端必须回退引擎实时现金;available/margin_ratio 同理。视图 v_wallet_account_summary。 */
+export interface WalletAccountSummaryRow {
+  wallet: string;
+  /** 会员登录钱包(= trading_users.hl_master_address)。 */
+  login_wallet: string | null;
+  engine_eoa_address: string | null;
+  venue: StatsVenue;
+  /** admin 余额覆盖值;未设 = NULL → 前端回退引擎实时现金。 */
+  account_value_usd: number | null;
+  position_value_usd: number | null;
+  unrealized_pnl_usd: number | null;
+  /** Σ(名义/leverage)。 */
+  margin_used_usd: number | null;
+  /** account_value − margin;account_value 为空 → NULL,回退引擎可提。 */
+  available_usd: number | null;
+  margin_ratio_pct: number | null;
+}
+
+/** 按连接钱包匹配 {wallet, login_wallet, engine_eoa_address} 任一(大小写不敏感等值)。
+ *  地址是完整 0x hex,直接 `ilike.<addr>` = 等值忽略大小写;**不要**加 `*` 通配。
+ *  PostgREST `.or()` 取单一字符串、逗号分隔条件;0x+hex 不含逗号/特殊字符,安全。 */
+const walletOrFilter = (w: string): string =>
+  `wallet.ilike.${w},login_wallet.ilike.${w},engine_eoa_address.ilike.${w}`;
+
 /** 交易记录(可按 venue 过滤;不传 venue = 全部三类)。 */
 export function useTradeRecords(wallet: string | undefined, venue?: StatsVenue, limit = 100) {
   return useQuery<TradeRecord[]>({
@@ -122,7 +157,7 @@ export function useTradeRecords(wallet: string | undefined, venue?: StatsVenue, 
       let q = supabase
         .from("v_trade_records")
         .select("*")
-        .ilike("wallet", wallet!)
+        .or(walletOrFilter(wallet!))
         .order("happened_at", { ascending: false })
         .limit(limit);
       if (venue) q = q.eq("venue", venue);
@@ -143,7 +178,7 @@ export function useWalletDailyHistory(wallet: string | undefined, limit = 90) {
       const { data, error } = await supabase
         .from("v_wallet_daily_history")
         .select("*")
-        .ilike("wallet", wallet!)
+        .or(walletOrFilter(wallet!))
         .order("day", { ascending: false })
         .limit(limit);
       if (error) throw error;
@@ -162,7 +197,7 @@ export function useWalletOpenPositions(wallet: string | undefined) {
       const { data, error } = await supabase
         .from("v_wallet_open_positions")
         .select("*")
-        .ilike("wallet", wallet!)
+        .or(walletOrFilter(wallet!))
         .order("position_value_usd", { ascending: false });
       if (error) throw error;
       return (data ?? []) as OpenPositionRow[];
@@ -181,7 +216,7 @@ export function useWalletTodayClosed(wallet: string | undefined) {
       const { data, error } = await supabase
         .from("v_wallet_today_closed")
         .select("*")
-        .ilike("wallet", wallet!)
+        .or(walletOrFilter(wallet!))
         .order("happened_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as TodayClosedRow[];
@@ -200,9 +235,29 @@ export function useWalletTodayStats(wallet: string | undefined) {
       const { data, error } = await supabase
         .from("v_wallet_today_stats")
         .select("*")
-        .ilike("wallet", wallet!);
+        .or(walletOrFilter(wallet!));
       if (error) throw error;
       return (data ?? []) as WalletDailyRow[];
+    },
+    enabled: !!wallet,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+/** 按 (wallet, venue) 的账户汇总(净值/保证金/可用/保证金率)。
+ *  admin 覆盖优先:account_value_usd / available_usd / margin_ratio_pct 为 NULL 时,
+ *  调用方必须回退引擎实时现金(acct.accountValue / acct.withdrawable / acct.marginUsed)。 */
+export function useWalletAccountSummary(wallet: string | undefined) {
+  return useQuery<WalletAccountSummaryRow[]>({
+    queryKey: ["stats", "account-summary", wallet?.toLowerCase()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("v_wallet_account_summary")
+        .select("*")
+        .or(walletOrFilter(wallet!));
+      if (error) throw error;
+      return (data ?? []) as WalletAccountSummaryRow[];
     },
     enabled: !!wallet,
     staleTime: 30_000,

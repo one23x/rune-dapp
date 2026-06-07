@@ -50,6 +50,7 @@ import {
 import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import {
   useWalletOpenPositions, useWalletTodayClosed, useWalletDailyHistory, useWalletTodayStats,
+  useWalletAccountSummary,
   fmtPct as fmtStatsPct, numOrZero,
   type StatsVenue, type OpenPositionRow, type TodayClosedRow, type WalletDailyRow,
 } from "@app/lib/trading-stats-hooks";
@@ -1302,6 +1303,8 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   // 顶部统计台的盈亏类(当日/已平仓/持仓价值/未实现)读 Supabase 当日视图(= overwrite 后展示值),
   // 与下方列表口径统一;现金类(保证金/可用)才取引擎实时账户(Supabase 无现金概念)。
   const todayStatsQ = useWalletTodayStats(wallet);
+  // 账户汇总(交易所式:净值/保证金/可用/保证金率)—— admin 覆盖优先,NULL 回退引擎实时现金。
+  const summaryQ = useWalletAccountSummary(wallet);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
@@ -1324,9 +1327,17 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   }
 
   const acct = acctQ.data;
-  const av = acct?.accountValue ?? 0;
+  // 该 venue 的账户汇总(Supabase v_wallet_account_summary,admin 覆盖优先)。
+  const summary = (summaryQ.data ?? []).find((s) => s.venue === venue);
+  // 净值:admin 覆盖(account_value_usd)优先,NULL 回退引擎实时净值。
+  const av = summary?.account_value_usd ?? acct?.accountValue ?? 0;
   // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
   const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
+  // 保证金 / 可用:account_summary 优先(?? 仅在 NULL 时回退引擎实时现金,0 是有效值不回退)。
+  const marginUsed = summary?.margin_used_usd ?? acct?.marginUsed ?? 0;
+  const available = summary?.available_usd ?? acct?.withdrawable ?? 0;
+  // 保证金率(margin_ratio_pct):account_summary 有值才显示;否则用本地 margin/净值 兜底。
+  const marginRatio = summary?.margin_ratio_pct ?? pctOfAv(marginUsed);
   // 该 venue 的当日统计行(Supabase v_wallet_today_stats,展示值 = coalesce(manual,真实))。
   const today = (todayStatsQ.data ?? []).find((d) => d.venue === venue);
   // 顶部"持仓价值"取自合并层 acct.positions(引擎+overrides);列表在共享组件内自取 Supabase。
@@ -1341,8 +1352,10 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
           <StatCell label={t("hl.todayPnl", "当日盈亏")} value={numOrZero(today?.day_pnl_usd)} pct={today?.day_pnl_pct ?? null} tone="pnl" />
           <StatCell label={t("hl.realized", "已平仓")} value={numOrZero(today?.realized_pnl_day_usd)} pct={today?.realized_day_pct ?? null} tone="pnl" />
           <StatCell label={t("hl.statHoldValue", "持仓价值")} value={numOrZero(today?.position_value_usd)} pct={today?.position_share_pct ?? null} tone="neutral" />
-          <StatCell label={t("hl.marginUsed", "保证金")} value={acct?.marginUsed ?? 0} pct={pctOfAv(acct?.marginUsed ?? 0)} tone="neutral" />
-          <StatCell label={t("hl.available", "可用")} value={acct?.withdrawable ?? 0} pct={pctOfAv(acct?.withdrawable ?? 0)} tone="neutral" />
+          {/* 保证金 / 可用:account_summary 优先(admin 覆盖),NULL 回退引擎实时现金;
+              保证金率(margin_ratio_pct)优先,无则用本地 margin/净值 占比兜底。 */}
+          <StatCell label={t("hl.marginUsed", "保证金")} value={marginUsed} pct={marginRatio} tone="neutral" />
+          <StatCell label={t("hl.available", "可用")} value={available} pct={pctOfAv(available)} tone="neutral" />
           <StatCell label={t("hl.unrealized", "未实现盈亏")} value={numOrZero(today?.unrealized_pnl_usd)} pct={today?.unrealized_pct ?? null} tone="pnl" />
         </div>
       </div>

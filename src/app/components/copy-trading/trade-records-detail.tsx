@@ -283,6 +283,10 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
   const upnl = numOrZero(p.unrealized_pnl_usd);
   const roe = cost > 0 ? (upnl / cost) * 100 : 0;
   const pos = upnl >= 0;
+  // 交易所式增强:杠杆徽章(真实/手动行有值;PM custodial=NULL → 不显示)+ 每仓保证金(名义/leverage)。
+  const lev = p.leverage != null && Number(p.leverage) > 0 ? Number(p.leverage) : null;
+  const posValue = numOrZero(p.position_value_usd);
+  const positionMargin = lev != null && posValue > 0 ? posValue / lev : null;
   // 链上详情:① 有 tx_hash → tx 详情页(手动单可填真实 tx);② 真实 HL 持仓(无单笔 tx)
   //          → 该账户 explorer 页(地址页有真实持仓,能对上)。手动行不回退地址页(防穿帮)。
   const tx = p.tx_hash
@@ -300,6 +304,12 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
           <span className={`inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0 ${long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}>
             {long ? "LONG" : "SHORT"}
           </span>
+          {/* 杠杆徽章(交易所式)—— 仅有 leverage 的真实/手动行显示,如 10x。 */}
+          {lev != null && (
+            <span className="font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0 text-amber-300 bg-amber-500/10">
+              {lev}x
+            </span>
+          )}
           {tx && (
             <a href={tx} target="_blank" rel="noopener noreferrer"
               aria-label={t("hl.viewOnExplorer", "区块链浏览器查看")} title={t("hl.viewOnExplorer", "区块链浏览器查看")}
@@ -316,8 +326,15 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
       <div className="grid grid-cols-3 gap-1 text-center">
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.size", "数量")}</div><div className="text-[12px] font-bold tabular-nums">{Math.abs(size).toLocaleString()}</div></div>
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry", "入场价")}</div><div className="text-[12px] font-bold tabular-nums">{p.entry_px != null ? Number(p.entry_px).toLocaleString() : "—"}</div></div>
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value", "持仓价值")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(numOrZero(p.position_value_usd))}</div></div>
+        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value", "持仓价值")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(posValue)}</div></div>
       </div>
+      {/* 每仓保证金(交易所式)—— 名义/杠杆;仅 leverage 有值时显示,不破坏无杠杆行布局。 */}
+      {positionMargin != null && (
+        <div className="mt-1.5 flex items-center justify-between text-[10px]">
+          <span className="text-muted-foreground uppercase tracking-wide">{t("hl.positionMargin", "保证金")}</span>
+          <span className="font-bold tabular-nums text-foreground/80">{fmtUsd(positionMargin)}</span>
+        </div>
+      )}
       {closable && (
         <button
           type="button"
