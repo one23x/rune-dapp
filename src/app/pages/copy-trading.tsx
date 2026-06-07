@@ -25,10 +25,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@app/hooks/use-toast";
 import {
-  useEngineUser, useOpenOrders, useOrders, useLeaderSignals, useHotMarkets,
+  useEngineUser, useOrders, useLeaderSignals, useHotMarkets,
   usePolymarketOrderMutations,
 } from "@app/lib/engine-hooks";
 import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
+import { useWalletTodayStats, numOrZero } from "@app/lib/trading-stats-hooks";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { PremiumCard } from "@app/components/premium-card";
 import {
@@ -51,7 +52,6 @@ export default function CopyTradingPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
 
   const balanceQ = usePusdBalanceAdjusted(userId, wallet);
-  const openQ = useOpenOrders(userId);
   const ordersQ = useOrders(userId);
   const signalsQ = useLeaderSignals();
   const hotQ = useHotMarkets();
@@ -101,23 +101,32 @@ export default function CopyTradingPage() {
 
   const balance = pusdAmount(balanceQ.data);
 
-  const openOrders = useMemo(() => asArray(openQ.data).map(normalizeOrder), [openQ.data]);
-  const allOrders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
-  const openNotional = openOrders.reduce((s, o) => s + o.notional, 0);
+  // 总览统计走 Supabase show 合并层(v_wallet_today_stats,与 /copy-trading/stats 同口径,
+  // 跨 PM/HL 主测网汇总,反映 admin 复制单)—— 不再用裸引擎 PM 订单(useOpenOrders/useOrders)
+  // 那条口径只看真实 PM 订单,与 stats 页打架。持仓数/名义/当日盈亏/已实现 全来自当日统计视图。
+  const todayStatsQ = useWalletTodayStats(wallet);
+  const todayRows = todayStatsQ.data ?? [];
+  const openPositions = todayRows.reduce((s, r) => s + numOrZero(r.open_positions), 0);
+  const openNotional = todayRows.reduce((s, r) => s + numOrZero(r.position_value_usd), 0);
+  // 已实现 = 各 venue 当日已实现盈亏之和(与 stats 页同口径);替代裸引擎已平仓订单求和。
+  const realizedPnl = todayRows.reduce((s, r) => s + numOrZero(r.realized_pnl_day_usd), 0);
+  // 当日成交笔数 = 各 venue fills_today 之和(Supabase 当日统计;替代裸引擎 allOrders.length)。
+  const tradesToday = todayRows.reduce((s, r) => s + numOrZero(r.fills_today), 0);
 
-  const closed = allOrders.filter(isClosed);
-  const withPnl = closed.filter((o) => o.pnl != null);
+  // 胜率 Supabase 视图暂无对应字段 —— 保留裸引擎已平仓订单口径(仅此一项),
+  // 其余统计已全部切到 Supabase show 合并层。
+  const allOrders = useMemo(() => asArray(ordersQ.data).map(normalizeOrder), [ordersQ.data]);
+  const withPnl = allOrders.filter(isClosed).filter((o) => o.pnl != null);
   const wins = withPnl.filter((o) => (o.pnl ?? 0) > 0).length;
   const winRate = withPnl.length > 0 ? (wins / withPnl.length) * 100 : 0;
-  const realizedPnl = withPnl.reduce((s, o) => s + (o.pnl ?? 0), 0);
 
   const signalCount = asArray(signalsQ.data).length + asArray(hotQ.data).length;
-  const statsLoading = balanceQ.isLoading || openQ.isLoading || ordersQ.isLoading;
+  const statsLoading = balanceQ.isLoading || todayStatsQ.isLoading;
 
   // Live status pill — reflects the real account-data connection instead of
   // asserting "active" unconditionally. error → 连接异常 (red); still
   // loading/fetching → 同步中 (amber); data resolved → 已激活 (green).
-  const dataError = userQ.isError || balanceQ.isError || openQ.isError || ordersQ.isError;
+  const dataError = userQ.isError || balanceQ.isError || todayStatsQ.isError || ordersQ.isError;
   const dataSyncing = userQ.isLoading || statsLoading;
   const status: "error" | "syncing" | "active" =
     dataError ? "error" : dataSyncing ? "syncing" : "active";
@@ -250,12 +259,12 @@ export default function CopyTradingPage() {
               Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)
             ) : (
               <>
-                <StatCell label={t("copyTrading.statOpenPositions")} value={String(openOrders.length)} />
+                <StatCell label={t("copyTrading.statOpenPositions")} value={String(openPositions)} />
                 <StatCell label={t("copyTrading.statNotional")} value={fmtUsd(openNotional)} />
                 <StatCell label={t("copyTrading.statWinRate")} value={`${winRate.toFixed(0)}%`} accent={winRate >= 55 ? "#10b981" : undefined} />
                 <StatCell label={t("copyTrading.statSignals")} value={String(signalCount)} />
                 <StatCell label={t("copyTrading.statPnl")} value={fmtUsd(realizedPnl)} accent={realizedPnl >= 0 ? "#10b981" : "#f87171"} />
-                <StatCell label={t("copyTrading.statTrades", "交易次数")} value={String(allOrders.length)} />
+                <StatCell label={t("copyTrading.statTrades", "交易次数")} value={String(tradesToday)} />
               </>
             )}
           </div>

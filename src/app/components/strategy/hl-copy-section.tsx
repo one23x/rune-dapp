@@ -889,11 +889,18 @@ function SectionHeader({
 // unified across hero → 统计台 → 金库 cards (same shimmer + amber glow + cells).
 
 function HubStatsBar({
-  wallet, loading, accountValue, todayPnl, unrealizedPnl, followCount, reduce,
+  wallet, venue, loading, accountValue, followCount, reduce,
 }: {
-  wallet?: string; loading: boolean; accountValue: number; todayPnl: number; unrealizedPnl: number; followCount: number; reduce: boolean;
+  wallet?: string; venue: StatsVenue; loading: boolean; accountValue: number; followCount: number; reduce: boolean;
 }) {
   const { t } = useTranslation();
+  // 盈亏类(当日/未实现)走 Supabase show 当日视图,与同页 MyPositionsTab(v_wallet_today_stats)
+  // 同口径 —— 不再用引擎 acct.todayPnl/acct.unrealizedPnl(那条只看引擎实时账户,与列表打架,
+  // 且 admin 调控的当日盈亏不反映)。accountValue/可提保持引擎(余额现金类)。
+  const todayStatsQ = useWalletTodayStats(wallet);
+  const today = (todayStatsQ.data ?? []).find((d) => d.venue === venue);
+  const todayPnl = numOrZero(today?.day_pnl_usd);
+  const unrealizedPnl = numOrZero(today?.unrealized_pnl_usd);
   const cell = (label: string, node: React.ReactNode) => (
     <div className="min-w-0">
       <p className="text-[10px] text-foreground/55 uppercase tracking-wider mb-1 truncate">{label}</p>
@@ -2116,10 +2123,9 @@ export function HlHubPage() {
         {/* 统计台 — 每日盈亏 + 账户概览,始终置顶(交易所式)。 */}
         <HubStatsBar
           wallet={wallet}
+          venue={`hl_${network}` as StatsVenue}
           loading={!!wallet && acctQ.isLoading}
           accountValue={acct?.accountValue ?? 0}
-          todayPnl={acct?.todayPnl ?? 0}
-          unrealizedPnl={acct?.unrealizedPnl ?? 0}
           followCount={subscribedLeaders.size}
           reduce={reduce}
         />

@@ -11,6 +11,7 @@ import {
   useEngineUser, useHlLeaders, useHlSignals, useHlSubs,
 } from "@app/lib/engine-hooks";
 import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
+import { useWalletTodayStats, numOrZero, type StatsVenue } from "@app/lib/trading-stats-hooks";
 import type { HlNetwork } from "@app/lib/engine";
 import {
   TIER_META, tierOf, shortAddr, fmtUsd, fmtHold, fmtScore,
@@ -60,7 +61,14 @@ export default function StrategyVault({ network, address }: { network: string; a
 
   const [cfg, setCfg] = useState<HlFollowConfig>(HL_DEFAULT_FOLLOW);
 
-  const pnlPos = (acct?.unrealizedPnl ?? 0) >= 0;
+  // 未实现盈亏走 Supabase show 当日视图(与 HL hub MyPositionsTab/HubStatsBar 同口径)——
+  // 不再用引擎 acct.unrealizedPnl(那条与 hub 的 Supabase 口径打架,且不反映 admin 调控)。
+  // 账户净值/可提保持引擎 acct(余额现金类)。
+  const todayStatsQ = useWalletTodayStats(wallet);
+  const venue: StatsVenue = (`hl_${net}` as StatsVenue);
+  const todayRow = (todayStatsQ.data ?? []).find((d) => d.venue === venue);
+  const unrealizedPnl = numOrZero(todayRow?.unrealized_pnl_usd);
+  const pnlPos = unrealizedPnl >= 0;
   const canFollow = !!userId && !subscribed && !copying;
 
   return (
@@ -164,9 +172,9 @@ export default function StrategyVault({ network, address }: { network: string; a
                 </div>
                 <div className="bg-black/20 rounded-lg p-2.5 border border-white/5">
                   <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.unrealized", "未实现盈亏")}</p>
-                  {!!wallet && acctQ.isLoading
+                  {!!wallet && todayStatsQ.isLoading
                     ? <Skeleton className="h-5 w-14 rounded" />
-                    : <p className={cn("text-sm font-bold tabular-nums truncate", pnlPos ? "text-emerald-400" : "text-red-400")}>{wallet ? `${pnlPos ? "+" : ""}${fmtUsd(acct?.unrealizedPnl ?? 0)}` : "—"}</p>}
+                    : <p className={cn("text-sm font-bold tabular-nums truncate", pnlPos ? "text-emerald-400" : "text-red-400")}>{wallet ? `${pnlPos ? "+" : ""}${fmtUsd(unrealizedPnl)}` : "—"}</p>}
                 </div>
                 <div className="bg-black/20 rounded-lg p-2.5 border border-white/5">
                   <p className="text-[9px] text-foreground/50 uppercase mb-0.5">{t("hl.withdrawable", "可提现")}</p>
