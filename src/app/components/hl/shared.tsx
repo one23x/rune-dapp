@@ -172,6 +172,11 @@ export interface HlFollowConfig {
    * whitelist-validates this against hl-executors EXECUTOR_IDS.
    */
   executorId?: HlExecutorId;
+  /**
+   * 契约标记:为真时 submit 只发 { leaderAddress, network, executorId },
+   * 不发任何 sizing(ratio/cap/日额/杠杆),由后端按 executorId 套。见 executorOnlyConfig。
+   */
+  __executorOnly?: boolean;
 }
 
 /** HL 执行器档(与后端 hl-executors.ts 的 ExecutorId 对齐)。 */
@@ -183,6 +188,16 @@ export const HL_DEFAULT_FOLLOW: HlFollowConfig = {
   takeProfitPct: null,
   stopLossPct: null,
 };
+
+/**
+ * 执行器自带 sizing 的跟单契约:只携带 executorId 的 follow 配置。
+ * 经 useHlCopy.copy/copyMany → submit 时会走 __executorOnly 分支,前端【只发】
+ * { leaderAddress, network, executorId },后端按 executorId 套基础仓位 + 门控。
+ * (notionalRatio/maxLeverage 字段类型必填,这里给占位值;__executorOnly 为真时它们不会被发送。)
+ */
+export function executorOnlyConfig(executorId: HlExecutorId): HlFollowConfig {
+  return { notionalRatio: 0, maxLeverage: 0, __executorOnly: true, executorId } as HlFollowConfig & { __executorOnly: true };
+}
 
 interface CopyVars {
   leader: HlLeader;
@@ -201,9 +216,23 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
 
   // Raw follow request — shared by single + batch flows so the request shape
   // stays in one place. Throws a typed error the callers categorize.
+  //
+  // 契约变更(执行器自带 sizing):当 config 只携带 executorId(即 __executorOnly)时,
+  // 前端【只发】{ leaderAddress, network, executorId },不再发 ratio/cap/日额/杠杆 ——
+  // 后端按 executorId 套基础仓位(ratio/单笔/日额/杠杆 + 门控)。语义清晰,避免误传被忽略的字段。
+  // 仍保留旧的「带 sizing」分支以兼容其他入口(目前 HL 跟单全部走 executor-only)。
   const submit = useCallback(
     async (leader: HlLeader, config: HlFollowConfig): Promise<CopyOutcome> => {
       if (!userId) throw new Error("no_user");
+      if ((config as { __executorOnly?: boolean }).__executorOnly) {
+        await hyperliquid.subscribeCreate(userId, {
+          leaderAddress: leader.address,
+          network,
+          // 仅执行风格 —— 后端按 executorId 套 sizing + 门控,不接收任何前端 sizing。
+          executorId: config.executorId ?? "mirror",
+        });
+        return "ok";
+      }
       await hyperliquid.subscribeCreate(userId, {
         leaderAddress: leader.address,
         network,

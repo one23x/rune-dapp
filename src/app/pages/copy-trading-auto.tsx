@@ -1,20 +1,20 @@
 /**
  * Smart Copy-Trading — Strategy (策略跟单), at /copy-trading/auto.
  *
- * Real-data flow: pick a risk strategy (conservative / balanced / aggressive) →
- * its system params auto-fill (notional ratio, per-trade cap) → ONE click
- * activates copy-trading via the engine (recommendations.onboardPreset →
- * copySubscriptions fallback). Active subscriptions are listed with a stop
- * control. No membership/credit tiers, no daily/monthly spend limits, no
- * confidence threshold. No mock data: status/stats derive from real orders & subs.
+ * New flow (执行器自带 sizing): pick a 跟单风格(执行器:镜像/稳健/激进/智能)→ pick a 交易员
+ * (leader) → ONE click follows via copySubscriptions.create. The frontend sends ONLY
+ * { leader, executorId } — NO ratio/cap/preset/riskPreset — the backend applies sizing
+ * (base ratio / per-trade / daily / leverage + gating) by executorId. The old「策略包」
+ * (preset/riskPreset) selection layer is removed. Active subscriptions list with a stop
+ * control. No mock data: status/stats derive from real orders & subs.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount } from "thirdweb/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Zap, Check, Loader2, Sliders, ToggleLeft, ToggleRight,
+  Zap, Check, Loader2, Crown, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,95 +25,144 @@ import { queryClient } from "@app/lib/queryClient";
 import { useEngineUser, useCopySubs } from "@app/lib/engine-hooks";
 import { useWalletDailyHistory, numOrZero } from "@app/lib/trading-stats-hooks";
 import { useActiveAccount as useAcct2 } from "thirdweb/react";
-import { recommendations, copySubscriptions, signals } from "@app/lib/engine";
+import { copySubscriptions, signals } from "@app/lib/engine";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
-import { CopyGate, asArray, normalizeOrder, fmtUsd } from "@app/components/copy-trading/shared";
+import { CopyGate, asArray, fmtUsd } from "@app/components/copy-trading/shared";
 
-// ─── Strategy definitions (each carries the real system params it applies) ────
-
-interface StrategyDef {
-  key: "conservative" | "balanced" | "aggressive";
-  labelKey: string;
-  labelFallback: string;
-  descKey: string;
-  descFallback: string;
-  notionalRatio: number;   // fraction of leader notional copied
-  notionalCapUsd: number;  // per-trade cap
-  accent: string;
-  glow: string;
-}
-
-const STRATEGIES: StrategyDef[] = [
-  {
-    key: "conservative",
-    labelKey: "copyTrading.presetConservative", labelFallback: "保守",
-    descKey: "copyTrading.presetConservativeDesc", descFallback: "小仓位、仅高共识，资金保全优先。",
-    notionalRatio: 0.03, notionalCapUsd: 50,
-    accent: "rgba(161,161,170,0.5)", glow: "",
-  },
-  {
-    key: "balanced",
-    labelKey: "copyTrading.presetBalanced", labelFallback: "稳健",
-    descKey: "copyTrading.presetBalancedDesc", descFallback: "中等仓位，均衡信号门槛。",
-    notionalRatio: 0.05, notionalCapUsd: 100,
-    accent: "rgba(99,102,241,0.45)", glow: "rgba(99,102,241,0.15)",
-  },
-  {
-    key: "aggressive",
-    labelKey: "copyTrading.presetAggressive", labelFallback: "激进",
-    descKey: "copyTrading.presetAggressiveDesc", descFallback: "更大仓位、更多信号、更高波动。",
-    notionalRatio: 0.08, notionalCapUsd: 200,
-    accent: "rgba(245,158,11,0.5)", glow: "rgba(245,158,11,0.12)",
-  },
+// ─── 执行器(跟单风格)— mirror|steady|aggressive|smart(默认 mirror)──────────────
+// 与 HL 端、后端 hl-executors EXECUTOR_IDS 对齐。后端按 executorId 套 sizing,前端只传 id。
+type PmExecutorId = "mirror" | "steady" | "aggressive" | "smart";
+type ExecutorMeta = { id: PmExecutorId; emoji: string; label: string; blurb: string };
+const PM_EXECUTORS: ExecutorMeta[] = [
+  { id: "mirror",     emoji: "🪞", label: "镜像 Mirror",     blurb: "原样跟随交易员,最快进场(默认)" },
+  { id: "steady",     emoji: "🛡", label: "稳健 Steady",     blurb: "小仓位·只跟顶级交易员" },
+  { id: "aggressive", emoji: "🔥", label: "激进 Aggressive", blurb: "大仓位·广撒网" },
+  { id: "smart",      emoji: "🤖", label: "智能 Smart",      blurb: "只在 AI 看好时精选出手" },
 ];
 
-// Frontend strategy keys → backend risk-preset keys. The backend onboard-preset
-// route only accepts conservative|steady|aggressive (risk-presets.ts ALL_PRESET_KEYS);
-// the UI's "balanced" maps to backend "steady" (same 0.05 notionalRatio). Sending a
-// raw "balanced" was the cause of the copy-trade 400 invalid_body.
-const BACKEND_PRESET: Record<StrategyDef["key"], string> = {
-  conservative: "conservative",
-  balanced: "steady",
-  aggressive: "aggressive",
-};
+function ExecutorPicker({
+  value, onChange, disabled = false,
+}: { value: PmExecutorId; onChange: (id: PmExecutorId) => void; disabled?: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[12px] font-semibold text-foreground/70">{t("hl.executorTitle", "执行风格")}</span>
+        <span className="text-[10px] text-foreground/40">· {t("hl.executorHint", "决定如何替你执行跟单")}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {PM_EXECUTORS.map((e) => {
+          const on = value === e.id;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(e.id)}
+              data-testid={`button-executor-${e.id}`}
+              className={cn(
+                "text-left rounded-xl px-3 py-2.5 border transition-all active:scale-[0.99] disabled:opacity-50",
+                on
+                  ? "bg-primary/10 border-primary/30 text-foreground"
+                  : "bg-white/[0.02] border-white/[0.06] text-foreground/55 hover:border-white/15",
+              )}
+            >
+              <div className="flex items-center gap-1.5 text-[13px] font-bold">
+                <span>{e.emoji}</span>
+                <span>{t(`hl.executor.${e.id}.label`, e.label)}</span>
+              </div>
+              <p className="mt-0.5 text-[10px] leading-snug text-foreground/40">{t(`hl.executor.${e.id}.blurb`, e.blurb)}</p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-function deriveActiveStrategy(subs: any[]): StrategyDef["key"] | null {
-  for (const s of subs) {
-    const status = String(s?.status ?? "active").toLowerCase();
-    if (status !== "active" && status !== "running") continue;
-    const cap = Number(s?.notionalCapUsd ?? s?.notionalCap ?? 0);
-    if (cap > 0) {
-      const byCap = STRATEGIES.find((t) => t.notionalCapUsd === cap);
-      if (byCap) return byCap.key;
-    }
-    const preset = String(s?.riskPreset ?? s?.preset ?? "").toLowerCase();
-    const byPreset = STRATEGIES.find((t) => preset.includes(t.key));
-    if (byPreset) return byPreset.key;
-  }
-  return null;
+// 候选交易员一行(来自 leaderboard)。followed → 「已跟单」;否则一键跟单。
+function LeaderRow({
+  wallet, label, followed, busy, onFollow,
+}: { wallet: string; label: string; followed: boolean; busy: boolean; onFollow: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="premium-card rounded-xl p-3 flex items-center justify-between gap-3"
+      style={followed ? { boxShadow: "0 0 0 1px rgba(52,211,153,0.4), 0 0 16px rgba(52,211,153,0.12)" } : undefined}>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/[0.05] border border-white/[0.08] shrink-0">
+          <Crown className="h-4 w-4 text-amber-300/80" />
+        </span>
+        <code className="font-mono text-[13px] font-semibold text-foreground/85 truncate">{label}</code>
+      </div>
+      {followed ? (
+        <span className="shrink-0 h-9 px-3 rounded-xl inline-flex items-center justify-center gap-1.5 text-[12px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25">
+          <Check className="h-3.5 w-3.5" />{t("copyTrading.followed", "已跟单")}
+        </span>
+      ) : (
+        <Button
+          size="sm"
+          className="shrink-0 h-9 px-3.5 font-extrabold"
+          style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
+          disabled={busy}
+          onClick={onFollow}
+          data-testid={`button-leader-follow-${wallet}`}
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Zap className="h-3.5 w-3.5 mr-1" />}
+          {busy ? t("copyTrading.activating", "激活中…") : t("copyTrading.oneClickFollow", "一键开始跟单")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function leaderWalletOf(r: any): string | undefined {
+  const w = r?.wallet ?? r?.proxyWallet ?? r?.address ?? r?.leaderWallet ?? r?.leader;
+  return typeof w === "string" && w.startsWith("0x") ? w : undefined;
 }
 
 function AutoCopyInner({ userId }: { userId: string }) {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const presetsQ = useQuery({
-    queryKey: ["engine", "rec-presets"],
-    queryFn: () => recommendations.presets(),
-    staleTime: 300_000,
-    retry: false,
-  });
-  const enginePresets = asArray(presetsQ.data);
-
   const subsQ = useCopySubs(userId);
   const subs = asArray(subsQ.data);
-  // 统计走 Supabase 合并层(show=真实+复制,跨 PM/HL,与 stats 页同口径)—— 不再用裸引擎 PM 订单。
+  // 统计走 Supabase 合并层(show=真实+复制,跨 PM/HL,与 stats 页同口径)。
   const _acct = useAcct2();
   const _wallet = _acct?.address;
   const dailyQ = useWalletDailyHistory(_wallet);
   const dh = useMemo(() => dailyQ.data ?? [], [dailyQ.data]);
 
-  const activeKey = useMemo(() => deriveActiveStrategy(subs), [subs]);
+  // Top leaders (7d) — the 交易员 candidates for one-click follow.
+  const leadersQ = useQuery({
+    queryKey: ["engine", "pm-leaders-top", "7d"],
+    queryFn: () => signals.leadersTop("7d"),
+    staleTime: 120_000,
+    retry: false,
+  });
+  const leaders = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { wallet: string; label: string }[] = [];
+    for (const r of asArray(leadersQ.data)) {
+      const w = leaderWalletOf(r);
+      if (!w || seen.has(w.toLowerCase())) continue;
+      seen.add(w.toLowerCase());
+      const name = String((r as any)?.name ?? (r as any)?.label ?? "").trim();
+      out.push({ wallet: w, label: name || `${w.slice(0, 6)}…${w.slice(-4)}` });
+    }
+    return out.slice(0, 12);
+  }, [leadersQ.data]);
+
+  const followedWallets = useMemo(() => {
+    const s = new Set<string>();
+    for (const sub of subs) {
+      const st = String((sub as any)?.status ?? "active").toLowerCase();
+      if (st !== "active" && st !== "running") continue;
+      const w = (sub as any)?.leaderWallet ?? (sub as any)?.leader;
+      if (typeof w === "string" && w.startsWith("0x")) s.add(w.toLowerCase());
+    }
+    return s;
+  }, [subs]);
+
   const activeSubs = subs.filter((s: any) => {
     const st = String(s?.status ?? "active").toLowerCase();
     return st === "active" || st === "running";
@@ -123,7 +172,6 @@ function AutoCopyInner({ userId }: { userId: string }) {
     const ym = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
     return dh.filter((r) => String(r.day).startsWith(ym)).reduce((s, r) => s + numOrZero(r.closed_today), 0);
   }, [dh]);
-  // 总已实现 = 各 venue 最新一天的累计实现(show)之和
   const realizedPnl = useMemo(() => {
     const latest = new Map<string, any>();
     for (const r of dh) { const e = latest.get(r.venue); if (!e || r.day > e.day) latest.set(r.venue, r); }
@@ -131,51 +179,15 @@ function AutoCopyInner({ userId }: { userId: string }) {
   }, [dh]);
   const isRunning = activeSubs.length > 0;
 
-  // Selection — defaults to the active strategy once it resolves, until the user picks.
-  const [selectedKey, setSelectedKey] = useState<StrategyDef["key"]>("balanced");
-  const [touched, setTouched] = useState(false);
-  useEffect(() => {
-    if (activeKey && !touched) setSelectedKey(activeKey);
-  }, [activeKey, touched]);
+  // 主选择层:跟单风格(执行器)。默认 mirror。一键跟单只传 { leaderWallet, executorId }。
+  const [executorId, setExecutorId] = useState<PmExecutorId>("mirror");
+  const [busyWallet, setBusyWallet] = useState<string | null>(null);
 
-  const [autoCopy, setAutoCopy] = useState(true);
-
-  const selDef = STRATEGIES.find((t) => t.key === selectedKey) ?? STRATEGIES[1];
-  const isActiveSelected = selectedKey === activeKey;
-
-  const activate = useMutation({
-    mutationFn: async (key: StrategyDef["key"]) => {
-      const strat = STRATEGIES.find((t) => t.key === key)!;
-      const backendKey = BACKEND_PRESET[strat.key];
-      // Prefer the exact id the engine advertises for this preset, else the mapped
-      // backend key — never the raw UI key (which the backend enum rejects → 400).
-      const match = enginePresets.find((p: any) => {
-        const id = String(p?.id ?? p?.key ?? p?.preset ?? p?.name ?? "").toLowerCase();
-        return id === backendKey || id.includes(backendKey);
-      });
-      const presetId = String((match as any)?.id ?? (match as any)?.key ?? backendKey);
-      const body = {
-        preset: presetId,
-        riskPreset: backendKey,
-        notionalRatio: strat.notionalRatio,
-        notionalCapUsd: strat.notionalCapUsd,
-        autoExecute: autoCopy,
-      };
-      try {
-        return await recommendations.onboardPreset(userId, body);
-      } catch {
-        const top = asArray(await signals.leadersTop("7d").catch(() => null));
-        const topWallet = top
-          .map((r: any) => r?.wallet ?? r?.proxyWallet ?? r?.address)
-          .find((w: any) => typeof w === "string" && w.startsWith("0x"));
-        if (!topWallet) throw new Error(t("copyTrading.noLeaderForPreset", "暂无可跟的 Leader，请稍后再试"));
-        return await copySubscriptions.create(userId, {
-          leaderWallet: topWallet,
-          notionalRatio: strat.notionalRatio,
-          notionalCapUsd: strat.notionalCapUsd,
-          status: "active",
-        });
-      }
+  const follow = useMutation({
+    mutationFn: async (leaderWallet: string) => {
+      // 契约变更:只传 { leaderWallet, executorId } —— 不再传 preset/riskPreset/ratio/cap。
+      // 后端按 executorId 套 sizing(基础仓位 ratio/单笔/日额/杠杆 + 门控)。
+      return await copySubscriptions.create(userId, { leaderWallet, executorId });
     },
     onSuccess: () => {
       toast({ title: t("copyTrading.autoCopySuccess"), description: t("copyTrading.autoCopySuccessDesc") });
@@ -183,6 +195,12 @@ function AutoCopyInner({ userId }: { userId: string }) {
     },
     onError: (e: any) => toast({ title: t("common.error"), description: String(e?.message ?? e), variant: "destructive" }),
   });
+
+  async function onFollow(leaderWallet: string) {
+    if (busyWallet) return;
+    setBusyWallet(leaderWallet.toLowerCase());
+    try { await follow.mutateAsync(leaderWallet); } catch { /* toast handled */ } finally { setBusyWallet(null); }
+  }
 
   const stop = useMutation({
     mutationFn: async (id: string) => copySubscriptions.delete(userId, id),
@@ -231,77 +249,44 @@ function AutoCopyInner({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* ── 2. Strategy selector ── */}
-      <section className="space-y-3">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-[15px] font-semibold text-foreground">{t("copyTrading.pickPreset", "选择策略")}</h2>
-          <span className="text-[12px] text-muted-foreground">{t("copyTrading.selectAndActivate", "选择并激活")}</span>
-        </div>
-
-        <div className="space-y-2.5">
-          {STRATEGIES.map((strat) => {
-            const isActive = strat.key === activeKey;
-            const isSelected = selectedKey === strat.key;
-            return (
-              <button key={strat.key}
-                onClick={() => { setSelectedKey(strat.key); setTouched(true); }}
-                className={cn("w-full flex items-center p-4 rounded-xl transition-all text-left")}
-                style={{
-                  background: isSelected ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.025)",
-                  border: `1px solid ${isSelected ? strat.accent : "rgba(255,255,255,0.06)"}`,
-                  boxShadow: isSelected && strat.glow ? `0 0 20px ${strat.glow}` : undefined,
-                }}>
-                <div className="flex-1 min-w-0">
-                  <div className={cn("text-[16px] font-medium", isSelected ? "text-amber-400" : "text-foreground")}>
-                    {t(strat.labelKey, strat.labelFallback)}
-                  </div>
-                  <div className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">{t(strat.descKey, strat.descFallback)}</div>
-                </div>
-                {isActive ? (
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded text-[12px] font-medium shrink-0 ml-3"
-                    style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#34d399" }}>
-                    <Check className="h-3 w-3" /> {t("copyTrading.subStatusActive", "激活中")}
-                  </div>
-                ) : isSelected ? (
-                  <Check className="h-4 w-4 text-amber-400 shrink-0 ml-3" />
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected strategy → auto-filled system params + ONE-CLICK follow */}
-        <div className="rounded-xl p-4 space-y-3.5"
-          style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
-          <div className="flex items-center gap-2">
-            <Sliders className="h-4 w-4 text-amber-400" />
-            <span className="text-[13px] font-semibold text-foreground">
-              {t(selDef.labelKey, selDef.labelFallback)} · {t("copyTrading.systemParams", "系统参数")}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Param label={t("copyTrading.paramRatio", "跟单比例")} value={`${(selDef.notionalRatio * 100).toFixed(0)}%`} />
-            <Param label={t("copyTrading.paramTradeCap", "单笔上限")} value={`$${selDef.notionalCapUsd}`} />
-          </div>
-
-          <ConfigToggle label={t("copyTrading.cfgAutoCopy", "自动跟单模式")} value={autoCopy} onToggle={() => setAutoCopy((v) => !v)} />
-
-          <Button className="w-full font-bold h-11"
-            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
-            onClick={() => activate.mutate(selectedKey)}
-            disabled={activate.isPending}>
-            {activate.isPending ? (
-              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("copyTrading.activating", "激活中…")}</>
-            ) : isActiveSelected ? (
-              <><Check className="h-4 w-4 mr-1.5" />{t("copyTrading.reapply", "已激活 · 重新应用参数")}</>
-            ) : (
-              <><Zap className="h-4 w-4 mr-1.5" />{t("copyTrading.oneClickFollow", "一键开始跟单")}</>
-            )}
-          </Button>
-        </div>
+      {/* ── 2. Pick 风格(执行器)── 主选择层,替代旧策略包。sizing 由后端按 executorId 决定。 */}
+      <section className="rounded-xl p-4"
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <ExecutorPicker value={executorId} onChange={setExecutorId} disabled={!!busyWallet} />
       </section>
 
-      {/* ── 3. Active subscriptions (real) ── */}
+      {/* ── 3. Pick 交易员 → 一键跟单 ── */}
+      <section className="space-y-3">
+        <div className="flex items-baseline gap-2">
+          <Users className="h-4 w-4 text-amber-400 self-center" />
+          <h2 className="text-[15px] font-semibold text-foreground">{t("copyTrading.pickLeader", "选择交易员")}</h2>
+          <span className="text-[12px] text-muted-foreground">{t("copyTrading.pickLeaderHint", "选一位,一键跟单")}</span>
+        </div>
+
+        {leadersQ.isLoading ? (
+          <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
+        ) : leaders.length === 0 ? (
+          <div className="rounded-xl p-6 text-center text-[13px] text-muted-foreground"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            {t("copyTrading.noLeaderForPreset", "暂无可跟的 Leader，请稍后再试")}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {leaders.map((l) => (
+              <LeaderRow
+                key={l.wallet}
+                wallet={l.wallet}
+                label={l.label}
+                followed={followedWallets.has(l.wallet.toLowerCase())}
+                busy={busyWallet === l.wallet.toLowerCase()}
+                onFollow={() => onFollow(l.wallet)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── 4. Active subscriptions (real) ── */}
       {(subsQ.isLoading || activeSubs.length > 0) && (
         <section className="space-y-2">
           <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
@@ -313,7 +298,7 @@ function AutoCopyInner({ userId }: { userId: string }) {
             <div className="space-y-2">
               {activeSubs.map((s: any, i: number) => {
                 const id = String(s?.id ?? i);
-                const label = String(s?.leaderWallet ?? s?.leader ?? s?.preset ?? s?.riskPreset ?? id);
+                const label = String(s?.leaderWallet ?? s?.leader ?? id);
                 return (
                   <div key={id} className="premium-card rounded-xl p-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -342,28 +327,6 @@ function StatCell({ label, value, accent }: { label: string; value: string; acce
     <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
       <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1 truncate">{label}</p>
       <p className="text-[15px] font-semibold tabular-nums truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>{value}</p>
-    </div>
-  );
-}
-
-function Param({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg px-3 py-2 flex items-center justify-between gap-2"
-      style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-      <span className="text-[12px] font-semibold text-foreground tabular-nums">{value}</span>
-    </div>
-  );
-}
-
-function ConfigToggle({ label, value, onToggle }: { label: string; value: boolean; onToggle: () => void }) {
-  return (
-    <div className="flex items-center justify-between p-3.5 rounded-xl"
-      style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <span className="text-[13px] font-medium text-foreground">{label}</span>
-      <button onClick={onToggle} className="focus:outline-none">
-        {value ? <ToggleRight className="h-8 w-8 text-amber-500" /> : <ToggleLeft className="h-8 w-8 text-muted-foreground/40" />}
-      </button>
     </div>
   );
 }

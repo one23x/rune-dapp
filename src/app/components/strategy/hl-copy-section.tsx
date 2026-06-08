@@ -24,7 +24,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "wouter";
 import { useActiveAccount } from "thirdweb/react";
 import {
-  Users, Activity, Layers, History as HistoryIcon,
+  Users, Activity, History as HistoryIcon,
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
   Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X, ExternalLink,
@@ -33,7 +33,6 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -61,7 +60,7 @@ import { AiDecisionCards } from "./ai-decision-cards";
 import { HlVaultsPanel } from "./hl-vaults-panel";
 import { AiLab } from "./ai-lab";
 import {
-  NetworkToggle, HlEmpty, useHlCopy, TIER_META, tierOf,
+  NetworkToggle, HlEmpty, useHlCopy, executorOnlyConfig, TIER_META, tierOf,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
   type HlFollowConfig, type HlExecutorId,
 } from "@app/components/hl/shared";
@@ -1619,69 +1618,6 @@ function BottomTabs({ network }: { network: HlNetwork }) {
   );
 }
 
-// ── 策略包 — 选一个、一键跟单(参数内置,参考 demo-rune)─────────────────────────
-//
-// 每个 pack 预设:跟几位(count,按评分取 top-N)+ 镜像比例 + 单笔/日上限 + 杠杆上限
-// + 币种白名单。用户选一个 → 一键跟单(copyMany 批量订阅该 N 位 leader),无需手动调参。
-// 风险等级 —— low/medium/high。high 包(aggressive)在二次确认态额外要求勾选「我已知悉
-// 高风险并自愿承担」。所有包都已降为保守/稳健参数:杠杆有上限(≤5x)、不再全跟(99→10)。
-type HlRisk = "low" | "medium" | "high";
-interface HlPack {
-  key: string; color: string; risk: HlRisk;
-  count: number; ratioPct: number; cap: number; daily: number; maxLev: number; coins: string[];
-}
-const HL_PACKS: HlPack[] = [
-  { key: "highwin",    color: "#34d399", risk: "low",    count: 2,  ratioPct: 4, cap: 40,  daily: 120, maxLev: 3, coins: ["BTC", "ETH", "SOL"] },
-  { key: "leadmirror", color: "#a78bfa", risk: "medium", count: 1,  ratioPct: 6, cap: 60,  daily: 180, maxLev: 3, coins: [] },
-  { key: "balanced",   color: "#818cf8", risk: "medium", count: 4,  ratioPct: 5, cap: 50,  daily: 200, maxLev: 5, coins: [] },
-  { key: "aggressive", color: "#fb7185", risk: "high",   count: 10, ratioPct: 8, cap: 80,  daily: 250, maxLev: 5, coins: [] },
-];
-
-// 高风险勾选框 —— 复用 ui/Checkbox(暗色主题)。仅 high 风险包在确认态展示;
-// 未勾选时"确认跟单"按钮 disabled。低/中风险不渲染此项,维持原二次确认。
-function HighRiskAck({ checked, onChange, color }: { checked: boolean; onChange: (v: boolean) => void; color: string }) {
-  const { t } = useTranslation();
-  return (
-    <label
-      className="mt-1 flex items-start gap-2 cursor-pointer select-none rounded-lg px-2 py-1.5"
-      style={{ background: `${color}10`, border: `1px solid ${color}33` }}
-    >
-      <Checkbox
-        checked={checked}
-        onCheckedChange={(v) => onChange(v === true)}
-        className="mt-0.5 border-red-400/70 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
-        data-testid="checkbox-hl-high-risk-ack"
-      />
-      <span className="text-[11px] leading-snug font-semibold text-red-200">
-        {t("hl.pack.highRiskAck", "我已知悉高风险并自愿承担")}
-      </span>
-    </label>
-  );
-}
-
-// 满仓保护提示(显示层)—— 真实限额由后端执行,这里仅如实告知。
-function FullPositionNote({ color }: { color: string }) {
-  const { t } = useTranslation();
-  return (
-    <p className="text-[11px] leading-relaxed" style={{ color: `${color}cc` }}>
-      {t("hl.pack.fullPositionNote", "单笔下单最多使用账户可用余额的 20%,且不超过节点额度。")}
-    </p>
-  );
-}
-
-function packConfig(pack: HlPack, executorId: HlExecutorId): HlFollowConfig {
-  return {
-    notionalRatio: pack.ratioPct / 100,
-    maxLeverage: pack.maxLev,
-    takeProfitPct: null,
-    stopLossPct: null,
-    notionalCapUsd: pack.cap,
-    dailyCapUsd: pack.daily,
-    allowedCoins: pack.coins,
-    executorId,
-  };
-}
-
 // ── 执行器选择 — mirror|steady|aggressive|smart(默认 mirror = 现有行为)──────────
 //
 // 4 张卡:中文名 + emoji + 一句话。选中的 executorId 随一键跟单的 subscribeCreate 一起传后端,
@@ -1741,146 +1677,173 @@ function ExecutorPicker({
   );
 }
 
-function PackCard({
-  pack, leaders, subsIndex, busy, onEnable, underfunded = false,
+// ── 交易员一键跟单行 — 选风格(执行器)后,每位交易员一键跟单 ──────────────────────
+//
+// 新契约:不展示/不传 sizing(ratio/cap/日额/杠杆)—— 由所选执行器在后端决定。本行只负责
+// 「选这位交易员 → 一键跟单」,把 { leader, executorId } 交给 onFollow。已跟单 → 显示「已跟单」。
+function LeaderFollowRow({
+  leader, followed, busy, onFollow, underfunded = false,
 }: {
-  pack: HlPack;
-  leaders: HlLeader[];
-  /** leader → 该 leader 名下订阅的参数指纹列表(ratio/cap)。 */
-  subsIndex: Map<string, Array<{ ratio: number; cap: number | null }>>;
+  leader: HlLeader;
+  followed: boolean;
   busy: boolean;
-  onEnable: (picks: HlLeader[], pack: HlPack) => void;
-  /** 账户净值 < HL_MIN → 跟单按钮变「充值后跟单」并禁用 follow(UIUX Rec #2)。 */
+  onFollow: (leader: HlLeader) => void;
   underfunded?: boolean;
 }) {
   const { t } = useTranslation();
-  // 一次性风险确认:首次点击进入 confirm 态,再点一次才真正跟单(UIUX Rec #5b)。
-  const [confirm, setConfirm] = useState(false);
-  // 高风险包(risk:"high")确认态额外要求勾选「我已知悉高风险并自愿承担」。
-  const [riskAck, setRiskAck] = useState(false);
-  const isHighRisk = pack.risk === "high";
-  useEffect(() => { if (busy) { setConfirm(false); setRiskAck(false); } }, [busy]);
-  // 按评分取 top-N。
-  const picks = useMemo(
-    () => [...leaders].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, pack.count),
-    [leaders, pack.count],
-  );
-  // 「已启用」= pick 名下存在与本包参数指纹一致的订阅(ratio=ratioPct/100 全等 + cap 全等)。
-  // 各包的 picks 互为子集(同一评分池 top-N),只看 leader 会一人订阅、多卡全亮。
-  const packRatio = pack.ratioPct / 100;
-  const followedCount = picks.filter((l) =>
-    (subsIndex.get(l.address.toLowerCase()) ?? []).some(
-      (s) => Math.abs(s.ratio - packRatio) < 1e-9 && (s.cap == null || s.cap === pack.cap),
-    ),
-  ).length;
-  const allOn = picks.length > 0 && followedCount === picks.length;
-
-  const param = (k: string, v: React.ReactNode) => (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-foreground/45">{k}</span>
-      <span className="font-bold text-foreground/80 tabular-nums">{v}</span>
-    </div>
-  );
-
+  const score = leader.score ?? null;
   return (
-    <div className="glass-panel p-4" style={allOn ? { boxShadow: `0 0 0 1px ${pack.color}66, 0 0 18px ${pack.color}22` } : undefined}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: pack.color }} />
-          <span className="text-[15px] font-bold text-foreground truncate">{t(`hl.pack.${pack.key}.label`, pack.key)}</span>
-        </div>
-        {followedCount > 0 && (
-          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${pack.color}22`, color: pack.color }}>
-            {t("hl.packOn", "已启用")} {followedCount}/{picks.length}
+    <div className="glass-panel p-3.5 flex items-center justify-between gap-3" style={followed ? { boxShadow: "0 0 0 1px rgba(52,211,153,0.4), 0 0 16px rgba(52,211,153,0.12)" } : undefined}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/[0.05] border border-white/[0.08] shrink-0">
+            <Crown className="h-4 w-4 text-amber-300/80" />
           </span>
-        )}
-      </div>
-      <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: `${pack.color}1a`, color: pack.color }}>
-        {t(`hl.risk.${pack.risk}`, pack.risk === "low" ? "低风险" : pack.risk === "medium" ? "中风险" : "高风险")} · {t("hl.packFollowN", "跟 {{count}} 位", { count: picks.length })}
-      </div>
-      <p className="mt-2 text-[12px] leading-relaxed text-foreground/55">{t(`hl.pack.${pack.key}.desc`, "")}</p>
-
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
-        {param(t("hl.packRatio", "镜像比例"), `${pack.ratioPct}%`)}
-        {param(t("hl.packCap", "单笔上限"), `$${pack.cap}`)}
-        {param(t("hl.packDaily", "日上限"), `$${pack.daily}`)}
-        {param(t("hl.packLev", "杠杆"), pack.maxLev > 0 ? `≤${pack.maxLev}x` : t("hl.packLevAuto", "随单"))}
-        {param(t("hl.packCoins", "币种"), pack.coins.length ? pack.coins.join("/") : t("hl.packAllCoins", "全部"))}
-        {param(t("hl.packExit", "跟随平仓"), t("hl.packExitOn", "开"))}
+          <div className="min-w-0">
+            <code className="block font-mono text-[13px] font-bold text-foreground/90 truncate">{leader.label || shortAddr(leader.address)}</code>
+            <div className="mt-0.5 flex items-center gap-2 text-[10px] text-foreground/45">
+              {score != null && <span className="num-gold font-semibold">{t("hl.leaderScore", "评分")} {fmtScore(score)}</span>}
+              {leader.medianHoldingS != null && <span>{t("hl.leaderHold", "持仓")} {fmtHold(leader.medianHoldingS)}</span>}
+              {leader.isHft && <span className="text-amber-300/60">HFT</span>}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 余额不足 → 跟单按钮变「充值后跟单」并禁用,引导回钱包面板充值(UIUX Rec #2)。 */}
       {underfunded ? (
-        <Link href="/strategy" data-testid={`link-pack-fund-${pack.key}`}>
+        <Link href="/strategy" data-testid={`link-leader-fund-${leader.address}`}>
           <button
             type="button"
-            className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] bg-white/[0.05] text-amber-200 border border-amber-500/30"
-            data-testid={`button-pack-fund-${pack.key}`}
+            className="shrink-0 h-9 px-3 rounded-xl inline-flex items-center justify-center gap-1.5 text-[12px] font-extrabold bg-white/[0.05] text-amber-200 border border-amber-500/30"
+            data-testid={`button-leader-fund-${leader.address}`}
           >
-            <Wallet className="h-4 w-4" />
-            {t("hl.packFundToFollow", "充值后跟单")}
+            <Wallet className="h-3.5 w-3.5" />{t("hl.packFundToFollow", "充值后跟单")}
           </button>
         </Link>
+      ) : followed ? (
+        <span className="shrink-0 h-9 px-3 rounded-xl inline-flex items-center justify-center gap-1.5 text-[12px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25" data-testid={`badge-leader-followed-${leader.address}`}>
+          <CheckCircle2 className="h-3.5 w-3.5" />{t("hl.leaderFollowed", "已跟单")}
+        </span>
       ) : (
-        <>
-          {/* 二次确认摘要 + 风险提示(UIUX Rec #5b)。 */}
-          {confirm && !allOn && (
-            <div className="mt-3 rounded-xl p-3 space-y-1.5" style={{ background: `${pack.color}12`, border: `1px solid ${pack.color}33` }}>
-              <div className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color: pack.color }}>
-                <AlertTriangle className="h-3.5 w-3.5" />{t("hl.packConfirmTitle", "确认跟单参数")}
-              </div>
-              <p className="text-[11px] leading-relaxed text-foreground/70">
-                {t("hl.packConfirmSummary", "跟随 {{n}} 个策略 · 镜像比例 {{ratio}}% · 杠杆 {{lev}} · 单笔上限 ${{cap}}", {
-                  n: picks.length,
-                  ratio: pack.ratioPct,
-                  lev: pack.maxLev > 0 ? `≤${pack.maxLev}x` : t("hl.packLevAuto", "随单"),
-                  cap: pack.cap,
-                })}
-              </p>
-              <p className="text-[11px] leading-relaxed text-red-300/90">
-                {t("hl.packRiskLine", "杠杆交易可能亏损全部本金,爆仓后无法追回。")}
-              </p>
-              {/* 满仓保护(显示层):如实告知单笔下单上限。 */}
-              <FullPositionNote color={pack.color} />
-              {/* 高风险包:必须勾选「已知悉高风险并自愿承担」,否则按钮 disabled。 */}
-              {isHighRisk && <HighRiskAck checked={riskAck} onChange={setRiskAck} color={pack.color} />}
-            </div>
-          )}
-
-          <button
-            type="button"
-            disabled={busy || picks.length === 0 || (confirm && !allOn && isHighRisk && !riskAck)}
-            onClick={() => {
-              if (allOn) { onEnable(picks, pack); return; }
-              if (confirm) { onEnable(picks, pack); setConfirm(false); setRiskAck(false); }
-              else setConfirm(true);
-            }}
-            className={cn(
-              "mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] disabled:opacity-50",
-              allOn ? "bg-white/[0.06] text-foreground/80 border border-white/10" : "text-black",
-            )}
-            style={allOn ? undefined : { background: `linear-gradient(135deg, ${pack.color}, ${pack.color}cc)`, boxShadow: `0 0 18px ${pack.color}40` }}
-            data-testid={`button-pack-enable-${pack.key}`}
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-            {busy ? t("hl.packEnabling", "启用中…")
-              : allOn ? t("hl.packReapply", "重新应用参数")
-              : confirm ? t("hl.packConfirmFollow", "确认跟单")
-              : followedCount > 0 ? t("hl.packTopUp", "补齐剩余 {{n}} 位", { n: picks.length - followedCount })
-              : t("hl.oneClickFollow", "一键跟单")}
-          </button>
-        </>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onFollow(leader)}
+          className="shrink-0 h-9 px-3.5 rounded-xl inline-flex items-center justify-center gap-1.5 text-[12px] font-extrabold text-black transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg, #fbbf24, #d97706)", boxShadow: "0 0 16px rgba(245,158,11,0.3)" }}
+          data-testid={`button-leader-follow-${leader.address}`}
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          {busy ? t("hl.packEnabling", "启用中…") : t("hl.oneClickFollow", "一键跟单")}
+        </button>
       )}
     </div>
   );
 }
 
-// ── CONSOLE 策略包 — 项目方在控制台配置的 pack(替代硬编码预设)──────────────────
+// 项目方精选交易员卡(console pack)→ 一键跟单其绑定的 leaderAddress(executor-only,无 sizing)。
+// 保留项目方的名称/标签/简介展示;参数面板移除(sizing 已由执行器接管)。
+function ConsoleLeaderCard({
+  pack, followed, busy, onFollow, underfunded = false,
+}: {
+  pack: ConsolePack;
+  followed: boolean;
+  busy: boolean;
+  onFollow: (pack: ConsolePack) => void;
+  underfunded?: boolean;
+}) {
+  const { t } = useTranslation();
+  const tierMeta = pack.tier ? CONSOLE_TIER_META[pack.tier] : null;
+  const color = tierMeta?.color ?? "#a78bfa";
+  const leaderBound = !!pack.leaderAddress;
+  const perfWin = pack.perf && typeof pack.perf === "object"
+    ? pickNum(pack.perf as Record<string, unknown>, "winRate", "win", "winRatePct") : undefined;
+  const perfRoi = pack.perf && typeof pack.perf === "object"
+    ? pickNum(pack.perf as Record<string, unknown>, "roi", "roiPct", "pnlPct") : undefined;
+
+  return (
+    <div className="glass-panel p-4" style={followed ? { boxShadow: `0 0 0 1px ${color}66, 0 0 18px ${color}22` } : undefined}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} />
+          <span className="text-[15px] font-bold text-foreground truncate">{pack.name || pack.slug}</span>
+        </div>
+        {followed && (
+          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/15 text-emerald-300">
+            {t("hl.leaderFollowed", "已跟单")}
+          </span>
+        )}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        {tierMeta && (
+          <span className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: `${color}1a`, color }}>
+            {t(`hl.consoleTier.${pack.tier}`, tierMeta.label)}
+          </span>
+        )}
+        {pack.category && (
+          <span className="inline-flex w-fit items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-white/[0.05] text-foreground/60">{pack.category}</span>
+        )}
+        {(perfWin != null || perfRoi != null) && (
+          <span className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-300">
+            {perfWin != null ? t("hl.consolePerfWin", "胜率 {{v}}%", { v: perfWin }) : ""}
+            {perfWin != null && perfRoi != null ? " · " : ""}
+            {perfRoi != null ? t("hl.consolePerfRoi", "收益 {{v}}%", { v: perfRoi }) : ""}
+          </span>
+        )}
+      </div>
+      {pack.leaderAddress && (
+        <code className="mt-2 block font-mono text-[11px] text-foreground/50 truncate">{shortAddr(pack.leaderAddress)}</code>
+      )}
+
+      {!leaderBound ? (
+        <button
+          type="button" disabled
+          className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[13px] font-bold bg-white/[0.04] text-foreground/40 border border-white/10 cursor-not-allowed"
+          data-testid={`button-console-leader-unbound-${pack.slug}`}
+        >
+          <AlertTriangle className="h-4 w-4" />{t("hl.consolePackUnbound", "项目方未绑定 leader")}
+        </button>
+      ) : underfunded ? (
+        <Link href="/strategy" data-testid={`link-console-leader-fund-${pack.slug}`}>
+          <button
+            type="button"
+            className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold bg-white/[0.05] text-amber-200 border border-amber-500/30"
+            data-testid={`button-console-leader-fund-${pack.slug}`}
+          >
+            <Wallet className="h-4 w-4" />{t("hl.packFundToFollow", "充值后跟单")}
+          </button>
+        </Link>
+      ) : followed ? (
+        <button
+          type="button"
+          className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-bold bg-white/[0.06] text-emerald-300 border border-emerald-500/25"
+          disabled
+          data-testid={`button-console-leader-followed-${pack.slug}`}
+        >
+          <CheckCircle2 className="h-4 w-4" />{t("hl.leaderFollowed", "已跟单")}
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onFollow(pack)}
+          className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold text-black transition-all active:scale-[0.99] disabled:opacity-50"
+          style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)`, boxShadow: `0 0 18px ${color}40` }}
+          data-testid={`button-console-leader-follow-${pack.slug}`}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+          {busy ? t("hl.packEnabling", "启用中…") : t("hl.oneClickFollow", "一键跟单")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── CONSOLE 精选交易员展示 helpers — 项目方在控制台配置的精选 leader ────────────────
 //
-// 每个 console pack 绑定 ONE leaderAddress(项目方指定要复制的 HL 交易员)+ 一套
-// 风险参数(params)。跟单 = 订阅该 pack 的 leaderAddress + 用 params 构建 cfg。
-// params 的 key 命名两种风格都兼容(ratioPct|notionalRatio, cap|notionalCapUsd,
-// daily|dailyCapUsd, coins|allowedCoins, maxLeverage)。
+// 每个 console pack 绑定 ONE leaderAddress(项目方指定要复制的 HL 交易员)。新契约下跟单
+// 只传 { leader, executorId },pack 的 sizing 参数不再使用;仅保留展示用的 perf 数字解析
+// (pickNum)与等级配色(CONSOLE_TIER_META)。
 
 /** Pick the first finite number among candidate keys (tolerant of naming). */
 function pickNum(params: Record<string, unknown>, ...keys: string[]): number | undefined {
@@ -1892,43 +1855,6 @@ function pickNum(params: Record<string, unknown>, ...keys: string[]): number | u
   return undefined;
 }
 
-/** Coin whitelist — tolerant of array or comma/space string. */
-function pickCoins(params: Record<string, unknown>, ...keys: string[]): string[] {
-  for (const k of keys) {
-    const v = params[k];
-    if (Array.isArray(v)) return v.map((c) => String(c).trim().toUpperCase()).filter(Boolean);
-    if (typeof v === "string" && v.trim() !== "") return v.split(/[,\s]+/).map((c) => c.trim().toUpperCase()).filter(Boolean);
-  }
-  return [];
-}
-
-/**
- * Map a console pack's `params` → the engine HlFollowConfig.
- *   ratioPct (whole %, e.g. 5) OR notionalRatio (fraction, e.g. 0.05) → notionalRatio
- *   maxLeverage (0 = 随单/auto) ; cap|notionalCapUsd ; daily|dailyCapUsd ;
- *   coins|allowedCoins ; takeProfitPct|tpPct ; stopLossPct|slPct.
- */
-function consolePackConfig(pack: ConsolePack, executorId: HlExecutorId): HlFollowConfig {
-  const p = pack.params ?? {};
-  // ratio: prefer an explicit fraction (notionalRatio/ratio ≤1), else whole-% (ratioPct).
-  const ratioFrac = pickNum(p, "notionalRatio", "ratio");
-  const ratioPct = pickNum(p, "ratioPct", "notionalRatioPct", "mirrorPct");
-  const notionalRatio =
-    ratioFrac != null ? (ratioFrac > 1 ? ratioFrac / 100 : ratioFrac)
-      : ratioPct != null ? ratioPct / 100
-      : 0.05;
-  return {
-    notionalRatio,
-    maxLeverage: pickNum(p, "maxLeverage", "maxLev", "leverage") ?? 0,
-    takeProfitPct: pickNum(p, "takeProfitPct", "tpPct") ?? null,
-    stopLossPct: pickNum(p, "stopLossPct", "slPct") ?? null,
-    notionalCapUsd: pickNum(p, "notionalCapUsd", "cap", "perTradeCapUsd"),
-    dailyCapUsd: pickNum(p, "dailyCapUsd", "daily", "dailyCap"),
-    allowedCoins: pickCoins(p, "allowedCoins", "coins"),
-    executorId,
-  };
-}
-
 /** Console tier → display meta (label + color). null tier = neutral. */
 const CONSOLE_TIER_META: Record<NonNullable<ConsolePack["tier"]>, { label: string; color: string }> = {
   entry: { label: "Entry", color: "#34d399" },
@@ -1936,177 +1862,11 @@ const CONSOLE_TIER_META: Record<NonNullable<ConsolePack["tier"]>, { label: strin
   pro: { label: "Pro", color: "#fb7185" },
 };
 
-/**
- * One CONSOLE pack card. Mirrors PackCard's visual + one-tap confirm UX, but
- * follows the pack's single bound leaderAddress with the pack's params.
- * No leaderAddress → disabled "项目方未绑定 leader" state.
- */
-function ConsolePackCard({
-  pack, subsIndex, busy, onEnable, underfunded = false,
-}: {
-  pack: ConsolePack;
-  /** leader → 该 leader 名下订阅的参数指纹列表(ratio/cap)。 */
-  subsIndex: Map<string, Array<{ ratio: number; cap: number | null }>>;
-  busy: boolean;
-  onEnable: (pack: ConsolePack) => void;
-  underfunded?: boolean;
-}) {
-  const { t } = useTranslation();
-  const [confirm, setConfirm] = useState(false);
-  const [riskAck, setRiskAck] = useState(false);
-  useEffect(() => { if (busy) { setConfirm(false); setRiskAck(false); } }, [busy]);
-
-  // 仅用于展示层指纹(isHighRisk / isOn 匹配);executorId 不参与参数指纹,固定 mirror 即可。
-  // 真正下单走 onEnableConsolePack → consolePackConfig(pack, executorId)(带用户选的执行风格)。
-  const cfg = useMemo(() => consolePackConfig(pack, "mirror"), [pack]);
-  // 高风险判定(由解析后的参数推断):杠杆 ≥8 或 镜像比例 ≥10% 视为高风险,
-  // 确认态额外要求勾选「已知悉高风险并自愿承担」。
-  const isHighRisk = cfg.maxLeverage >= 8 || cfg.notionalRatio >= 0.10;
-  const tierMeta = pack.tier ? CONSOLE_TIER_META[pack.tier] : null;
-  const color = tierMeta?.color ?? "#a78bfa";
-  const leaderBound = !!pack.leaderAddress;
-  // 「已开启」= 本包 leader 名下存在【参数指纹与本包一致】的订阅(ratio 全等,cap 若有也全等)。
-  // 只看 leader 会把别的入口/别的包建的订阅误判成本包开启(选一个包、多卡全亮)。
-  const isOn = leaderBound && (subsIndex.get(pack.leaderAddress!.toLowerCase()) ?? []).some(
-    (s) => Math.abs(s.ratio - cfg.notionalRatio) < 1e-9 && (s.cap == null || cfg.notionalCapUsd == null || s.cap === cfg.notionalCapUsd),
-  );
-
-  const minBal = pack.minBalanceUsd;
-  // perf — show a compact summary if the console attached a number-ish field.
-  const perfWin = pack.perf && typeof pack.perf === "object"
-    ? pickNum(pack.perf as Record<string, unknown>, "winRate", "win", "winRatePct")
-    : undefined;
-  const perfRoi = pack.perf && typeof pack.perf === "object"
-    ? pickNum(pack.perf as Record<string, unknown>, "roi", "roiPct", "pnlPct")
-    : undefined;
-
-  const param = (k: string, v: React.ReactNode) => (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-foreground/45">{k}</span>
-      <span className="font-bold text-foreground/80 tabular-nums">{v}</span>
-    </div>
-  );
-
-  return (
-    <div className="glass-panel p-4" style={isOn ? { boxShadow: `0 0 0 1px ${color}66, 0 0 18px ${color}22` } : undefined}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} />
-          <span className="text-[15px] font-bold text-foreground truncate">{pack.name || pack.slug}</span>
-        </div>
-        {isOn && (
-          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${color}22`, color }}>
-            {t("hl.packOn", "已启用")}
-          </span>
-        )}
-      </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        {tierMeta && (
-          <span className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: `${color}1a`, color }}>
-            {t(`hl.consoleTier.${pack.tier}`, tierMeta.label)}
-          </span>
-        )}
-        {pack.category && (
-          <span className="inline-flex w-fit items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-white/[0.05] text-foreground/60">
-            {pack.category}
-          </span>
-        )}
-        {(perfWin != null || perfRoi != null) && (
-          <span className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-300">
-            {perfWin != null ? t("hl.consolePerfWin", "胜率 {{v}}%", { v: perfWin }) : ""}
-            {perfWin != null && perfRoi != null ? " · " : ""}
-            {perfRoi != null ? t("hl.consolePerfRoi", "收益 {{v}}%", { v: perfRoi }) : ""}
-          </span>
-        )}
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
-        {param(t("hl.packRatio", "镜像比例"), `${(cfg.notionalRatio * 100).toFixed(0)}%`)}
-        {param(t("hl.packCap", "单笔上限"), cfg.notionalCapUsd != null ? `$${cfg.notionalCapUsd}` : t("hl.packAuto", "随单"))}
-        {param(t("hl.packDaily", "日上限"), cfg.dailyCapUsd != null ? `$${cfg.dailyCapUsd}` : t("hl.packAuto", "随单"))}
-        {param(t("hl.packLev", "杠杆"), cfg.maxLeverage > 0 ? `≤${cfg.maxLeverage}x` : t("hl.packLevAuto", "随单"))}
-        {param(t("hl.packCoins", "币种"), (cfg.allowedCoins && cfg.allowedCoins.length) ? cfg.allowedCoins.join("/") : t("hl.packAllCoins", "全部"))}
-        {minBal != null ? param(t("hl.packMinBal", "最低余额"), `$${minBal}`) : param(t("hl.packExit", "跟随平仓"), t("hl.packExitOn", "开"))}
-      </div>
-
-      {/* 项目方未绑定 leader → 禁用,提示需在控制台绑定。 */}
-      {!leaderBound ? (
-        <button
-          type="button"
-          disabled
-          className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[13px] font-bold bg-white/[0.04] text-foreground/40 border border-white/10 cursor-not-allowed"
-          data-testid={`button-console-pack-unbound-${pack.slug}`}
-        >
-          <AlertTriangle className="h-4 w-4" />
-          {t("hl.consolePackUnbound", "项目方未绑定 leader")}
-        </button>
-      ) : underfunded ? (
-        <Link href="/strategy" data-testid={`link-console-pack-fund-${pack.slug}`}>
-          <button
-            type="button"
-            className="mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] bg-white/[0.05] text-amber-200 border border-amber-500/30"
-            data-testid={`button-console-pack-fund-${pack.slug}`}
-          >
-            <Wallet className="h-4 w-4" />
-            {t("hl.packFundToFollow", "充值后跟单")}
-          </button>
-        </Link>
-      ) : (
-        <>
-          {confirm && !isOn && (
-            <div className="mt-3 rounded-xl p-3 space-y-1.5" style={{ background: `${color}12`, border: `1px solid ${color}33` }}>
-              <div className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color }}>
-                <AlertTriangle className="h-3.5 w-3.5" />{t("hl.packConfirmTitle", "确认跟单参数")}
-              </div>
-              <p className="text-[11px] leading-relaxed text-foreground/70">
-                {t("hl.consolePackConfirmSummary", "复制 {{leader}} · 镜像比例 {{ratio}}% · 杠杆 {{lev}} · 单笔上限 {{cap}}", {
-                  leader: shortAddr(pack.leaderAddress!),
-                  ratio: (cfg.notionalRatio * 100).toFixed(0),
-                  lev: cfg.maxLeverage > 0 ? `≤${cfg.maxLeverage}x` : t("hl.packLevAuto", "随单"),
-                  cap: cfg.notionalCapUsd != null ? `$${cfg.notionalCapUsd}` : t("hl.packAuto", "随单"),
-                })}
-              </p>
-              <p className="text-[11px] leading-relaxed text-red-300/90">
-                {t("hl.packRiskLine", "杠杆交易可能亏损全部本金,爆仓后无法追回。")}
-              </p>
-              {/* 满仓保护(显示层):如实告知单笔下单上限。 */}
-              <FullPositionNote color={color} />
-              {/* 高风险参数(杠杆≥8 或 镜像≥10%):必须勾选才可确认跟单。 */}
-              {isHighRisk && <HighRiskAck checked={riskAck} onChange={setRiskAck} color={color} />}
-            </div>
-          )}
-
-          <button
-            type="button"
-            disabled={busy || (confirm && !isOn && isHighRisk && !riskAck)}
-            onClick={() => {
-              if (isOn) { onEnable(pack); return; }
-              if (confirm) { onEnable(pack); setConfirm(false); setRiskAck(false); }
-              else setConfirm(true);
-            }}
-            className={cn(
-              "mt-3.5 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-extrabold transition-all active:scale-[0.99] disabled:opacity-50",
-              isOn ? "bg-white/[0.06] text-foreground/80 border border-white/10" : "text-black",
-            )}
-            style={isOn ? undefined : { background: `linear-gradient(135deg, ${color}, ${color}cc)`, boxShadow: `0 0 18px ${color}40` }}
-            data-testid={`button-console-pack-enable-${pack.slug}`}
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-            {busy ? t("hl.packEnabling", "启用中…")
-              : isOn ? t("hl.packReapply", "重新应用参数")
-              : confirm ? t("hl.packConfirmFollow", "确认跟单")
-              : t("hl.oneClickFollow", "一键跟单")}
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ── 智能跟单HL — full hub page reached from the Strategy hero ─────────────────
 //
 // 统计台 (HubStatsBar:每日盈亏) always on top, then 4 exchange-style tabs:
-//   总览 (钱包:开户/充值/提现 + 跟单中) · 智能跟单 (策略包 + 一键跟单 + AI 决策)
+//   总览 (钱包:开户/充值/提现 + 跟单中) · 智能跟单 (选风格<执行器> → 选交易员 → 一键跟单 + AI 决策)
 //   · 信号源 (DataSourceTab) · 持仓·平仓 (MyPositionsTab). Honest live engine data only.
 export function HlHubPage() {
   const { t } = useTranslation();
@@ -2127,33 +1887,24 @@ export function HlHubPage() {
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
   const packsQ = useConsolePacks();
-  const { copy, copyMany } = useHlCopy(userId, network);
+  const { copy } = useHlCopy(userId, network);
 
-  // CONSOLE packs drive the list when the project client has configured them.
-  // Empty list OR fetch error → fall back to the hardcoded HL_PACKS presets so
-  // nothing regresses for projects that haven't curated packs yet.
+  // CONSOLE packs(项目方精选交易员)drive the 交易员 list when configured;
+  // empty/error → fall back to the engine leaderboard (leadersQ). Either way the
+  // user picks a 执行风格 first, then one-click follows a 交易员 (executor-only).
   const consolePacks = packsQ.data?.packs ?? [];
   const useConsole = packsQ.isSuccess && consolePacks.length > 0;
 
-  // 订阅索引:leader → 该 leader 名下各订阅的参数指纹(ratio/cap)。
-  // 「包已开启」必须 leader + 参数双重匹配 —— 只看 leader 会把其他入口(批量跟单/
-  // 别的包/改绑前的旧包)建的订阅误判成本包已开启:包间共享 leader 时一人订阅四卡全亮。
-  const subsIndex = useMemo(() => {
-    const m = new Map<string, Array<{ ratio: number; cap: number | null }>>();
+  // 已跟单 leader 集合(地址小写)。新契约下「已跟单」只看 leader 是否有非 stopped 订阅 ——
+  // sizing 由执行器接管,不再做 ratio/cap 参数指纹匹配。
+  const subscribedLeaders = useMemo(() => {
+    const set = new Set<string>();
     for (const s of subsQ.data?.subscriptions ?? []) {
-      const row = s as any;
-      if (row.status === "stopped") continue;
-      const k = String(row.leaderAddress).toLowerCase();
-      const list = m.get(k) ?? [];
-      list.push({
-        ratio: Number(row.notionalRatio ?? NaN),
-        cap: row.notionalCapUsd != null ? Number(row.notionalCapUsd) : null,
-      });
-      m.set(k, list);
+      if ((s as any).status === "stopped") continue;
+      set.add(String((s as any).leaderAddress).toLowerCase());
     }
-    return m;
+    return set;
   }, [subsQ.data]);
-  const subscribedLeaders = useMemo(() => new Set(subsIndex.keys()), [subsIndex]);
 
   const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
@@ -2164,23 +1915,26 @@ export function HlHubPage() {
   // 仅在账户已成功读取后判定,避免加载/未连接时误报余额不足。
   const underfunded = !!wallet && !!hlAddress && acctQ.isSuccess && (acct?.accountValue ?? 0) < HL_MIN;
 
-  // 选一个策略包 → 一键跟单(copyMany 批量订阅该 pack 的 top-N leader)。每张卡独立 busy。
-  const [busyPack, setBusyPack] = useState<string | null>(null);
-  // 执行器档(执行风格):默认 mirror = 现有行为。随一键跟单一起传后端(白名单校验)。
+  // 选风格(执行器)→ 选交易员 → 一键跟单。每个 leader 独立 busy(地址小写为 key)。
+  const [busyLeader, setBusyLeader] = useState<string | null>(null);
+  // 执行器档(执行风格)= 主风格选择。默认 mirror。一键跟单时随 { leader, executorId } 传后端;
+  // 后端按 executorId 套基础仓位 + 门控(前端不再传 ratio/cap/日额/杠杆)。
   const [executorId, setExecutorId] = useState<HlExecutorId>("mirror");
-  // 交易所式四 tab:总览(账户/钱包/跟单中)· 智能跟单(策略包)· 信号源 · 持仓·平仓。
+  // 交易所式四 tab:总览(账户/钱包/跟单中)· 智能跟单(选风格 → 选交易员)· 信号源 · 持仓·平仓。
   const [hubTab, setHubTab] = useState<"overview" | "copy" | "signals" | "positions">("overview");
-  async function onEnablePack(picks: HlLeader[], pack: HlPack) {
-    if (busyPack) return;
-    setBusyPack(pack.key);
-    try { await copyMany(picks, packConfig(pack, executorId)); } finally { setBusyPack(null); }
+
+  // 一键跟单某个交易员 —— executor-only:只发 { leaderAddress, network, executorId }。
+  async function onFollowLeader(leader: HlLeader) {
+    if (busyLeader) return;
+    setBusyLeader(leader.address.toLowerCase());
+    try { await copy(leader, executorOnlyConfig(executorId)); } finally { setBusyLeader(null); }
   }
 
-  // CONSOLE pack → follow its single bound leaderAddress with its params.
-  // Synthesize the minimal HlLeader shape copy() needs (it only reads .address).
-  async function onEnableConsolePack(pack: ConsolePack) {
-    if (busyPack || !pack.leaderAddress) return;
-    setBusyPack(pack.slug);
+  // 项目方配置的精选交易员(console pack)→ 跟单其绑定的 leaderAddress,同样 executor-only
+  // (不再套用 pack 的 ratio/cap/日额/杠杆;sizing 由后端按 executorId 决定)。
+  async function onFollowConsole(pack: ConsolePack) {
+    if (busyLeader || !pack.leaderAddress) return;
+    setBusyLeader(pack.leaderAddress.toLowerCase());
     try {
       const leaderObj: HlLeader = {
         address: pack.leaderAddress,
@@ -2191,9 +1945,9 @@ export function HlHubPage() {
         medianHoldingS: null,
         isHft: null,
       };
-      await copy(leaderObj, consolePackConfig(pack, executorId));
+      await copy(leaderObj, executorOnlyConfig(executorId));
     } finally {
-      setBusyPack(null);
+      setBusyLeader(null);
     }
   }
 
@@ -2277,19 +2031,20 @@ export function HlHubPage() {
             </div>
           )}
 
-          {/* ── 智能跟单 — 策略包 + 一键跟单 + AI 决策 ──────────────────────── */}
+          {/* ── 智能跟单 — 选风格(执行器)→ 选交易员 → 一键跟单 + AI 决策 ──────── */}
           {hubTab === "copy" && (
             <div className="space-y-5">
+              {/* 第一步:选择跟单风格(执行器)。这是主选择层 —— sizing 由所选执行器在后端决定,
+                  前端跟单只传 { leader, executorId },不再有「策略包」那层。 */}
+              <div className="glass-panel p-4">
+                <ExecutorPicker value={executorId} onChange={setExecutorId} disabled={!!busyLeader} />
+              </div>
+
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Layers className="h-4 w-4 text-amber-400" />
-                  <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
-                  <span className="text-[11px] text-foreground/40">· {t("hl.packHint", "选一个,一键跟单")}</span>
-                </div>
-
-                {/* 执行风格选择(执行器档)—— 选中的 executorId 随一键跟单一起传后端。 */}
-                <div className="mb-3">
-                  <ExecutorPicker value={executorId} onChange={setExecutorId} disabled={!!busyPack} />
+                  <Users className="h-4 w-4 text-amber-400" />
+                  <h3 className="text-sm font-medium text-foreground/90">{t("hl.pickLeaderTitle", "选择交易员")}</h3>
+                  <span className="text-[11px] text-foreground/40">· {t("hl.pickLeaderHint", "选一位,一键跟单")}</span>
                 </div>
 
                 {/* 余额不足 → 醒目横幅,切到「总览」tab 充值。 */}
@@ -2313,33 +2068,34 @@ export function HlHubPage() {
                   </button>
                 )}
 
+                {/* 项目方在控制台配置了精选交易员 → 用 console 列表;否则用引擎 leaderboard。
+                    两种都是「一位交易员一行 / 一卡 → 一键跟单」,跟单只传 { leader, executorId }。 */}
                 {useConsole ? (
                   <div className="space-y-3">
                     {consolePacks.map((p) => (
-                      <ConsolePackCard
+                      <ConsoleLeaderCard
                         key={p.slug}
                         pack={p}
-                        subsIndex={subsIndex}
-                        busy={busyPack === p.slug}
-                        onEnable={onEnableConsolePack}
+                        followed={!!p.leaderAddress && subscribedLeaders.has(p.leaderAddress.toLowerCase())}
+                        busy={!!p.leaderAddress && busyLeader === p.leaderAddress.toLowerCase()}
+                        onFollow={onFollowConsole}
                         underfunded={underfunded}
                       />
                     ))}
                   </div>
                 ) : packsQ.isLoading || leadersQ.isLoading ? (
-                  <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}</div>
+                  <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
                 ) : leaders.length === 0 ? (
                   <HlEmpty icon={Users} title={t("hl.noLeaders")} desc={t("hl.noLeadersDesc")} />
                 ) : (
-                  <div className="space-y-3">
-                    {HL_PACKS.map((p) => (
-                      <PackCard
-                        key={p.key}
-                        pack={p}
-                        leaders={leaders}
-                        subsIndex={subsIndex}
-                        busy={busyPack === p.key}
-                        onEnable={onEnablePack}
+                  <div className="space-y-2.5">
+                    {leaders.map((l) => (
+                      <LeaderFollowRow
+                        key={l.address}
+                        leader={l}
+                        followed={subscribedLeaders.has(l.address.toLowerCase())}
+                        busy={busyLeader === l.address.toLowerCase()}
+                        onFollow={onFollowLeader}
                         underfunded={underfunded}
                       />
                     ))}
