@@ -33,6 +33,18 @@ function safeReload() {
   } catch {
     /* sessionStorage 不可用(隐私模式等)→ 仍然刷,只是少了循环保护 */
   }
+  // iOS Safari / 钱包 WKWebView 下 location.reload() 常被内存/磁盘缓存命中,
+  // index.html 仍是旧的 → 拿不到新版。改为带 cache-bust 参数的整页导航:
+  // 改变 URL(_v=时间戳)= 浏览器视作新地址,强制重新拉取 index.html(进而引用
+  // 新 hash 的 chunk)。每次刷新覆盖同一个 _v 参数,不累积;路由忽略未知 query。
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("_v", String(Date.now()));
+    window.location.replace(url.toString());
+    return;
+  } catch {
+    /* URL 构造失败(极老 WebView)→ 退回普通 reload */
+  }
   window.location.reload();
 }
 
