@@ -1343,20 +1343,36 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   // 顶部"持仓价值"取自合并层 acct.positions(引擎+overrides);列表在共享组件内自取 Supabase。
   const acctHoldValue = (acct?.positions ?? []).reduce((s, p) => s + p.positionValue, 0);
 
+  // ── 每格百分比兜底:视图 *_pct 为 null 时前端算,保证每个金额旁都有 %(Number.isFinite 守卫)。
+  const dayPnlUsd = numOrZero(today?.day_pnl_usd);
+  const realizedUsd = numOrZero(today?.realized_pnl_day_usd);
+  const posValueUsd = numOrZero(today?.position_value_usd);
+  const unrealUsd = numOrZero(today?.unrealized_pnl_usd);
+  // 浮盈% 的分母 = 持仓成本(净值视图无成本 → 回退账户成本:posValue − unrealized);兜底用净值。
+  const costBasis = posValueUsd - unrealUsd;
+  // 盈亏类口径:当日/已平仓 → 占净值;未实现 → 占成本(无成本则占净值)。
+  const dayPnlPct = today?.day_pnl_pct ?? pctOfAv(dayPnlUsd);
+  const realizedPct = today?.realized_day_pct ?? pctOfAv(realizedUsd);
+  // 持仓价值占净值(position_share_pct 优先,无则 posValue/净值)。
+  const holdSharePct = today?.position_share_pct ?? pctOfAv(posValueUsd);
+  const unrealPct = today?.unrealized_pct
+    ?? (costBasis > 0 ? (unrealUsd / costBasis) * 100 : pctOfAv(unrealUsd));
+
   return (
     <div className="space-y-3">
       {/* 顶部账户统计:盈亏类(当日/已平仓/持仓价值/未实现)= Supabase 当日视图(overwrite 后,
-          与下方列表一致);现金类(保证金/可用)= 引擎实时账户。这样 admin 调控的当日盈亏会同步到顶部。 */}
+          与下方列表一致);现金类(净值/保证金/可用)= account_summary 优先,引擎实时账户兜底。
+          每个金额旁标 %:盈亏类占净值/成本,现金类占净值,净值本身不重复标 %(它是 % 的分母)。 */}
       <div className="glass-panel p-3">
         <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
-          <StatCell label={t("hl.todayPnl", "当日盈亏")} value={numOrZero(today?.day_pnl_usd)} pct={today?.day_pnl_pct ?? null} tone="pnl" />
-          <StatCell label={t("hl.realized", "已平仓")} value={numOrZero(today?.realized_pnl_day_usd)} pct={today?.realized_day_pct ?? null} tone="pnl" />
-          <StatCell label={t("hl.statHoldValue", "持仓价值")} value={numOrZero(today?.position_value_usd)} pct={today?.position_share_pct ?? null} tone="neutral" />
-          {/* 保证金 / 可用:account_summary 优先(admin 覆盖),NULL 回退引擎实时现金;
-              保证金率(margin_ratio_pct)优先,无则用本地 margin/净值 占比兜底。 */}
+          {/* 净值(account_value)— admin 覆盖优先,引擎实时净值兜底;作为各 % 分母,自身不标 %。 */}
+          <StatCell label={t("hl.accountValue", "净值")} value={av} tone="neutral" />
           <StatCell label={t("hl.marginUsed", "保证金")} value={marginUsed} pct={marginRatio} tone="neutral" />
           <StatCell label={t("hl.available", "可用")} value={available} pct={pctOfAv(available)} tone="neutral" />
-          <StatCell label={t("hl.unrealized", "未实现盈亏")} value={numOrZero(today?.unrealized_pnl_usd)} pct={today?.unrealized_pct ?? null} tone="pnl" />
+          <StatCell label={t("hl.todayPnl", "当日盈亏")} value={dayPnlUsd} pct={dayPnlPct} tone="pnl" />
+          <StatCell label={t("hl.realized", "已平仓")} value={realizedUsd} pct={realizedPct} tone="pnl" />
+          <StatCell label={t("hl.unrealized", "未实现盈亏")} value={unrealUsd} pct={unrealPct} tone="pnl" />
+          <StatCell label={t("hl.statHoldValue", "持仓价值")} value={posValueUsd} pct={holdSharePct} tone="neutral" />
         </div>
       </div>
       {/* 持仓/历史/当日平仓/交易记录 — 与 PM stats 同一共享组件,数据全 Supabase。 */}

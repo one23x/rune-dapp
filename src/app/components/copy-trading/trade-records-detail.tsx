@@ -22,7 +22,7 @@ import { PremiumCard } from "@app/components/premium-card";
 import { SectionEmpty, SectionError, fmtUsd } from "@app/components/copy-trading/shared";
 import {
   useTradeRecords, useWalletDailyHistory, useWalletOpenPositions,
-  useWalletTodayClosed, useWalletTodayStats,
+  useWalletTodayClosed, useWalletTodayStats, useWalletAccountSummary,
   fmtPct, numOrZero, type StatsVenue,
 } from "@app/lib/trading-stats-hooks";
 import { DailyStatRow } from "@app/components/copy-trading/daily-stat-row";
@@ -182,12 +182,15 @@ function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress
   const { t } = useTranslation();
   const statsQ = useWalletTodayStats(wallet);
   const openQ = useWalletOpenPositions(wallet);
+  // 账户汇总(净值)—— 给每仓「持仓价值」算占净值比;NULL/0 时该 % 优雅不显示。
+  const summaryQ = useWalletAccountSummary(wallet);
 
   if (statsQ.isLoading || openQ.isLoading) return <ListSkeleton />;
   if (openQ.isError) return <SectionError onRetry={() => openQ.refetch()} />;
 
   const stats = (statsQ.data ?? []).filter((d) => !venueScope || d.venue === venueScope);
   const open = (openQ.data ?? []).filter((p) => !venueScope || p.venue === venueScope);
+  const summaries = summaryQ.data ?? [];
 
   return (
     <div className="space-y-4">
@@ -201,16 +204,21 @@ function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress
         <SectionEmpty icon={Layers} title={t("copyTrading.statsNoOpen", "暂无持仓")} />
       ) : (
         <div className="space-y-2">
-          {open.map((p, i) => (
-            <PositionCard
-              key={`${p.venue}-${p.symbol}-${i}`}
-              p={p}
-              showVenue={!venueScope}
-              onClose={onClosePosition}
-              closing={closingSymbol != null && closingSymbol === p.symbol}
-              hlAddress={hlAddress}
-            />
-          ))}
+          {open.map((p, i) => {
+            // 该仓所在 venue 的账户净值(admin 覆盖优先);用于算「持仓价值」占净值比。
+            const av = summaries.find((s) => s.venue === p.venue)?.account_value_usd ?? null;
+            return (
+              <PositionCard
+                key={`${p.venue}-${p.symbol}-${i}`}
+                p={p}
+                showVenue={!venueScope}
+                onClose={onClosePosition}
+                closing={closingSymbol != null && closingSymbol === p.symbol}
+                hlAddress={hlAddress}
+                accountValue={av}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -267,12 +275,14 @@ function TodayClosedTab({ wallet, venueScope }: { wallet: string; venueScope?: S
 
 /** 当前持仓一行:LONG/SHORT 徽章 + 浮盈$/ROE% + 三列(数量/入场价/持仓价值)。
  *  仅真实行 + 传入 onClose 时给「平仓」(双击确认);tx_hash 仅 HL 给详情页直链。 */
-function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
+function PositionCard({ p, showVenue, onClose, closing, hlAddress, accountValue }: {
   p: import("@app/lib/trading-stats-hooks").OpenPositionRow;
   showVenue?: boolean;
   onClose?: (symbol: string) => void;
   closing?: boolean;
   hlAddress?: string;
+  /** 该 venue 账户净值(admin 覆盖优先);用于算「持仓价值」占净值比,NULL/0 时 % 不显示。 */
+  accountValue?: number | null;
 }) {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
@@ -281,12 +291,17 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
   const long = size >= 0;
   const cost = numOrZero(p.position_cost_usd);
   const upnl = numOrZero(p.unrealized_pnl_usd);
-  const roe = cost > 0 ? (upnl / cost) * 100 : 0;
+  // ROE%:优先用成本(upnl/cost);成本缺失时回退名义(upnl/posValue),保证浮盈旁尽量带 %。
+  const roeBasis = cost > 0 ? cost : numOrZero(p.position_value_usd);
+  const roe = roeBasis > 0 ? (upnl / roeBasis) * 100 : NaN;
   const pos = upnl >= 0;
   // 交易所式增强:杠杆徽章(真实/手动行有值;PM custodial=NULL → 不显示)+ 每仓保证金(名义/leverage)。
   const lev = p.leverage != null && Number(p.leverage) > 0 ? Number(p.leverage) : null;
   const posValue = numOrZero(p.position_value_usd);
   const positionMargin = lev != null && posValue > 0 ? posValue / lev : null;
+  // 持仓价值占账户净值比(名义/净值)；净值不可用(NULL/≤0)时优雅不显示。
+  const av = accountValue != null ? Number(accountValue) : NaN;
+  const sharePct = Number.isFinite(av) && av > 0 && posValue > 0 ? (posValue / av) * 100 : NaN;
   // 链上详情:① 有 tx_hash → tx 详情页(手动单可填真实 tx);② 真实 HL 持仓(无单笔 tx)
   //          → 该账户 explorer 页(地址页有真实持仓,能对上)。手动行不回退地址页(防穿帮)。
   const tx = p.tx_hash
@@ -320,13 +335,13 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress }: {
         </div>
         <div className="text-right shrink-0">
           <div className={`text-[12px] font-bold tabular-nums ${pos ? "text-emerald-400" : "text-red-400"}`}>{pos ? "+" : ""}{fmtUsd(upnl)}</div>
-          {cost > 0 && <div className={`text-[10px] tabular-nums ${pos ? "text-emerald-400/70" : "text-red-400/70"}`}>{pos ? "+" : ""}{roe.toFixed(2)}%</div>}
+          {Number.isFinite(roe) && <div className={`text-[10px] tabular-nums ${pos ? "text-emerald-400/70" : "text-red-400/70"}`}>{pos ? "+" : ""}{roe.toFixed(2)}%</div>}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-1 text-center">
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.size", "数量")}</div><div className="text-[12px] font-bold tabular-nums">{Math.abs(size).toLocaleString()}</div></div>
         <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.entry", "入场价")}</div><div className="text-[12px] font-bold tabular-nums">{p.entry_px != null ? Number(p.entry_px).toLocaleString() : "—"}</div></div>
-        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value", "持仓价值")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(posValue)}</div></div>
+        <div><div className="text-[8px] text-muted-foreground uppercase tracking-wide">{t("hl.value", "持仓价值")}</div><div className="text-[12px] font-bold tabular-nums num-gold">{fmtUsd(posValue)}{Number.isFinite(sharePct) && <span className="text-[8px] text-muted-foreground/60 ml-0.5">({sharePct.toFixed(1)}%)</span>}</div></div>
       </div>
       {/* 每仓保证金(交易所式)—— 名义/杠杆;仅 leverage 有值时显示,不破坏无杠杆行布局。 */}
       {positionMargin != null && (
