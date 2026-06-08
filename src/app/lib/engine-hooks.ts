@@ -24,6 +24,12 @@ import {
   type PolymarketOrderInput,
 } from "@app/lib/engine";
 import { supabase } from "@app/lib/supabase-client";
+import {
+  fetchHlAccountFromSync,
+  fetchHlLeadersFromSync,
+  fetchHlSignalsFromSync,
+  fetchPusdBalanceFromSync,
+} from "@app/lib/engine-supabase-reads";
 
 /**
  * Resolve the Engine user for a connected wallet — **auto-onboard on first sight**.
@@ -167,13 +173,17 @@ export function useLeaders(window: "1d" | "7d" | "30d" = "7d") {
   });
 }
 
-/** Latest leader-consensus signals feed. */
+/**
+ * Latest leader-consensus signals feed (PM 市场共识流,非 HL)。
+ * 该共识聚合在 Supabase 无对应同形状源(trading_signal_trades 是逐笔信号、
+ * 字段形状不同),故保持读引擎,但把轮询 30s→120s 降消耗(共识卡非实时关键)。
+ */
 export function useLeaderSignals() {
   return useQuery({
     queryKey: ["engine", "leader-signals"],
     queryFn: () => signals.leaderSignalsLatest(),
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    staleTime: 120_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -204,26 +214,38 @@ export function useOrders(userId: string | undefined) {
   });
 }
 
-/** A user's live open Polymarket orders. */
+/** A user's live open Polymarket orders. 轮询 15s→60s 降引擎消耗(无同步源)。 */
 export function useOpenOrders(userId: string | undefined) {
   return useQuery({
     queryKey: ["engine", "open-orders", userId],
     queryFn: () => trading.polymarket.openOrders(userId!),
     enabled: !!userId,
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
   });
 }
 
-/** A user's pUSD collateral balance. */
+/**
+ * A user's pUSD collateral balance — **同步表优先,引擎兜底**。
+ * 先读 trading_pm_account_state(生产机 pm-positions-sync 每 ~2min 刷),拼出
+ * 引擎 pusd-balance 同形状 { smartWallet, balanceUsd };该 user 无同步行时回退
+ * 引擎实时 funding.pusdBalance(保证未覆盖账户不白屏)。refetchInterval 由
+ * 30s 放宽到 120s(同步表本就 2min 刷,实时打引擎只是兜底场景)。
+ */
 export function usePusdBalance(userId: string | undefined) {
   return useQuery({
     queryKey: ["engine", "pusd-balance", userId],
-    queryFn: () => funding.pusdBalance(userId!),
+    queryFn: async () => {
+      try {
+        const synced = await fetchPusdBalanceFromSync(userId!);
+        if (synced) return synced;
+      } catch {
+        // 同步表读失败(RLS/网络)→ 安静回退引擎,不阻断余额显示。
+      }
+      return funding.pusdBalance(userId!);
+    },
     enabled: !!userId,
-    staleTime: 30_000,
-    // Background-poll like useHlAccount: bridged funds can land after the deposit
-    // dialog's ~3min invalidation window closes; this self-heals a stale balance.
-    refetchInterval: 30_000,
+    staleTime: 120_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -309,36 +331,77 @@ export function usePolymarketPlaceOrder(userId: string | undefined) {
 
 // ─── Hyperliquid copy-trading (network-keyed) ────────────────────────────────
 
-/** Ranked HL leaders for a network. */
+/**
+ * Ranked HL leaders for a network — **同步表优先,引擎兜底**。
+ * 先读 trading_hl_leaders(生产机 trading-sync 每 ~2min 刷);空表回退引擎
+ * hyperliquid.leaders。组件无需改(返回 { network, leaders } 同形状)。
+ */
 export function useHlLeaders(network: HlNetwork) {
   return useQuery({
     queryKey: ["engine", "hl", "leaders", network],
-    queryFn: () => hyperliquid.leaders(network),
-    staleTime: 60_000,
+    queryFn: async () => {
+      try {
+        const synced = await fetchHlLeadersFromSync(network);
+        if (synced) return synced;
+      } catch {
+        /* 同步表读失败 → 回退引擎 */
+      }
+      return hyperliquid.leaders(network);
+    },
+    staleTime: 120_000,
+    refetchInterval: 120_000,
   });
 }
 
-/** Recent HL leader signals (open/close fills); optionally scoped to one leader. */
+/**
+ * Recent HL leader signals (open/close fills) — **同步表优先,引擎兜底**。
+ * 先读 trading_hl_copy_signals(每 ~2min 刷,按 network + happened_at desc,
+ * 可按 leader 过滤);空结果回退引擎 hyperliquid.signals。refetchInterval
+ * 30s→120s(同步表 2min 刷)。返回 { network, signals } 同形状,组件无需改。
+ */
 export function useHlSignals(
   network: HlNetwork,
   opts?: { limit?: number; leader?: string },
 ) {
   return useQuery({
     queryKey: ["engine", "hl", "signals", network, opts?.limit ?? null, opts?.leader ?? null],
-    queryFn: () => hyperliquid.signals(network, opts),
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    queryFn: async () => {
+      try {
+        const synced = await fetchHlSignalsFromSync(network, opts);
+        if (synced) return synced;
+      } catch {
+        /* 同步表读失败 → 回退引擎 */
+      }
+      return hyperliquid.signals(network, opts);
+    },
+    staleTime: 120_000,
+    refetchInterval: 120_000,
   });
 }
 
-/** A user/follower's HL account state + open positions (direct HL info API). */
+/**
+ * A user/follower's HL account state + open positions — **同步表优先,引擎兜底**。
+ * 先从 trading_hl_account_state(HL 现金,2min 刷)+ v_wallet_open_positions(持仓)
+ * 拼出引擎 HlAccount 同形状对象;同步层无该 HL 账户(地址未覆盖)时回退引擎实时
+ * hyperliquid.account,保证不白屏。refetchInterval 30s→120s(同步表 2min 刷)。
+ * 注意:useHlAccountAdjusted(hl-display-overrides.ts)包装本 hook,叠加 admin 覆盖/
+ * 手动持仓/手动成交 —— 本 hook 返回同形状对象后那层逻辑原样工作。
+ */
 export function useHlAccount(address: string | undefined, network: HlNetwork) {
   return useQuery({
     queryKey: ["engine", "hl", "account", network, address?.toLowerCase()],
-    queryFn: () => hyperliquid.account(address!, network),
+    queryFn: async () => {
+      try {
+        const synced = await fetchHlAccountFromSync(address!, network);
+        if (synced) return synced;
+      } catch {
+        /* 同步表读失败 → 回退引擎 */
+      }
+      return hyperliquid.account(address!, network);
+    },
     enabled: !!address,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 120_000,
+    refetchInterval: 120_000,
     retry: false,
   });
 }
@@ -353,14 +416,16 @@ export function useHlSubs(userId: string | undefined) {
   });
 }
 
-/** F17 — AI 跟单决策流(决策卡)。每个信号经 AI 判断+调参的审计。 */
+/** F17 — AI 跟单决策流(决策卡)。每个信号经 AI 判断+调参的审计。
+ *  无 Supabase 同步源 → 仍读引擎,但轮询 30s→180s、staleTime 提到 180s
+ *  降消耗(决策卡为审计展示,非实时关键)。 */
 export function useHlCopyDecisions(userId: string | undefined) {
   return useQuery({
     queryKey: ["engine", "hl", "copy-decisions", userId],
     queryFn: () => hyperliquid.copyDecisions(userId!),
     enabled: !!userId,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 180_000,
+    refetchInterval: 180_000,
   });
 }
 

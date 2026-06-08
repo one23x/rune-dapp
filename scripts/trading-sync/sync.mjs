@@ -50,6 +50,15 @@ const SPECS = [
   { target: "trading_hl_copy_subscriptions", conflict: ["id"],
     cols: ["id","project_id","user_id","leader_address","follower_address","notional_ratio","notional_cap_usd","daily_cap_usd","today_used_usd","max_leverage","status","network","take_profit_pct","created_at","updated_at"],
     src: `select id, project_id, user_id, leader_address, follower_address, notional_ratio, notional_cap_usd, daily_cap_usd, today_used_usd, max_leverage, status, network, take_profit_pct, created_at, updated_at from trading.hl_copy_subscriptions` },
+  // HL 跟单信号流 + leader 榜 → dapp useHlSignals / useHlLeaders 改读 Supabase(降引擎 API 消耗)。
+  // 信号量大(数万行/月);前端只读最近 N 条(≤60),只同步最近 3 天的开/平仓 fills 即够用,
+  // 既保证 feed 新鲜又把每周期 upsert 量从 ~68k 压到 ~2 万(fills 是 append-only,PK=id 幂等)。
+  { target: "trading_hl_copy_signals", conflict: ["id"],
+    cols: ["id","leader_address","coin","side","is_close","px","sz","notional_usd","leader_sz_after","fill_hash","happened_at","network","created_at"],
+    src: `select id, leader_address, coin, side, is_close, px, sz, notional_usd, leader_sz_after, fill_hash, happened_at, network, created_at from trading.hl_copy_signals where happened_at > now() - interval '3 days'` },
+  { target: "trading_hl_leaders", conflict: ["address","network"],
+    cols: ["address","network","label","active","score","median_holding_s","is_hft","last_fill_time","created_at","updated_at"],
+    src: `select address, network, label, active, score, median_holding_s, is_hft, last_fill_time, created_at, updated_at from trading.hl_leaders` },
 ];
 
 const CHUNK = 500;
