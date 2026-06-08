@@ -63,7 +63,7 @@ import { AiLab } from "./ai-lab";
 import {
   NetworkToggle, HlEmpty, useHlCopy, TIER_META, tierOf,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
-  type HlFollowConfig,
+  type HlFollowConfig, type HlExecutorId,
 } from "@app/components/hl/shared";
 import { useOnboardFlow, DepositBuyPanel, DepositTransferPanel, DepositAddressPanel, NodeGateCard, NodeBadge, useNodeGate } from "@app/components/copy-trading/shared";
 import { HL_BRIDGE2_MAINNET } from "@app/components/hl/hl-deposit-guide";
@@ -1669,7 +1669,7 @@ function FullPositionNote({ color }: { color: string }) {
   );
 }
 
-function packConfig(pack: HlPack): HlFollowConfig {
+function packConfig(pack: HlPack, executorId: HlExecutorId): HlFollowConfig {
   return {
     notionalRatio: pack.ratioPct / 100,
     maxLeverage: pack.maxLev,
@@ -1678,7 +1678,67 @@ function packConfig(pack: HlPack): HlFollowConfig {
     notionalCapUsd: pack.cap,
     dailyCapUsd: pack.daily,
     allowedCoins: pack.coins,
+    executorId,
   };
+}
+
+// ── 执行器选择 — mirror|steady|aggressive|smart(默认 mirror = 现有行为)──────────
+//
+// 4 张卡:中文名 + emoji + 一句话。选中的 executorId 随一键跟单的 subscribeCreate 一起传后端,
+// 后端用 hl-executors EXECUTOR_IDS 白名单校验(未知/缺省 → 'mirror')。文案在前端硬编码以避免
+// 多一次拉取;后端有 GET /v1/executors?venue=hl 作为单一事实源(留待后续切换)。
+type ExecutorMeta = { id: HlExecutorId; emoji: string; label: string; blurb: string };
+const HL_EXECUTORS: ExecutorMeta[] = [
+  { id: "mirror",     emoji: "🪞", label: "镜像 Mirror",     blurb: "原样跟随交易员,最快进场(默认)" },
+  { id: "steady",     emoji: "🛡", label: "稳健 Steady",     blurb: "小仓位·只跟顶级交易员" },
+  { id: "aggressive", emoji: "🔥", label: "激进 Aggressive", blurb: "大仓位·广撒网" },
+  { id: "smart",      emoji: "🤖", label: "智能 Smart",      blurb: "只在 AI 看好时精选出手" },
+];
+
+function ExecutorPicker({
+  value, onChange, disabled = false,
+}: {
+  value: HlExecutorId;
+  onChange: (id: HlExecutorId) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[12px] font-semibold text-foreground/70">{t("hl.executorTitle", "执行风格")}</span>
+        <span className="text-[10px] text-foreground/40">· {t("hl.executorHint", "决定如何替你执行跟单")}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {HL_EXECUTORS.map((e) => {
+          const on = value === e.id;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(e.id)}
+              data-testid={`button-executor-${e.id}`}
+              className={cn(
+                "text-left rounded-xl px-3 py-2.5 border transition-all active:scale-[0.99] disabled:opacity-50",
+                on
+                  ? "bg-primary/10 border-primary/30 text-foreground"
+                  : "bg-white/[0.02] border-white/[0.06] text-foreground/55 hover:border-white/15",
+              )}
+            >
+              <div className="flex items-center gap-1.5 text-[13px] font-bold">
+                <span>{e.emoji}</span>
+                <span>{t(`hl.executor.${e.id}.label`, e.label)}</span>
+              </div>
+              <p className="mt-0.5 text-[10px] leading-snug text-foreground/40">
+                {t(`hl.executor.${e.id}.blurb`, e.blurb)}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function PackCard({
@@ -1848,7 +1908,7 @@ function pickCoins(params: Record<string, unknown>, ...keys: string[]): string[]
  *   maxLeverage (0 = 随单/auto) ; cap|notionalCapUsd ; daily|dailyCapUsd ;
  *   coins|allowedCoins ; takeProfitPct|tpPct ; stopLossPct|slPct.
  */
-function consolePackConfig(pack: ConsolePack): HlFollowConfig {
+function consolePackConfig(pack: ConsolePack, executorId: HlExecutorId): HlFollowConfig {
   const p = pack.params ?? {};
   // ratio: prefer an explicit fraction (notionalRatio/ratio ≤1), else whole-% (ratioPct).
   const ratioFrac = pickNum(p, "notionalRatio", "ratio");
@@ -1865,6 +1925,7 @@ function consolePackConfig(pack: ConsolePack): HlFollowConfig {
     notionalCapUsd: pickNum(p, "notionalCapUsd", "cap", "perTradeCapUsd"),
     dailyCapUsd: pickNum(p, "dailyCapUsd", "daily", "dailyCap"),
     allowedCoins: pickCoins(p, "allowedCoins", "coins"),
+    executorId,
   };
 }
 
@@ -1895,7 +1956,9 @@ function ConsolePackCard({
   const [riskAck, setRiskAck] = useState(false);
   useEffect(() => { if (busy) { setConfirm(false); setRiskAck(false); } }, [busy]);
 
-  const cfg = useMemo(() => consolePackConfig(pack), [pack]);
+  // 仅用于展示层指纹(isHighRisk / isOn 匹配);executorId 不参与参数指纹,固定 mirror 即可。
+  // 真正下单走 onEnableConsolePack → consolePackConfig(pack, executorId)(带用户选的执行风格)。
+  const cfg = useMemo(() => consolePackConfig(pack, "mirror"), [pack]);
   // 高风险判定(由解析后的参数推断):杠杆 ≥8 或 镜像比例 ≥10% 视为高风险,
   // 确认态额外要求勾选「已知悉高风险并自愿承担」。
   const isHighRisk = cfg.maxLeverage >= 8 || cfg.notionalRatio >= 0.10;
@@ -2103,12 +2166,14 @@ export function HlHubPage() {
 
   // 选一个策略包 → 一键跟单(copyMany 批量订阅该 pack 的 top-N leader)。每张卡独立 busy。
   const [busyPack, setBusyPack] = useState<string | null>(null);
+  // 执行器档(执行风格):默认 mirror = 现有行为。随一键跟单一起传后端(白名单校验)。
+  const [executorId, setExecutorId] = useState<HlExecutorId>("mirror");
   // 交易所式四 tab:总览(账户/钱包/跟单中)· 智能跟单(策略包)· 信号源 · 持仓·平仓。
   const [hubTab, setHubTab] = useState<"overview" | "copy" | "signals" | "positions">("overview");
   async function onEnablePack(picks: HlLeader[], pack: HlPack) {
     if (busyPack) return;
     setBusyPack(pack.key);
-    try { await copyMany(picks, packConfig(pack)); } finally { setBusyPack(null); }
+    try { await copyMany(picks, packConfig(pack, executorId)); } finally { setBusyPack(null); }
   }
 
   // CONSOLE pack → follow its single bound leaderAddress with its params.
@@ -2126,7 +2191,7 @@ export function HlHubPage() {
         medianHoldingS: null,
         isHft: null,
       };
-      await copy(leaderObj, consolePackConfig(pack));
+      await copy(leaderObj, consolePackConfig(pack, executorId));
     } finally {
       setBusyPack(null);
     }
@@ -2220,6 +2285,11 @@ export function HlHubPage() {
                   <Layers className="h-4 w-4 text-amber-400" />
                   <h3 className="text-sm font-medium text-foreground/90">{t("hl.strategyPacks", "策略包")}</h3>
                   <span className="text-[11px] text-foreground/40">· {t("hl.packHint", "选一个,一键跟单")}</span>
+                </div>
+
+                {/* 执行风格选择(执行器档)—— 选中的 executorId 随一键跟单一起传后端。 */}
+                <div className="mb-3">
+                  <ExecutorPicker value={executorId} onChange={setExecutorId} disabled={!!busyPack} />
                 </div>
 
                 {/* 余额不足 → 醒目横幅,切到「总览」tab 充值。 */}

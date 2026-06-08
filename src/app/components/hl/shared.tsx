@@ -166,7 +166,16 @@ export interface HlFollowConfig {
   dailyCapUsd?: number;
   /** Coin whitelist (e.g. ["BTC","ETH","SOL"]). Empty = all coins. */
   allowedCoins?: string[];
+  /**
+   * Execution profile (执行器档): mirror|steady|aggressive|smart.
+   * Omit = engine default 'mirror' (现有行为不变). The engine create route
+   * whitelist-validates this against hl-executors EXECUTOR_IDS.
+   */
+  executorId?: HlExecutorId;
 }
+
+/** HL 执行器档(与后端 hl-executors.ts 的 ExecutorId 对齐)。 */
+export type HlExecutorId = "mirror" | "steady" | "aggressive" | "smart";
 
 export const HL_DEFAULT_FOLLOW: HlFollowConfig = {
   notionalRatio: 0.1,
@@ -206,6 +215,8 @@ export function useHlCopy(userId: string | undefined, network: HlNetwork) {
         notionalCapUsd: config.notionalCapUsd,
         dailyCapUsd: config.dailyCapUsd,
         allowedCoins: config.allowedCoins && config.allowedCoins.length > 0 ? config.allowedCoins : undefined,
+        // 执行器档:省略 → 后端默认 'mirror'(现有行为不变);后端白名单校验。
+        executorId: config.executorId,
       });
       return "ok";
     },
