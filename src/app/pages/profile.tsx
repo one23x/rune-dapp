@@ -15,10 +15,9 @@ import { buildReferralUrl } from "@/hooks/rune/use-referral-param";
 import {
   useEngineUser, useCopySubs, useHlSubs,
 } from "@app/lib/engine-hooks";
-import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
-import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
 import { useWalletTodayStats, numOrZero } from "@app/lib/trading-stats-hooks";
-import { asArray, pusdAmount, fmtUsd } from "@app/components/copy-trading/shared";
+import { useMemberAccount } from "@app/lib/member-account-hooks";
+import { asArray, fmtUsd } from "@app/components/copy-trading/shared";
 import { Activity, Layers } from "lucide-react";
 
 // MENU_ITEMS deliberately omits the "Referral & Team" entry — it lives
@@ -90,32 +89,28 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
 
-  // HL 账户地址解析(custodial = 托管 EOA;agent = 用户主账户)—— 与 hl-copy-section 同范式,
-  // 不能直接拿连接钱包当 HL 地址(custodial 用户 HL 账户不在连接钱包上 → 会查到空账户)。
-  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
-  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : hlUser?.engineEoaAddress;
-
-  const balanceQ = usePusdBalanceAdjusted(userId, wallet);
   const pmSubsQ = useCopySubs(userId);
   const hlSubsQ = useHlSubs(userId);
-  // 账户净值走 overwrite 合并层(引擎实时 + trading_hl_overrides);统计三格走 Supabase 当日视图。
-  const hlAcctQ = useHlAccountAdjusted(hlAddress, "mainnet", wallet);
+  // 账户/盈亏/持仓全部读会员虚拟账本(v_member_account,三市场行)——
+  // HL 账户净值 = hl_mainnet equity;pUSD 余额 = polymarket equity;浮盈/持仓数 = 三市场汇总。
+  const memberAcct = useMemberAccount(wallet);
+  // 当日盈亏:账本视图无对应列,取 Supabase 当日统计跨 venue 汇总(manual 优先)。
   const statsQ = useWalletTodayStats(wallet);
 
-  const pusd = pusdAmount(balanceQ.data);
-  // 跨 venue(PM + HL 主/测网)当日统计汇总 —— 全部 coalesce(manual,真实)展示值,admin 调控即时联动。
-  const agg = useMemo(() => (statsQ.data ?? []).reduce(
-    (a, d) => ({
-      dayPnl: a.dayPnl + numOrZero(d.day_pnl_usd),
-      unreal: a.unreal + numOrZero(d.unrealized_pnl_usd),
-      open: a.open + numOrZero(d.open_positions),
-    }),
-    { dayPnl: 0, unreal: 0, open: 0 },
-  ), [statsQ.data]);
+  const hlLedger = memberAcct.byVenue("hl_mainnet");
+  const pmLedger = memberAcct.byVenue("polymarket");
+  const hlAcctVal = numOrZero(hlLedger?.equity);
+  const pusd = numOrZero(pmLedger?.equity);
+  // 跨三市场浮盈 / 持仓数(账本汇总);当日盈亏取当日统计视图。
+  const agg = useMemo(() => {
+    const unreal = memberAcct.rows.reduce((s, r) => s + numOrZero(r.unrealized_pnl), 0);
+    const open = memberAcct.rows.reduce((s, r) => s + numOrZero(r.open_positions), 0);
+    const dayPnl = (statsQ.data ?? []).reduce((s, d) => s + numOrZero(d.day_pnl_usd), 0);
+    return { dayPnl, unreal, open };
+  }, [memberAcct.rows, statsQ.data]);
 
   const pmSubCount = asArray(pmSubsQ.data).filter((s: any) => s?.status !== "stopped").length;
   const hlSubCount = (hlSubsQ.data?.subscriptions ?? []).filter((s: any) => s?.status !== "stopped").length;
-  const hlAcctVal = hlAcctQ.data?.accountValue ?? 0;
   const hlOpen = agg.open;
 
   // While the engine user is resolving, hold a slot so the card doesn't pop in.
@@ -143,14 +138,14 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
           <div>
             <div className="text-xs text-white/50 mb-1">{t("profile.hlAccount", "HL Account")}</div>
             <div className="text-2xl font-bold text-white tabular-nums">
-              {hlAcctQ.isLoading ? "…" : fmtUsd(hlAcctVal)}
+              {memberAcct.isLoading ? "…" : fmtUsd(hlAcctVal)}
             </div>
             <div className="text-[10px] text-white/40 mt-0.5">{hlOpen} {t("profile.hlOpenPositions", "open positions")}</div>
           </div>
           <div className="text-right">
             <div className="text-xs text-white/50 mb-1">{t("profile.pmBalance", "pUSD")}</div>
             <div className="text-sm font-medium text-white/90 tabular-nums">
-              {balanceQ.isLoading ? "…" : fmtUsd(pusd)}
+              {memberAcct.isLoading ? "…" : fmtUsd(pusd)}
             </div>
           </div>
         </div>

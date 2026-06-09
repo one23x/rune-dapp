@@ -25,6 +25,8 @@ import { useToast } from "@app/hooks/use-toast";
 import { queryClient } from "@app/lib/queryClient";
 import { funding, users, gas as engineGas, type NodeStatus } from "@app/lib/engine";
 import { useNodeStatus, useRedeemCode } from "@app/lib/engine-hooks";
+import { supabase } from "@app/lib/supabase-client";
+import { useMemberAccount, type MemberVenue } from "@app/lib/member-account-hooks";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 import { useSupabaseNodeGate } from "@app/lib/node-gate-supabase";
 import { useActiveAccount, useActiveWalletChain, useSwitchActiveWalletChain, useReadContract, useSendTransaction, PayEmbed } from "thirdweb/react";
@@ -1404,14 +1406,24 @@ export function DepositBuyPanel({
 // ─── Withdraw dialog (guarded, confirm-only) ─────────────────────────────────
 
 export function WithdrawDialog({
-  open, onOpenChange, userId, available,
-}: { open: boolean; onOpenChange: (v: boolean) => void; userId: string; available: number }) {
+  open, onOpenChange, userId, available, wallet, venue = "polymarket",
+}: {
+  open: boolean; onOpenChange: (v: boolean) => void; userId: string; available: number;
+  /** 会员连接钱包 —— 用于解析 user_id 并写入提现申请。 */
+  wallet?: string;
+  /** 提现市场:polymarket | hl_mainnet | hl_testnet。默认 polymarket(总览入口)。 */
+  venue?: MemberVenue;
+}) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const account = useActiveAccount();
   const [amount, setAmount] = useState("");
   const [dest, setDest] = useState("");
   const [confirming, setConfirming] = useState(false);
+
+  // 提现走「申请审核」模型:写 member_withdraw_requests(pending),公司线下打款。
+  // 真实链上余额与会员看到的虚拟账本解耦,故不再直接调引擎 walletWithdraw。
+  const memberAcct = useMemberAccount(wallet);
 
   // 默认把提现目标地址填成「当前连接的钱包」——最常见就是提回自己钱包(仍可改)。
   // reset() 在关闭时清空,所以每次重新打开都会重新预填最新连接地址。
@@ -1425,13 +1437,23 @@ export function WithdrawDialog({
 
   const withdraw = useMutation({
     mutationFn: async () => {
-      // walletWithdraw — relayer on-chain pUSD withdraw to an external 0x address.
-      // Backend expects { amountUsd, destination } (zod-validated); the old { amount, to } 400'd every time.
-      return funding.walletWithdraw(userId, { amountUsd: amt, destination: dest.trim() });
+      // 提现申请:写 member_withdraw_requests(status=pending),由公司审核后线下打款。
+      const uid = memberAcct.userId;
+      if (!uid) throw new Error("member account not resolved");
+      const w = (wallet ?? account?.address ?? "").trim();
+      const { error } = await supabase.from("member_withdraw_requests").insert({
+        user_id: uid,
+        wallet: w,
+        amount_usd: amt,
+        venue,
+        status: "pending",
+        note: `dest:${dest.trim()}`,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: t("copyTrading.withdrawSuccess"), description: t("copyTrading.withdrawSuccessDesc") });
-      queryClient.invalidateQueries({ queryKey: ["engine", "pusd-balance", userId] });
+      // 文案改为「审核中」——资金不即时到账,等公司审核打款。
+      toast({ title: t("copyTrading.withdrawPending", "提现申请已提交"), description: t("copyTrading.withdrawPendingDesc", "申请审核中,通过后将由公司打款到账。") });
       reset();
       onOpenChange(false);
     },

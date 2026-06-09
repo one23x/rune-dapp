@@ -62,16 +62,15 @@ function prettySymbol(symbol?: string | null, marketId?: string | null): string 
   return s;
 }
 
-/** HL explorer tx 详情页直链(PM 无链上详情 → null,不渲染链接;绝不退回地址页防穿帮)。 */
-function explorerTx(hash: string, venue: StatsVenue): string | null {
-  if (venue === "hl_mainnet") return `https://app.hyperliquid.xyz/explorer/tx/${hash}`;
-  if (venue === "hl_testnet") return `https://app.hyperliquid-testnet.xyz/explorer/tx/${hash}`;
+/**
+ * 2026-06-09 账本转向:会员看到的持仓/记录全部是公司维护的虚拟账本,与真实链上账户解耦。
+ * 链上 explorer 链接一律不给(虚拟数据链到链上 = 立刻穿帮)。两个函数恒返回 null,
+ * 所有 `{tx && <a>}` / `{addr && <a>}` 链接块自动不渲染。
+ */
+function explorerTx(_hash: string, _venue: StatsVenue): string | null {
   return null;
 }
-/** HL 账户 explorer 页 —— 仅给「真实」持仓行用(地址页有真实持仓,能对上;手动行不能给,会穿帮)。 */
-function explorerAddr(addr: string, venue: StatsVenue): string | null {
-  if (venue === "hl_mainnet") return `https://app.hyperliquid.xyz/explorer/address/${addr}`;
-  if (venue === "hl_testnet") return `https://app.hyperliquid-testnet.xyz/explorer/address/${addr}`;
+function explorerAddr(_addr: string, _venue: StatsVenue): string | null {
   return null;
 }
 

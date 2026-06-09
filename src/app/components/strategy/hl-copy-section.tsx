@@ -46,13 +46,13 @@ import {
   useEngineUser, useHlLeaders, useHlSignals, useHlSubs, useHlSubMutations, useHlClose,
   useConsolePacks,
 } from "@app/lib/engine-hooks";
-import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import {
   useWalletOpenPositions, useWalletTodayClosed, useWalletDailyHistory, useWalletTodayStats,
-  useWalletAccountSummary,
   fmtPct as fmtStatsPct, numOrZero,
   type StatsVenue, type OpenPositionRow, type TodayClosedRow, type WalletDailyRow,
 } from "@app/lib/trading-stats-hooks";
+import { useMemberAccount } from "@app/lib/member-account-hooks";
+import { supabase } from "@app/lib/supabase-client";
 import { hyperliquid, users } from "@app/lib/engine";
 import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
 import { TradeRecordsDetail } from "@app/components/copy-trading/trade-records-detail";
@@ -133,7 +133,7 @@ function AddressLine({ address, label }: { address: string; label?: string }) {
 // 充值:展示用户的引擎托管 EOA(= HL 签名者/账户),用户从 Arbitrum 把 USDC 充进去;
 //       测试网用 HL 测试网水龙头/桥。地址来自 engineUser.engineEoaAddress —— 未开户时为空,
 //       由 HlAccountStrip 的「开通账户」先把它创建出来(解决"充值地址生成不出来")。
-// 提现:hyperliquid.withdraw → 引擎签 withdraw3 经官方桥把 USDC 提到指定 Arbitrum 地址。
+// 提现:写 member_withdraw_requests(pending,venue=hl_<network>),公司审核后线下打款(申请审核模型)。
 // 弹窗用 w-[calc(100vw-2rem)] max-w-sm + footer 在 <sm 纵向堆叠,适配手机端。
 // 跨链 / 买币直充(thirdweb PayEmbed)—— Arbitrum USDC 直接到托管 EOA(=seller)。
 // 资金只会进引擎托管地址(HL 下单账户),与 copy-trading 的 DepositBridge 同构,
@@ -177,11 +177,26 @@ function HlFunding({
     if (wdOpen && !dest && account?.address) setDest(account.address);
   }, [wdOpen, account?.address, dest]);
 
+  // 提现走「申请审核」模型:写 member_withdraw_requests(pending,venue=hl_<network>),
+  // 公司审核后线下打款。会员看到的虚拟账本与真实链上账户解耦,不再直接调引擎 hyperliquid.withdraw。
+  const memberAcct = useMemberAccount(wallet);
   const withdraw = useMutation({
-    mutationFn: async () => hyperliquid.withdraw(userId, { amountUsd: amt, destination: dest.trim(), network }),
+    mutationFn: async () => {
+      const uid = memberAcct.userId;
+      if (!uid) throw new Error("member account not resolved");
+      const w = (wallet ?? account?.address ?? "").trim();
+      const { error } = await supabase.from("member_withdraw_requests").insert({
+        user_id: uid,
+        wallet: w,
+        amount_usd: amt,
+        venue: `hl_${network}`,
+        status: "pending",
+        note: `dest:${dest.trim()}`,
+      });
+      if (error) throw error;
+    },
     onSuccess: () => {
-      toast({ title: t("hl.withdrawSuccess", "提现已提交"), description: t("hl.withdrawSuccessDesc", "USDC 将经官方桥到达目标 Arbitrum 地址(约几分钟,含 ~$1 桥费)。") });
-      queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
+      toast({ title: t("hl.withdrawPending", "提现申请已提交"), description: t("hl.withdrawPendingDesc", "申请审核中,通过后将由公司打款到账。") });
       reset(); setWdOpen(false);
     },
     onError: (e: unknown) => toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" }),
@@ -1288,34 +1303,32 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
   const account = useActiveAccount();
   const wallet = account?.address;
   const { toast } = useToast();
-  // HL 账户:custodial = 引擎托管 EOA;agent = 用户主账户(自己钱包)。下单/持仓/余额都在该地址。
+  // HL 账户地址解析:仅用于真实成交行的「链上详情」直链(非余额读取);custodial=托管 EOA / agent=主账户。
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
   const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
-  const engineEoa = hlUser?.engineEoaAddress;
-  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
-  // 顶部账户统计(净值/今日盈亏/浮盈/已实现/可用/保证金)仍走引擎+overrides 合并层。
-  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
+  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : hlUser?.engineEoaAddress;
   // 列表(当前持仓 / 历史 / 当日平仓 / 交易记录)统一走共享 TradeRecordsDetail
-  // (venueScope=hl_<network>,全 Supabase 视图;admin overwrite 即时一致;与 PM stats 同一组件)。
+  // (venueScope=hl_<network>,全 Supabase 虚拟数据;manual 持仓/记录;与 PM stats 同一组件)。
   const venue: StatsVenue = (`hl_${network}` as StatsVenue);
-  // 顶部统计台的盈亏类(当日/已平仓/持仓价值/未实现)读 Supabase 当日视图(= overwrite 后展示值),
-  // 与下方列表口径统一;现金类(保证金/可用)才取引擎实时账户(Supabase 无现金概念)。
+  // 顶部账户统计 = 会员虚拟账本 v_member_account(本市场行):净值/保证金/可用/已实现/浮盈。
+  // 不再读引擎真实账户(useHlAccountAdjusted),与会员看到的账本完全一致。
+  const memberAcct = useMemberAccount(wallet);
+  const ledger = memberAcct.byVenue(venue);
+  // 当日盈亏 + 持仓价值:账本视图无对应列,取 Supabase 当日统计(manual 优先)。
   const todayStatsQ = useWalletTodayStats(wallet);
-  // 账户汇总(交易所式:净值/保证金/可用/保证金率)—— admin 覆盖优先,NULL 回退引擎实时现金。
-  const summaryQ = useWalletAccountSummary(wallet);
   const { close, closingCoin } = useHlClose(userId, network);
   async function onClosePosition(coin: string) {
     try {
       await close(coin);
       toast({ title: t("hl.closeOk", "已平仓"), description: t("hl.closeOkDesc", "已提交市价平仓(reduce-only),稍后刷新持仓。") });
-      acctQ.refetch();
+      memberAcct.refetch();
     } catch (e) {
       const msg = String((e as { message?: string })?.message ?? e);
       // 仓位已不在(被 leader 镜像平仓 / TP-SL 自动平仓 / 重复点击)→ 当作已平仓,刷新而非报错。
       if (/no_open_position/i.test(msg)) {
         toast({ title: t("hl.closeAlready", "该仓位已平仓"), description: t("hl.closeAlreadyDesc", "持仓已不存在(可能已被自动平仓),已刷新。") });
-        acctQ.refetch();
+        memberAcct.refetch();
         return;
       }
       toast({ title: t("common.error", "出错了"), description: msg, variant: "destructive" });
@@ -1325,29 +1338,24 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
     return <HlEmpty icon={Wallet} title={t("hl.connectTitle")} desc={t("hl.connectDesc")} />;
   }
 
-  const acct = acctQ.data;
-  // 该 venue 的账户汇总(Supabase v_wallet_account_summary,admin 覆盖优先)。
-  const summary = (summaryQ.data ?? []).find((s) => s.venue === venue);
-  // 净值:admin 覆盖(account_value_usd)优先,NULL 回退引擎实时净值。
-  const av = summary?.account_value_usd ?? acct?.accountValue ?? 0;
+  // 净值(equity)= 账本本市场行;无账本行 → 0(穿帮兜底:不报错,显示空账户)。
+  const av = numOrZero(ledger?.equity);
   // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
   const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
-  // 保证金 / 可用:account_summary 优先(?? 仅在 NULL 时回退引擎实时现金,0 是有效值不回退)。
-  const marginUsed = summary?.margin_used_usd ?? acct?.marginUsed ?? 0;
-  const available = summary?.available_usd ?? acct?.withdrawable ?? 0;
-  // 保证金率(margin_ratio_pct):account_summary 有值才显示;否则用本地 margin/净值 兜底。
-  const marginRatio = summary?.margin_ratio_pct ?? pctOfAv(marginUsed);
-  // 该 venue 的当日统计行(Supabase v_wallet_today_stats,展示值 = coalesce(manual,真实))。
+  // 保证金 / 可用 / 已实现 / 浮盈 全来自账本。
+  const marginUsed = numOrZero(ledger?.margin_used);
+  const available = numOrZero(ledger?.available);
+  const marginRatio = pctOfAv(marginUsed);
+  // 该 venue 的当日统计行(Supabase v_wallet_today_stats)—— 仅取当日盈亏 / 持仓价值。
   const today = (todayStatsQ.data ?? []).find((d) => d.venue === venue);
-  // 顶部"持仓价值"取自合并层 acct.positions(引擎+overrides);列表在共享组件内自取 Supabase。
-  const acctHoldValue = (acct?.positions ?? []).reduce((s, p) => s + p.positionValue, 0);
 
   // ── 每格百分比兜底:视图 *_pct 为 null 时前端算,保证每个金额旁都有 %(Number.isFinite 守卫)。
   const dayPnlUsd = numOrZero(today?.day_pnl_usd);
-  const realizedUsd = numOrZero(today?.realized_pnl_day_usd);
+  // 已实现 / 浮盈走账本(与净值同源);当日持仓价值走当日统计。
+  const realizedUsd = numOrZero(ledger?.realized_pnl);
   const posValueUsd = numOrZero(today?.position_value_usd);
-  const unrealUsd = numOrZero(today?.unrealized_pnl_usd);
-  // 浮盈% 的分母 = 持仓成本(净值视图无成本 → 回退账户成本:posValue − unrealized);兜底用净值。
+  const unrealUsd = numOrZero(ledger?.unrealized_pnl);
+  // 浮盈% 的分母 = 持仓成本(账本无成本 → 回退:posValue − unrealized);兜底用净值。
   const costBasis = posValueUsd - unrealUsd;
   // 盈亏类口径:当日/已平仓 → 占净值;未实现 → 占成本(无成本则占净值)。
   const dayPnlPct = today?.day_pnl_pct ?? pctOfAv(dayPnlUsd);
@@ -1380,7 +1388,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
         venueScope={venue}
         onClosePosition={(coin) => void onClosePosition(coin)}
         closingSymbol={closingCoin}
-        hlAddress={hlAddress ?? acct?.address}
+        hlAddress={hlAddress}
       />
     </div>
   );
@@ -1523,15 +1531,10 @@ export function HlCopySection() {
 
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
-  const engineEoa = hlUser?.engineEoaAddress;
-  // 非托管 agent 模式:HL 账户 = 用户主账户(master/自己钱包),持仓/净值读 master;
-  // custodial:读托管 EOA。engineEoaAddress 在 agent 模式承载的是 agent key(不持仓)。
-  const agentMode = hlUser?.hlMode === "agent";
-  const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
 
-  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
-  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
+  // Hero 数字 = 会员虚拟账本本市场行(净值/浮盈),不再读引擎真实账户。
+  const memberAcct = useMemberAccount(wallet);
+  const ledger = memberAcct.byVenue(`hl_${network}` as StatsVenue);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
 
@@ -1543,8 +1546,6 @@ export function HlCopySection() {
     return set;
   }, [subsQ.data]);
 
-  const acct = acctQ.data;
-
   return (
     <div className="space-y-5" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
       <NetworkToggle value={network} onChange={setNetwork} />
@@ -1555,12 +1556,12 @@ export function HlCopySection() {
         <div className="cursor-pointer active:scale-[0.99] transition-transform">
           <HlHero
             wallet={wallet}
-            loading={!!wallet && acctQ.isLoading}
-            accountValue={acct?.accountValue ?? 0}
-            unrealizedPnl={acct?.unrealizedPnl ?? 0}
+            loading={!!wallet && memberAcct.isLoading}
+            accountValue={numOrZero(ledger?.equity)}
+            unrealizedPnl={numOrZero(ledger?.unrealized_pnl)}
             followCount={subscribedLeaders.size}
             reduce={reduce}
-            health={engineHealthFrom(acctQ, leadersQ)}
+            health={engineHealthFrom(leadersQ)}
           />
         </div>
       </Link>
@@ -1879,11 +1880,12 @@ export function HlHubPage() {
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
   const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
   const engineEoa = hlUser?.engineEoaAddress;
-  // 非托管 agent 模式:净值/持仓读 master(自己钱包);custodial 读托管 EOA。
+  // agent/custodial 仅用于充值/提现(HlFunding,真实资金流向);展示数字一律走会员账本。
   const agentMode = hlUser?.hlMode === "agent";
   const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
-  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
-  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
+  // 会员虚拟账本(本市场行):净值/可提门槛展示全部源自此,不读引擎真实账户。
+  const memberAcct = useMemberAccount(wallet);
+  const ledger = memberAcct.byVenue(`hl_${network}` as StatsVenue);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
   const packsQ = useConsolePacks();
@@ -1906,14 +1908,15 @@ export function HlHubPage() {
     return set;
   }, [subsQ.data]);
 
-  const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
+  // 会员账本本市场净值(展示 + 余额门槛判定均用它)。
+  const accountValue = numOrZero(ledger?.equity);
 
-  // 实时引擎健康(UIUX Rec #6)+ 余额门槛(UIUX Rec #2)。
-  const engineHealth = engineHealthFrom(acctQ, leadersQ);
-  // 账户净值 < HL_MIN → 跟单会以 insufficient_funds 静默失败,改为引导充值。
-  // 仅在账户已成功读取后判定,避免加载/未连接时误报余额不足。
-  const underfunded = !!wallet && !!hlAddress && acctQ.isSuccess && (acct?.accountValue ?? 0) < HL_MIN;
+  // 实时引擎健康(UIUX Rec #6)+ 余额门槛(UIUX Rec #2)。引擎健康只看 leaders 连通性。
+  const engineHealth = engineHealthFrom(leadersQ);
+  // 账本净值 < HL_MIN → 跟单会以 insufficient_funds 静默失败,改为引导充值。
+  // 仅在账本已成功读取后判定,避免加载/未连接时误报余额不足。
+  const underfunded = !!wallet && !memberAcct.isLoading && !memberAcct.isError && accountValue < HL_MIN;
 
   // 选风格(执行器)→ 选交易员 → 一键跟单。每个 leader 独立 busy(地址小写为 key)。
   const [busyLeader, setBusyLeader] = useState<string | null>(null);
@@ -1972,8 +1975,8 @@ export function HlHubPage() {
         <HubStatsBar
           wallet={wallet}
           venue={`hl_${network}` as StatsVenue}
-          loading={!!wallet && acctQ.isLoading}
-          accountValue={acct?.accountValue ?? 0}
+          loading={!!wallet && memberAcct.isLoading}
+          accountValue={accountValue}
           followCount={subscribedLeaders.size}
           reduce={reduce}
         />
@@ -2021,9 +2024,9 @@ export function HlHubPage() {
                     network={network}
                     agentMode={agentMode}
                     depositAddress={engineEoa ?? ""}
-                    withdrawable={acct?.withdrawable ?? 0}
+                    withdrawable={numOrZero(ledger?.withdrawable)}
                     wallet={wallet}
-                    accountValue={acct?.accountValue ?? 0}
+                    accountValue={accountValue}
                   />
                 ) : undefined}
               />
@@ -2061,7 +2064,7 @@ export function HlHubPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[13px] font-bold text-amber-200">{t("hl.underfundedTitle2", "余额不足,去「总览」充值")}</div>
                       <p className="mt-0.5 text-[11px] leading-snug text-foreground/55">
-                        {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(acct?.accountValue ?? 0) })}
+                        {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(accountValue) })}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-amber-300/80" />

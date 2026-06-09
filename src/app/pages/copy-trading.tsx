@@ -28,13 +28,14 @@ import {
   useEngineUser, useOrders, useLeaderSignals, useHotMarkets,
   usePolymarketOrderMutations,
 } from "@app/lib/engine-hooks";
-import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
+import { usePusdBalance } from "@app/lib/engine-hooks";
 import { useWalletTodayStats, numOrZero } from "@app/lib/trading-stats-hooks";
+import { useMemberAccount } from "@app/lib/member-account-hooks";
 import { CopyTradingLayout } from "@app/components/copy-trading/layout";
 import { PremiumCard } from "@app/components/premium-card";
 import {
   OnboardCard, DepositDialog, WithdrawDialog, CopyRiskDialog,
-  asArray, pusdAmount, normalizeOrder, isClosed, fmtUsd, type CopyRiskParams,
+  asArray, normalizeOrder, isClosed, fmtUsd, type CopyRiskParams,
 } from "@app/components/copy-trading/shared";
 
 export default function CopyTradingPage() {
@@ -51,7 +52,12 @@ export default function CopyTradingPage() {
   const previewMode =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
 
-  const balanceQ = usePusdBalanceAdjusted(userId, wallet);
+  // balanceQ(引擎)只用于:① 充值目标 smartWallet 地址 ② 账户连接状态(loading/error)。
+  // **展示余额不再读引擎** —— 见下方 memberAcct(会员虚拟账本 polymarket equity)。
+  const balanceQ = usePusdBalance(userId);
+  // 会员虚拟账本(本会员三市场行);copy-trading 总览 = Polymarket 市场视图。
+  const memberAcct = useMemberAccount(wallet);
+  const pmLedger = memberAcct.byVenue("polymarket");
   const ordersQ = useOrders(userId);
   const signalsQ = useLeaderSignals();
   const hotQ = useHotMarkets();
@@ -99,17 +105,17 @@ export default function CopyTradingPage() {
     }
   };
 
-  const balance = pusdAmount(balanceQ.data);
+  // 展示余额 = 会员虚拟账本 Polymarket 市场净值(equity),不再读引擎 pUSD。
+  const balance = numOrZero(pmLedger?.equity);
 
-  // 总览统计走 Supabase show 合并层(v_wallet_today_stats,与 /copy-trading/stats 同口径,
-  // 跨 PM/HL 主测网汇总,反映 admin 复制单)—— 不再用裸引擎 PM 订单(useOpenOrders/useOrders)
-  // 那条口径只看真实 PM 订单,与 stats 页打架。持仓数/名义/当日盈亏/已实现 全来自当日统计视图。
+  // 持仓数 / 已实现 走会员账本(本会员所有市场汇总,与余额同源);名义价值 / 当日成交笔数
+  // 账本无对应列,仍取 Supabase 当日统计(v_wallet_today_stats,manual+真实,非引擎余额)。
   const todayStatsQ = useWalletTodayStats(wallet);
   const todayRows = todayStatsQ.data ?? [];
-  const openPositions = todayRows.reduce((s, r) => s + numOrZero(r.open_positions), 0);
+  const openPositions = memberAcct.rows.reduce((s, r) => s + numOrZero(r.open_positions), 0);
   const openNotional = todayRows.reduce((s, r) => s + numOrZero(r.position_value_usd), 0);
-  // 已实现 = 各 venue 当日已实现盈亏之和(与 stats 页同口径);替代裸引擎已平仓订单求和。
-  const realizedPnl = todayRows.reduce((s, r) => s + numOrZero(r.realized_pnl_day_usd), 0);
+  // 已实现 = 各市场账本已实现盈亏之和(与余额同源)。
+  const realizedPnl = memberAcct.rows.reduce((s, r) => s + numOrZero(r.realized_pnl), 0);
   // 当日成交笔数 = 各 venue fills_today 之和(Supabase 当日统计;替代裸引擎 allOrders.length)。
   const tradesToday = todayRows.reduce((s, r) => s + numOrZero(r.fills_today), 0);
 
@@ -121,12 +127,12 @@ export default function CopyTradingPage() {
   const winRate = withPnl.length > 0 ? (wins / withPnl.length) * 100 : 0;
 
   const signalCount = asArray(signalsQ.data).length + asArray(hotQ.data).length;
-  const statsLoading = balanceQ.isLoading || todayStatsQ.isLoading;
+  const statsLoading = memberAcct.isLoading || todayStatsQ.isLoading;
 
   // Live status pill — reflects the real account-data connection instead of
   // asserting "active" unconditionally. error → 连接异常 (red); still
   // loading/fetching → 同步中 (amber); data resolved → 已激活 (green).
-  const dataError = userQ.isError || balanceQ.isError || todayStatsQ.isError || ordersQ.isError;
+  const dataError = userQ.isError || memberAcct.isError || todayStatsQ.isError || ordersQ.isError;
   const dataSyncing = userQ.isLoading || statsLoading;
   const status: "error" | "syncing" | "active" =
     dataError ? "error" : dataSyncing ? "syncing" : "active";
@@ -298,7 +304,7 @@ export default function CopyTradingPage() {
           充值不到账。**绝不回退到 userQ.smartWalletAddress**(那是错的地址,正是历史不到账的根因);
           未就绪时下游 DepositBuyPanel 会显示"地址准备中"并禁充,而不是打到错地址。 */}
       <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} userId={userId ?? ""} wallet={wallet} deposited={balance} smartWalletAddress={(balanceQ.data as { smartWallet?: string } | undefined)?.smartWallet} />
-      <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} />
+      <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} userId={userId ?? ""} available={balance} wallet={wallet} venue="polymarket" />
 
       {/* 跟单前风险提示(任务3-PM):确认后进入策略页选择/启用跟单。 */}
       <CopyRiskDialog
