@@ -23,7 +23,7 @@ export default function CopyTradingStatsPage() {
 
   return (
     <CopyTradingLayout title={t("copyTrading.statsTitle", "交易数据")}>
-      <TradeRecordsDetail wallet={wallet} venueScope="polymarket" />
+      <TradeRecordsDetail wallet={wallet} />
     </CopyTradingLayout>
   );
 }
