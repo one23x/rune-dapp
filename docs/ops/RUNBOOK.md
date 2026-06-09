@@ -46,3 +46,15 @@ systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target 
 - `rune-prod-pg` 上有**两个库各带一套 trading schema**:`rune` = 生产引擎(one-agents-backend Docker `DATABASE_URL` 指它)实际读写;`postgres` = 旧引擎阶段遗留(数据停在 2026-05 月底)。**任何读 trading 数据的脚本必须连 `/rune`**。2026-06-06 trading-sync 曾因连 `/postgres` 导致 Supabase 数据滞后/缺新用户。
 - **pm2 改 env 不要用 `restart --update-env`**:进程创建时的 env(含 .env 注入的)烤在 pm2 dump 里,sync.mjs 又是 process.env 优先,改 .env 后必须 `pm2 delete <name> && pm2 start ... && pm2 save` 才生效。
 - 本机连 Supabase:直连 `db.<ref>.supabase.co:5432` 不通(IPv6-only),走 `aws-1-ap-northeast-2.pooler.supabase.com:5432`(用户名 `postgres.<ref>`)且加 `gssencmode=disable`。
+
+## 跟单执行器拓扑 + 运维定时器(2026-06-09)
+- **单一执行器铁律**:HL copy executor 只能在**一台**机器跑,否则重复下单。
+  - worker `10.0.2.125`(ROLE=worker):`HL_COPY_EXECUTOR_ENABLED=true` + `COPYTRADE_MATCHER_ENABLED=true` = **唯一** HL 执行器 + PM matcher。
+  - API 机 `10.0.1.159`(ROLE=all):`HL_COPY_EXECUTOR_ENABLED=false`(只留 API/treasury/gas)。PM consume 走 SQS FIFO 去重,两机跑也不双发;但 **HL 执行器无跨机去重**,故必须单机。改 env 后 `docker compose -f docker-compose.engine.yml up -d --no-deps --force-recreate backend` 生效。
+- **worker systemd 定时器**(`/etc/systemd/system/*.timer`,脚本在 `~/`,跑 `ml-runner` 容器):
+  - `ranker-eval.timer`(09:00 UTC):hl-copy-ranker 放行vs拦截事后核对 + leader-edge 成熟度 → `trading.ranker_eval_daily` / `leader_edge_readiness`。
+  - `auto-subscribe-quality.timer`(每小时 :07):净值≥$15 的 mainnet 户**自动补订**所有 score≥65 非HFT leader(幂等,复用各户执行器档)。脚本 `~/auto-subscribe-quality.py`。
+  - `copy-pnl-report.timer`(每4h :17):当日已实现盈亏 → `~/copy-pnl-report.log` + Supabase `trading_copy_pnl_daily`;有 `~/.slack-pnl-webhook` 则自动推 Slack(否则会话里用 MCP 转发)。
+- **执行器菜单**:`hl_copy_subscriptions`/`copy_subscriptions`.`executor_id`(mirror/steady/aggressive/smart)。执行器**自带基础 sizing**(创建时带 executorId 即按档套 ratio/cap/日额/杠杆;不带=向后兼容用请求值)。**小户开单**:净值×ratio 撑不到 $10.5 的小账户,不被 balanceCap 集中度护栏挡,**净值≥~$15 即抬到最小单**。前端「选风格→选交易员→一键跟单」只传 `{leader, executorId}`。
+- **部署/回滚**:push main → 两机 `git pull`(⚠️ **必须核对两机 `git log --oneline -1` 一致**;回滚用 `git checkout <commit>` 进 detached HEAD,`git checkout main` 可能落到旧 commit,务必显式核对)→ 容器内 apply 迁移 → build + up --no-deps --force-recreate。
+- **教训(0 开仓排查)**:跟单显示「0 开仓」时,**先查 funded户(净值≥$15)× 活跃leader(近1-2h有开仓)的配对**——通常是**配置/资金错配**(有钱户订的 leader 在睡、活跃 leader 的户没钱 $0),**不是代码 bug、不是同步问题**。本次曾误判为重构回归、白回滚一轮。诊断顺序:① 信号在流? ② 执行器活着? ③ funded×活跃 配对存在? ④ 才查代码。解法=补订优质 leader。
