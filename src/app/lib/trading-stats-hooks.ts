@@ -88,6 +88,12 @@ export interface OpenPositionRow {
   login_wallet?: string | null;
   /** 引擎托管 EOA 地址;视图尾列,用于按连接钱包匹配。 */
   engine_eoa_address?: string | null;
+  /** PM 持仓结果方向(Yes/No);仅 Polymarket 行有值,HL 行恒 NULL。视图尾列。
+   *  前端 PM 行用它显 Yes/No 徽章(取代多空 LONG/SHORT)。 */
+  outcome?: string | null;
+  /** PM 市场题目;仅 Polymarket 行有值,HL 行恒 NULL。视图尾列。
+   *  前端 PM 行优先用它显 symbol(取代 token_id 截断)。 */
+  title?: string | null;
 }
 
 export interface TodayClosedRow {

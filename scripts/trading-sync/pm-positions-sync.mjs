@@ -7,7 +7,8 @@
 //   1) 引擎 pusd-balance → 拿 Polymarket 代理钱包(proxyWallet)+ pUSD 现金余额。
 //      代理地址确定且稳定 → 缓存进 trading_pm_account_state.proxy_wallet,有缓存就不再打引擎。
 //   2) Polymarket data-api positions?user=<代理> → 真实持仓(token=asset / 份额=size /
-//      均价=avgPrice / 现价=curPrice / 已实现=realizedPnl / 是否可赎=redeemable)。
+//      均价=avgPrice / 现价=curPrice / 已实现=realizedPnl / 是否可赎=redeemable /
+//      outcome=Yes|No / title=市场题目)。outcome+title 存库供前端显 Yes/No + 题目。
 //   3) 写 Supabase:
 //      - trading_positions:全量替换该用户的行(data-api 不再返回的=已赎回/平仓→自动删除)。
 //      - trading_mark_prices(venue=polymarket, symbol=token, px=curPrice)→ 视图按此估值。
@@ -83,18 +84,22 @@ async function syncUser(client, u) {
       const size = num(p.size);
       if (size == null || Math.abs(size) < 1e-9) continue; // 0 份额不写(视图也会滤)
       posVal += num(p.currentValue) || 0;
-      // 持仓行
+      // 持仓行 —— outcome(Yes/No)+ title(市场题目)直接存 data-api 原值,供前端正确显示
+      // PM 语义(非多空)与市场名称(非 token_id 截断)。
+      const outcome = p.outcome != null && String(p.outcome).trim() !== "" ? String(p.outcome).trim() : null;
+      const title = p.title != null && String(p.title).trim() !== "" ? String(p.title).trim() : null;
       await client.query(
         `insert into trading_positions
            (user_id, token_id, market_id, net_shares, avg_entry_price, realized_pnl_usd,
-            total_bought_usd, total_sold_usd, last_fill_at, settlement_status, updated_at, synced_at)
-         values ($1,$2,$3,$4,$5,$6,$7,0,now(),$8,now(),now())
+            total_bought_usd, total_sold_usd, last_fill_at, settlement_status, outcome, title, updated_at, synced_at)
+         values ($1,$2,$3,$4,$5,$6,$7,0,now(),$8,$9,$10,now(),now())
          on conflict (user_id, market_id, token_id) do update set
            net_shares=excluded.net_shares, avg_entry_price=excluded.avg_entry_price,
            realized_pnl_usd=excluded.realized_pnl_usd, total_bought_usd=excluded.total_bought_usd,
-           settlement_status=excluded.settlement_status, updated_at=now(), synced_at=now()`,
+           settlement_status=excluded.settlement_status, outcome=excluded.outcome, title=excluded.title,
+           updated_at=now(), synced_at=now()`,
         [u.user_id, String(p.asset), String(p.conditionId || ""), size, num(p.avgPrice),
-         num(p.realizedPnl), num(p.initialValue), p.redeemable ? "resolved" : null]
+         num(p.realizedPnl), num(p.initialValue), p.redeemable ? "resolved" : null, outcome, title]
       );
       // 标记价(供视图估值)
       if (num(p.curPrice) != null) {

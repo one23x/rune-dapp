@@ -285,9 +285,16 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress, accountValue 
 }) {
   const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
-  const coin = prettySymbol(p.symbol, p.market_id);
+  const isPm = p.venue === "polymarket";
+  // PM 持仓:symbol 优先用市场题目(title),无题目再回退 token_id 截断;HL 行不变。
+  const coin = isPm && p.title && p.title.trim()
+    ? p.title.trim()
+    : prettySymbol(p.symbol, p.market_id);
   const size = numOrZero(p.size);
   const long = size >= 0;
+  // PM 持仓显 Yes/No(结果方向),而非多空 LONG/SHORT;outcome 缺失时不显徽章。
+  const pmOutcome = isPm && p.outcome && p.outcome.trim() ? p.outcome.trim() : null;
+  const pmIsYes = pmOutcome != null && /^yes$/i.test(pmOutcome);
   const cost = numOrZero(p.position_cost_usd);
   const upnl = numOrZero(p.unrealized_pnl_usd);
   // ROE%:优先用成本(upnl/cost);成本缺失时回退名义(upnl/posValue),保证浮盈旁尽量带 %。
@@ -315,9 +322,18 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress, accountValue 
         <div className="flex items-center gap-2 min-w-0">
           {showVenue && <VenueChip venue={p.venue} />}
           <span className="text-[13px] font-bold text-foreground/90 truncate">{coin}</span>
-          <span className={`inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0 ${long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}>
-            {long ? "LONG" : "SHORT"}
-          </span>
+          {isPm ? (
+            // PM:Yes/No 结果方向徽章(非多空)；outcome 缺失则不显,避免误标多空。
+            pmOutcome && (
+              <span className={`inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0 ${pmIsYes ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}>
+                {pmIsYes ? "Yes" : "No"}
+              </span>
+            )
+          ) : (
+            <span className={`inline-flex items-center gap-0.5 font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0 ${long ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}>
+              {long ? "LONG" : "SHORT"}
+            </span>
+          )}
           {/* 杠杆徽章(交易所式)—— 仅有 leverage 的真实/手动行显示,如 10x。 */}
           {lev != null && (
             <span className="font-bold rounded text-[10px] px-1.5 py-0.5 shrink-0 text-amber-300 bg-amber-500/10">
