@@ -41,6 +41,8 @@ const ONCE = process.env.ONCE === "1";
 if (!SUPABASE_DB_URL) { console.error("FATAL: need SUPABASE_DB_URL"); process.exit(1); }
 
 const num = (v) => (v == null || v === "" ? null : Number(v));
+// 写 Supabase 的钱包/地址列统一小写(根治大小写再污染);链上读用的地址不经此。
+const lowerAddr = (v) => (typeof v === "string" && v ? v.toLowerCase() : v);
 
 async function fetchJson(url, opts) {
   const res = await fetch(url, { ...opts, headers: { "user-agent": "rune-pm-sync", accept: "application/json", ...(opts?.headers || {}) } });
@@ -53,7 +55,7 @@ async function getEngineAccount(userId) {
   try {
     const r = await fetchJson(`${ENGINE_PROXY}/trade/polymarket/users/${userId}/pusd-balance`);
     const proxy = r.smartWallet || r.proxyWallet || null;
-    return { proxy: proxy ? String(proxy) : null, balanceUsd: num(r.balanceUsd) };
+    return { proxy: proxy ? lowerAddr(String(proxy)) : null, balanceUsd: num(r.balanceUsd) };
   } catch { return null; }
 }
 
@@ -67,7 +69,7 @@ async function getPositions(proxy) {
 
 async function syncUser(client, u) {
   // 有缓存代理就复用,否则打引擎(代理地址稳定);余额每轮刷新。
-  let proxy = u.proxy_wallet, balanceUsd = null;
+  let proxy = lowerAddr(u.proxy_wallet), balanceUsd = null;
   const acct = await getEngineAccount(u.user_id);
   if (acct) { proxy = acct.proxy || proxy; balanceUsd = acct.balanceUsd; }
   if (!proxy) return { user: u.user_id, skipped: "no_proxy" };
@@ -119,7 +121,7 @@ async function syncUser(client, u) {
          wallet=excluded.wallet, proxy_wallet=excluded.proxy_wallet,
          balance_usd=coalesce(excluded.balance_usd, trading_pm_account_state.balance_usd),
          positions_value_usd=excluded.positions_value_usd, as_of=now()`,
-      [u.user_id, u.smart_wallet_address, proxy, balanceUsd, posVal]
+      [u.user_id, lowerAddr(u.smart_wallet_address), proxy, balanceUsd, posVal]
     );
     await client.query("commit");
     return { user: u.user_id, positions: positions.length, balance: balanceUsd };

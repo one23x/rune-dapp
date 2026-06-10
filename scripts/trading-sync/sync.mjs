@@ -63,6 +63,15 @@ const SPECS = [
 
 const CHUNK = 500;
 
+// 写 Supabase 的钱包/地址列统一小写,根治大小写再污染(否则规范化后几分钟又被
+// checksummed 整表 upsert 盖回)。链上读取/签名用的地址不在此(那些另取 checksummed)。
+const ADDR_COLS = new Set([
+  "smart_wallet_address", "engine_eoa_address", "hl_master_address",
+  "leader_wallet", "leader_address", "follower_address", "address", "wallet",
+  "proxy_wallet", "recv_address", "eoa", "recipient_address",
+]);
+const lowerAddr = (col, v) => (ADDR_COLS.has(col) && typeof v === "string" && v ? v.toLowerCase() : v);
+
 async function upsert(dst, spec, rows) {
   if (!rows.length) return 0;
   const { target, cols, conflict } = spec;
@@ -73,7 +82,7 @@ async function upsert(dst, spec, rows) {
     const slice = rows.slice(i, i + CHUNK);
     const params = [];
     const valuesSql = slice.map((row) => {
-      const ph = cols.map((c) => { params.push(row[c] === undefined ? null : row[c]); return `$${params.length}`; });
+      const ph = cols.map((c) => { params.push(row[c] === undefined ? null : lowerAddr(c, row[c])); return `$${params.length}`; });
       return `(${ph.join(",")})`;
     }).join(",");
     const sql = `insert into public.${target} (${cols.join(",")}) values ${valuesSql} on conflict (${conflict.join(",")}) ${setClause}`;
