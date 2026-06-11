@@ -82,7 +82,11 @@ async function fetchState(address, network) {
   const main = await fetchClearing(url, address);
   let dex = null;
   if (network === "mainnet") {
-    try { dex = await fetchClearing(url, address, "xyz"); } catch { dex = null; }
+    // ⚠️ builder dex 查询失败(429/网络)时**不要**吞掉错误回退主-only —— 那会让净值在
+    // 「主+dex 聚合 ↔ 主-only」间闪烁、误报巨亏。让错误抛出 → fetchStateRetry 按 429 重试 →
+    // 仍失败则整账户本轮被 fetchAll 跳过(保留上次已聚合的值,不覆盖成低值)。
+    // 无 dex 资金的账户:xyz 查询返回正常 200(accountValue 0),不抛错,照常聚合。
+    dex = await fetchClearing(url, address, "xyz");
   }
   const ms = main.marginSummary || {};
   const dms = (dex && dex.marginSummary) || {};
