@@ -67,11 +67,11 @@ async function loadTargets(dst) {
 async function loadDexWallets(dst) {
   const set = new Set();
   let any = false;
-  // follower_address = engine_eoa(account_state 的 target 口径),最直接;再 union 视图各地址列兜全。
+  // follower_address = engine_eoa = account_state 的 target 口径,精确匹配持 dex 仓的真实账户。
+  // 不用 v_wallet_open_positions(其 wallet 含 smart/手动仓,会把范围撑大、失去过滤意义)。
   for (const sql of [
     `select distinct lower(follower_address) w from public.trading_hl_real_positions where coin like 'xyz:%'`,
     `select distinct lower(engine_eoa_address) w from public.v_wallet_open_positions where symbol like 'xyz:%' and engine_eoa_address is not null`,
-    `select distinct lower(wallet) w from public.v_wallet_open_positions where symbol like 'xyz:%'`,
   ]) {
     try {
       const { rows } = await dst.query(sql);
