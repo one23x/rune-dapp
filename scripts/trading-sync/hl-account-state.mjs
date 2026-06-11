@@ -62,6 +62,21 @@ async function loadTargets(dst) {
   return rows.filter((r) => r.wallet && r.wallet.startsWith("0x"));
 }
 
+// 只对**当前持有 builder dex(xyz:)仓**的钱包查 dex —— 多数户没有 dex,main 即全部。
+// 大幅减少 HL 调用(避免 dex 翻倍触发 429)。查不到表则返回 null → 退回「全部查 dex」兜底。
+async function loadDexWallets(dst) {
+  for (const sql of [
+    `select distinct lower(wallet) w from public.trading_hl_positions where coin like 'xyz:%'`,
+    `select distinct lower(wallet) w from public.v_wallet_open_positions where coin like 'xyz:%'`,
+  ]) {
+    try {
+      const { rows } = await dst.query(sql);
+      return new Set(rows.map((r) => r.w).filter(Boolean));
+    } catch { /* 试下一个 */ }
+  }
+  return null; // 兜底:全查
+}
+
 async function fetchClearing(url, address, dex) {
   const body = { type: "clearinghouseState", user: address };
   if (dex) body.dex = dex;
@@ -77,11 +92,14 @@ async function fetchClearing(url, address, dex) {
 // 主 perp + HIP-3 builder dex(xyz)聚合。账户把保证金划进 builder dex 交易(xyz:XYZ100 等)时,
 // 主 clearinghouseState 看不到那部分 → 净值被严重低估(健康账户显示成巨亏)。聚合两者得真实总额。
 // builder dex 仅主网有;查询失败/无则按 0,不影响主账户(2026-06-10 修)。
+let dexWallets = null; // runOnce 填充:当前持 builder dex 仓的钱包集合(null=未知→全查兜底)
+
 async function fetchState(address, network) {
   const url = INFO_HOST[network];
   const main = await fetchClearing(url, address);
   let dex = null;
-  if (network === "mainnet") {
+  // 仅主网、且(未知集合 或 该钱包确有 dex 仓)才查 dex —— 省掉绝大多数无 dex 户的翻倍调用。
+  if (network === "mainnet" && (dexWallets === null || dexWallets.has(address.toLowerCase()))) {
     // ⚠️ builder dex 查询失败(429/网络)时**不要**吞掉错误回退主-only —— 那会让净值在
     // 「主+dex 聚合 ↔ 主-only」间闪烁、误报巨亏。让错误抛出 → fetchStateRetry 按 429 重试 →
     // 仍失败则整账户本轮被 fetchAll 跳过(保留上次已聚合的值,不覆盖成低值)。
@@ -141,10 +159,11 @@ async function runOnce() {
   await dst.connect();
   try {
     const targets = await loadTargets(dst);
+    dexWallets = await loadDexWallets(dst); // 只对持 dex 仓的钱包查 dex
     const { results, fail } = await fetchAll(targets);
     for (const { wallet, network, state } of results) await upsertOne(dst, wallet, network, state);
     console.log(`[${new Date().toISOString()}] acct ${Date.now() - t0}ms`,
-      JSON.stringify({ targets: targets.length, ok: results.length, fail }));
+      JSON.stringify({ targets: targets.length, dexWallets: dexWallets ? dexWallets.size : "all", ok: results.length, fail }));
   } finally {
     await dst.end().catch(() => {});
   }
