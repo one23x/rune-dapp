@@ -28,7 +28,7 @@ try {
 
 const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
 const INTERVAL_MS = Number(process.env.ACCT_INTERVAL_MS || 120000);
-const CONCURRENCY = Math.max(1, Number(process.env.ACCT_CONCURRENCY || 5));
+const CONCURRENCY = Math.max(1, Number(process.env.ACCT_CONCURRENCY || 2)); // dex 查询使调用翻倍,降并发防 429
 const SUB_STATUSES = (process.env.ACCT_SUB_STATUSES || "active")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const ONCE = process.env.ONCE === "1";
@@ -86,6 +86,7 @@ async function fetchState(address, network) {
     // 「主+dex 聚合 ↔ 主-only」间闪烁、误报巨亏。让错误抛出 → fetchStateRetry 按 429 重试 →
     // 仍失败则整账户本轮被 fetchAll 跳过(保留上次已聚合的值,不覆盖成低值)。
     // 无 dex 资金的账户:xyz 查询返回正常 200(accountValue 0),不抛错,照常聚合。
+    await sleep(150); // 主/dex 两次调用间隔,平滑速率
     dex = await fetchClearing(url, address, "xyz");
   }
   const ms = main.marginSummary || {};
@@ -127,7 +128,7 @@ async function fetchAll(targets) {
       const t = targets[i++];
       try { results.push({ ...t, state: await fetchStateRetry(t.wallet, t.network) }); }
       catch (e) { fail++; console.error(`  skip ${t.wallet}/${t.network}: ${e.message}`); }
-      await sleep(120); // 轻微间隔,HL info 公共 API 友好限速
+      await sleep(280); // 间隔(dex 翻倍调用后加大,防 429;cycle 2min 足够)
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, next));
