@@ -62,21 +62,40 @@ async function loadTargets(dst) {
   return rows.filter((r) => r.wallet && r.wallet.startsWith("0x"));
 }
 
-async function fetchState(address, network) {
-  const url = INFO_HOST[network];
+async function fetchClearing(url, address, dex) {
+  const body = { type: "clearinghouseState", user: address };
+  if (dex) body.dex = dex;
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ type: "clearinghouseState", user: address }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const d = await res.json();
-  const ms = d.marginSummary || {};
+  return res.json();
+}
+
+// 主 perp + HIP-3 builder dex(xyz)聚合。账户把保证金划进 builder dex 交易(xyz:XYZ100 等)时,
+// 主 clearinghouseState 看不到那部分 → 净值被严重低估(健康账户显示成巨亏)。聚合两者得真实总额。
+// builder dex 仅主网有;查询失败/无则按 0,不影响主账户(2026-06-10 修)。
+async function fetchState(address, network) {
+  const url = INFO_HOST[network];
+  const main = await fetchClearing(url, address);
+  let dex = null;
+  if (network === "mainnet") {
+    try { dex = await fetchClearing(url, address, "xyz"); } catch { dex = null; }
+  }
+  const ms = main.marginSummary || {};
+  const dms = (dex && dex.marginSummary) || {};
+  const add = (a, b) => {
+    const x = num(a), y = num(b);
+    if (x === null && y === null) return null;
+    return (x ?? 0) + (y ?? 0);
+  };
   return {
-    account_value_usd: num(ms.accountValue),
-    withdrawable_usd: num(d.withdrawable),
-    margin_used_usd: num(ms.totalMarginUsed),
-    total_ntl_pos_usd: num(ms.totalNtlPos),
+    account_value_usd: add(ms.accountValue, dms.accountValue),
+    withdrawable_usd: add(main.withdrawable, dex && dex.withdrawable),
+    margin_used_usd: add(ms.totalMarginUsed, dms.totalMarginUsed),
+    total_ntl_pos_usd: add(ms.totalNtlPos, dms.totalNtlPos),
   };
 }
 

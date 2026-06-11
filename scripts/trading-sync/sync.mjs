@@ -27,8 +27,10 @@ if (!RDS_URL || !SUPABASE_DB_URL) { console.error("FATAL: need RDS_URL + SUPABAS
 // 每张表:目标表 / 冲突键 / 列 / RDS 源查询(列顺序须与 cols 一致)
 const SPECS = [
   { target: "trading_users", conflict: ["id"],
-    cols: ["id","smart_wallet_address","engine_eoa_address","status","project_id","created_at","updated_at"],
-    src: `select id, smart_wallet_address, engine_eoa_address, status::text, project_id, created_at, updated_at from trading.users` },
+    // hl_master_address(会员真实连接钱包/节点钱包)+ hl_mode 必须同步:admin 按 hl_master 搜索/显示「连接钱包」,
+    // 缺失会让工厂部署户(smart_wallet≠节点钱包)在后台搜不到、误显示成「待开户」(2026-06-10 补)。
+    cols: ["id","smart_wallet_address","engine_eoa_address","hl_master_address","hl_mode","status","project_id","created_at","updated_at"],
+    src: `select id, smart_wallet_address, engine_eoa_address, hl_master_address, hl_mode, status::text, project_id, created_at, updated_at from trading.users` },
   { target: "trading_positions", conflict: ["user_id","market_id","token_id"],
     cols: ["user_id","project_id","token_id","market_id","net_shares","avg_entry_price","realized_pnl_usd","total_bought_usd","total_sold_usd","last_fill_at","settlement_status","redeem_proceeds_usd","updated_at"],
     src: `select user_id, project_id, coalesce(token_id,'') token_id, coalesce(market_id,'') market_id, net_shares, avg_entry_price, realized_pnl_usd, total_bought_usd, total_sold_usd, last_fill_at, settlement_status, redeem_proceeds_usd, updated_at from trading.positions where user_id is not null` },
