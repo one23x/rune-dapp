@@ -28,7 +28,7 @@ try {
 
 const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
 const INTERVAL_MS = Number(process.env.ACCT_INTERVAL_MS || 120000);
-const CONCURRENCY = Math.max(1, Number(process.env.ACCT_CONCURRENCY || 2)); // dex 查询使调用翻倍,降并发防 429
+const CONCURRENCY = Math.max(1, Number(process.env.ACCT_CONCURRENCY || 1)); // dex 查询使调用翻倍,降并发防 429
 const SUB_STATUSES = (process.env.ACCT_SUB_STATUSES || "active")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const ONCE = process.env.ONCE === "1";
@@ -49,6 +49,8 @@ async function fetchStateRetry(wallet, network) {
 
 // 从 Supabase 读去重后的 (address, network)。地址按 dapp 口径解析,统一小写。
 async function loadTargets(dst) {
+  // ① 有订阅的账户(原口径) ② 有入金记录的 active 账户(即使没订阅也要刷余额,
+  //    否则「充值了但没建跟单」的账户余额永远停在 $0,被误以为充值失败)。
   const { rows } = await dst.query(`
     select distinct
       lower(case when u.hl_mode = 'agent' then u.hl_master_address else u.engine_eoa_address end) as wallet,
@@ -58,6 +60,11 @@ async function loadTargets(dst) {
     where s.status = any($1::text[])
       and (case when u.hl_mode = 'agent' then u.hl_master_address else u.engine_eoa_address end) is not null
       and s.network in ('mainnet','testnet')
+    union
+    select distinct lower(u.engine_eoa_address) as wallet, 'mainnet' as network
+    from public.trading_users u
+    where u.status = 'active' and u.hl_mode = 'custodial' and u.engine_eoa_address is not null
+      and exists (select 1 from public.member_ledger m where m.user_id = u.id and m.kind = 'deposit')
   `, [SUB_STATUSES]);
   return rows.filter((r) => r.wallet && r.wallet.startsWith("0x"));
 }
