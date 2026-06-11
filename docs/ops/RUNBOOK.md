@@ -58,3 +58,18 @@ systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target 
 - **执行器菜单**:`hl_copy_subscriptions`/`copy_subscriptions`.`executor_id`(mirror/steady/aggressive/smart)。执行器**自带基础 sizing**(创建时带 executorId 即按档套 ratio/cap/日额/杠杆;不带=向后兼容用请求值)。**小户开单**:净值×ratio 撑不到 $10.5 的小账户,不被 balanceCap 集中度护栏挡,**净值≥~$15 即抬到最小单**。前端「选风格→选交易员→一键跟单」只传 `{leader, executorId}`。
 - **部署/回滚**:push main → 两机 `git pull`(⚠️ **必须核对两机 `git log --oneline -1` 一致**;回滚用 `git checkout <commit>` 进 detached HEAD,`git checkout main` 可能落到旧 commit,务必显式核对)→ 容器内 apply 迁移 → build + up --no-deps --force-recreate。
 - **教训(0 开仓排查)**:跟单显示「0 开仓」时,**先查 funded户(净值≥$15)× 活跃leader(近1-2h有开仓)的配对**——通常是**配置/资金错配**(有钱户订的 leader 在睡、活跃 leader 的户没钱 $0),**不是代码 bug、不是同步问题**。本次曾误判为重构回归、白回滚一轮。诊断顺序:① 信号在流? ② 执行器活着? ③ funded×活跃 配对存在? ④ 才查代码。解法=补订优质 leader。
+
+## admin「待开户/找不到账号/连接钱包对不上/亏损/无数据」= 两个同步缺口(2026-06-10/11)
+**全是显示问题,账户和钱都是好的。** 起因:运营在 admin 按节点钱包查某客户,显示成「待开户」、搜不到、或「亏了 68%」。逐层挖出两个根因:
+
+1. **`hl_master_address` 从未从 RDS 同步到 Supabase**(`scripts/trading-sync/sync.mjs` 的 trading_users `cols` 列表漏了它,只同步 id/smart/engine/status/project/created/updated)。后果:
+   - admin 搜索(`trading-accounts.tsx` ~L2035)和「待开户」视图 `v_admin_onboard_requests` 都按 `hl_master`(=节点/连接钱包)关联;Supabase 这列 null/stale → **按节点钱包搜不到、已开户的误显示成「待开户(无账户)」**。
+   - **关键认知**:`hl_master_address` = 会员真实连接钱包(=买节点的钱包);`smart_wallet_address` = 工厂部署成功时**另建的 PM 智能钱包(≠节点钱包)**,失败则兜底=节点钱包;`engine_eoa_address` = 托管 HL 交易地址。**HL 数据全记在 engine_eoa 名下**,v_wallet_* 视图键=smart_wallet。三者常不相等(256 户里 217 户 smart≠master)。
+   - **修**:① 一次性从 RDS 回填 Supabase `trading_users.hl_master_address`(238 户,改对 7 个,null 从一堆→0);② `sync.mjs` cols/src 加 `hl_master_address`+`hl_mode`(根治,新户不再漏);③ admin「连接钱包」列改显示 `hl_master`(非 smart_wallet)——数据查询走 `u.id`/`engine_eoa` 不受影响。
+
+2. **HL 账户净值漏聚合 HIP-3 builder dex(`xyz`)**(`scripts/trading-sync/hl-account-state.mjs` 只查 `clearinghouseState` 主 perp)。后果:账户把保证金 `usdClassTransfer` 划进 builder dex 交易(xyz:XYZ100 等)后,主 perp 净值骤降 → **admin 余额/`trading_hl_account_state` 严重低估**(实测 0x3d35 显示 $0 实际 $840;0xE940 显示 $326 实际 $1074=主$326+dex$749,充$1005 实为 +7% 盈利却被当成亏 68%)。**24/254 主网户中招**。还会**误触发日亏熔断**(daily-supervisor 把它全部订阅 paused)。
+   - **修**:`hl-account-state.mjs` 的 `fetchState` 改为查 `clearinghouseState`(主)+ `{dex:"xyz"}`(builder)并**相加** account_value/margin/ntl。已部署。持仓/成交同步本就跨 dex(`hl-positions.mjs` 主+builder、`hl-fills.mjs` userFillsByTime 含 `xyz:*`),**只有净值这一项漏**。
+   - **诊断手法**:某 HL 户「钱不见了/像巨亏」→ 查 `engine_eoa` 的 `clearinghouseState` **主 + dex:"xyz" 两次**相加;`userNonFundingLedgerUpdates` 看 deposit/withdraw(send 到自己=划 dex,非转出);别只看主 perp。
+   - 熔断器 `daily-supervisor.ts` 本身是 builder-dex-aware 的(合并 builder 持仓视图),修了净值源后不会再误停;误停的账户解除暂停后会立即恢复开单。
+
+**速查映射**:节点钱包(rune_members/rune_purchases.user,BSC chain56)=hl_master=连接钱包;PM 智能钱包=smart_wallet(v_wallet_* 键);托管 HL 地址=engine_eoa(HL 链上数据键)。搜不到先确认按的是哪个 + Supabase 那几列是否同步对齐(全小写)。
