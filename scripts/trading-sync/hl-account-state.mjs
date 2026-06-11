@@ -65,16 +65,21 @@ async function loadTargets(dst) {
 // 只对**当前持有 builder dex(xyz:)仓**的钱包查 dex —— 多数户没有 dex,main 即全部。
 // 大幅减少 HL 调用(避免 dex 翻倍触发 429)。查不到表则返回 null → 退回「全部查 dex」兜底。
 async function loadDexWallets(dst) {
+  const set = new Set();
+  let any = false;
+  // follower_address = engine_eoa(account_state 的 target 口径),最直接;再 union 视图各地址列兜全。
   for (const sql of [
-    `select distinct lower(wallet) w from public.trading_hl_positions where coin like 'xyz:%'`,
-    `select distinct lower(wallet) w from public.v_wallet_open_positions where coin like 'xyz:%'`,
+    `select distinct lower(follower_address) w from public.trading_hl_real_positions where coin like 'xyz:%'`,
+    `select distinct lower(engine_eoa_address) w from public.v_wallet_open_positions where symbol like 'xyz:%' and engine_eoa_address is not null`,
+    `select distinct lower(wallet) w from public.v_wallet_open_positions where symbol like 'xyz:%'`,
   ]) {
     try {
       const { rows } = await dst.query(sql);
-      return new Set(rows.map((r) => r.w).filter(Boolean));
-    } catch { /* 试下一个 */ }
+      for (const r of rows) if (r.w) set.add(r.w);
+      any = true;
+    } catch { /* 跳过该源 */ }
   }
-  return null; // 兜底:全查
+  return any ? set : null; // 全失败→null→全查兜底
 }
 
 async function fetchClearing(url, address, dex) {
