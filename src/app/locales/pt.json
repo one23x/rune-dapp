@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "Seu NFT de nó foi cunhado na sua carteira (Arbitrum).",
     "toastFail": "Falha na compra",
     "toastFailDesc": "A transação não foi concluída. Tente novamente."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "O mercado de previsão inteligente está sendo otimizado",
+    "optimizingDesc": "Ainda não disponível. Em breve."
   }
 }

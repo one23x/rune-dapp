@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "Votre NFT de nœud a été minté dans votre portefeuille (Arbitrum).",
     "toastFail": "Échec de l'achat",
     "toastFailDesc": "La transaction n'a pas abouti. Veuillez réessayer."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "Le marché de prédiction intelligent est en cours d'optimisation",
+    "optimizingDesc": "Pas encore disponible. Restez à l'écoute."
   }
 }

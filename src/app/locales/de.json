@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "Dein Node-NFT wurde in deine Wallet (Arbitrum) gemintet.",
     "toastFail": "Kauf fehlgeschlagen",
     "toastFailDesc": "Die Transaktion wurde nicht abgeschlossen. Bitte erneut versuchen."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "Der Smart-Prognosemarkt wird optimiert",
+    "optimizingDesc": "Noch nicht verfügbar. Bleiben Sie dran."
   }
 }

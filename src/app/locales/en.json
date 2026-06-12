@@ -2520,5 +2520,9 @@
     "toastDoneDesc": "Your node NFT has been minted to your wallet (Arbitrum).",
     "toastFail": "Purchase failed",
     "toastFailDesc": "The transaction did not complete. Please retry."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "Smart Prediction Market is being optimized",
+    "optimizingDesc": "Not yet available — stay tuned."
   }
 }

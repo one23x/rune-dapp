@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "노드 NFT가 지갑(Arbitrum)에 민팅되었습니다.",
     "toastFail": "구매 실패",
     "toastFailDesc": "거래가 완료되지 않았습니다. 다시 시도하세요."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "스마트 예측 시장을 최적화하고 있습니다",
+    "optimizingDesc": "아직 오픈되지 않았습니다. 기대해 주세요."
   }
 }

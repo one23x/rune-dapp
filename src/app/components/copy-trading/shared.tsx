@@ -612,6 +612,9 @@ export function CopyGate({
 
 // ─── Deposit dialog ───────────────────────────────────────────────────────────
 
+// 智能预测市场(PM)充值通道总开关 —— false 时充值弹窗显示「正在优化,尚未开放」(2026-06-12 关闭)。
+const PM_DEPOSIT_OPEN = false;
+
 export function DepositDialog({
   open, onOpenChange, userId, smartWalletAddress, wallet, deposited = 0,
 }: {
@@ -725,6 +728,13 @@ export function DepositDialog({
           </div>
         </DialogHeader>
 
+        {!PM_DEPOSIT_OPEN ? (
+          <div className="py-10 text-center space-y-3">
+            <div className="text-4xl">🔧</div>
+            <p className="text-[15px] font-bold text-foreground">{t("predictionMarket.optimizingTitle", "智能预测市场正在优化")}</p>
+            <p className="text-[12.5px] text-muted-foreground leading-relaxed px-3">{t("predictionMarket.optimizingDesc", "尚未开放,敬请期待。")}</p>
+          </div>
+        ) : (
         <Tabs defaultValue="transfer" className="mt-1">
           <TabsList className="grid w-full grid-cols-3 h-auto p-1">
             <TabsTrigger value="transfer" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
@@ -769,6 +779,7 @@ export function DepositDialog({
             />
           </TabsContent>
         </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );

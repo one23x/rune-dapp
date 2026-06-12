@@ -2520,5 +2520,9 @@
     "toastDoneDesc": "节点 NFT 已铸造到你的钱包(Arbitrum)。",
     "toastFail": "购买失败",
     "toastFailDesc": "交易未完成,请重试。"
+  },
+  "predictionMarket": {
+    "optimizingTitle": "智能预测市场正在优化",
+    "optimizingDesc": "尚未开放,敬请期待。"
   }
 }

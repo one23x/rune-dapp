@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "ノード NFT がウォレット(Arbitrum)にミントされました。",
     "toastFail": "購入失敗",
     "toastFailDesc": "取引が完了しませんでした。再試行してください。"
+  },
+  "predictionMarket": {
+    "optimizingTitle": "スマート予測市場は最適化中です",
+    "optimizingDesc": "まだ公開されていません。お楽しみに。"
   }
 }

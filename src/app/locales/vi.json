@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "NFT nút đã được đúc vào ví của bạn (Arbitrum).",
     "toastFail": "Mua thất bại",
     "toastFailDesc": "Giao dịch chưa hoàn tất. Vui lòng thử lại."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "Thị trường dự đoán thông minh đang được tối ưu hóa",
+    "optimizingDesc": "Chưa khả dụng. Vui lòng chờ đợi."
   }
 }

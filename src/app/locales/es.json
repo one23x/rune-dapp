@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "Tu NFT de nodo se ha acuñado en tu billetera (Arbitrum).",
     "toastFail": "Compra fallida",
     "toastFailDesc": "La transacción no se completó. Inténtalo de nuevo."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "El mercado de predicción inteligente se está optimizando",
+    "optimizingDesc": "Aún no está disponible. Próximamente."
   }
 }

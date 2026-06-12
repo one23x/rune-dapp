@@ -2479,5 +2479,9 @@
     "toastDoneDesc": "تم سكّ NFT العقدة في محفظتك (Arbitrum).",
     "toastFail": "فشل الشراء",
     "toastFailDesc": "لم تكتمل المعاملة. حاول مرة أخرى."
+  },
+  "predictionMarket": {
+    "optimizingTitle": "يتم تحسين سوق التنبؤ الذكي",
+    "optimizingDesc": "غير متاح بعد. ترقبوا."
   }
 }
