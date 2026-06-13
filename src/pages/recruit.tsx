@@ -18,8 +18,8 @@ import { useActiveAccount } from "thirdweb/react";
 import { useNodeConfigs, useUserPurchase } from "@/hooks/rune/use-node-presell";
 import { NODE_IDS, NODE_META, type NodeId } from "@/lib/thirdweb/contracts";
 import { useReferrerOf } from "@/hooks/rune/use-community";
-import { emitOpenPurchase } from "@/lib/rune/purchase-signal";
 import { useDemoStore } from "@/lib/demo-store";
+import { BuyDialog } from "@app/pages/nodes";
 
 /** Map the REST response's tier key to the on-chain nodeId.
  *  101 is the apex (FOUNDER 50k); 501 is the entry tier (INITIAL 1k). */
@@ -325,6 +325,11 @@ export default function Recruit() {
   const { isDemoMode, demoAddress, demoNodeId, exitDemo } = useDemoStore();
   const [, navigate] = useLocation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  // In-place node purchase popup (reuses the dapp BuyDialog) so users buy
+  // right on the /recruit landing without leaving the marketing site.
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [buyTier, setBuyTier] = useState<NodeId | null>(null);
+  function openBuy(tier: NodeId) { setBuyTier(tier); setBuyOpen(true); }
 
   // REST overview still supplies the marketing-style metadata (tier English
   // name, daily USDT projection, airdrop-per-seat, etc.) that isn't stored
@@ -363,7 +368,7 @@ export default function Recruit() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/app/profile")}
               className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 px-3 py-1 text-xs font-medium hover:bg-cyan-500/20 transition-colors"
             >
               {tt({ zh: "进入 Dashboard →", "zh-TW": "進入 Dashboard →", en: "Open Dashboard →", ja: "ダッシュボードへ →", ko: "대시보드로 →", th: "เปิด Dashboard →", vi: "Mở Dashboard →" })}
@@ -596,11 +601,11 @@ export default function Recruit() {
                         asChild
                         className="mt-4 w-full h-9 text-sm font-medium border-emerald-700/40 hover:border-emerald-500/60 hover:bg-emerald-500/5 text-emerald-200"
                       >
-                        <a href="/dashboard">{tt({ zh: "已购买 · 查看面板", "zh-TW": "已購買 · 查看面板", en: "Purchased · Open Dashboard", ja: "購入済 · ダッシュボードへ", ko: "구매 완료 · 대시보드 열기", th: "ซื้อแล้ว · เปิด Dashboard", vi: "Đã mua · Mở Dashboard" })}</a>
+                        <a href="/app/profile">{tt({ zh: "已购买 · 查看面板", "zh-TW": "已購買 · 查看面板", en: "Purchased · Open Dashboard", ja: "購入済 · ダッシュボードへ", ko: "구매 완료 · 대시보드 열기", th: "ซื้อแล้ว · เปิด Dashboard", vi: "Đã mua · Mở Dashboard" })}</a>
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => emitOpenPurchase(nodeId)}
+                        onClick={() => openBuy(nodeId)}
                         className={`mt-4 w-full h-9 text-sm font-semibold ${NODE_BTN[level]}`}
                       >
                         {tt({ zh: "立即购买 · Buy Now", "zh-TW": "立即購買 · Buy Now", en: "Buy Now", ja: "今すぐ購入", ko: "지금 구매", th: "ซื้อเลย", vi: "Mua ngay" })}
@@ -852,7 +857,7 @@ export default function Recruit() {
           </div>
           <Button
             variant="outline"
-            onClick={() => navigate("/tutorial")}
+            onClick={() => navigate("/app/profile")}
             className="w-full sm:w-auto shrink-0 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-500/60 gap-2"
           >
             <BookOpen className="h-4 w-4" />
@@ -912,6 +917,8 @@ export default function Recruit() {
           })}
         </div>
       </section>
+
+      <BuyDialog key={buyTier ?? "none"} open={buyOpen} onOpenChange={setBuyOpen} initialTier={buyTier} />
     </div>
   );
 }

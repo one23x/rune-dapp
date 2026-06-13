@@ -24,8 +24,8 @@ import { useReferrerOf } from "@/hooks/rune/use-community";
 import { usePredictionCode } from "@/hooks/rune/use-prediction-code";
 import { NODE_META, type NodeId } from "@/lib/thirdweb/contracts";
 import { runeChain } from "@/lib/thirdweb/chains";
-import { emitOpenPurchase } from "@/lib/rune/purchase-signal";
 import { copyText } from "@app/lib/copy";
+import { BuyDialog } from "@app/pages/nodes";
 
 const short = (a: string | undefined) => (!a ? "—" : `${a.slice(0, 6)}…${a.slice(-4)}`);
 
@@ -42,6 +42,7 @@ export function NodeOverviewPanel({ address }: { address: string }) {
   const code = codeRow?.code ?? null;
 
   const [copied, setCopied] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
   async function copyCode() {
     if (!code) return;
     if (await copyText(code)) {
@@ -91,7 +92,7 @@ export function NodeOverviewPanel({ address }: { address: string }) {
           </CardContent>
         </Card>
       ) : (
-        <button type="button" onClick={() => emitOpenPurchase()} disabled={isLoading}
+        <button type="button" onClick={() => setBuyOpen(true)} disabled={isLoading}
           className="group w-full rounded-2xl py-4 px-5 flex items-center gap-3 text-left text-white shadow-[0_12px_30px_-12px_rgba(251,191,36,0.55)] transition-shadow disabled:opacity-60"
           style={{ background: "linear-gradient(135deg,#f59e0b,#ea580c)", border: "1px solid rgba(251,191,36,0.45)" }}
           data-testid="button-buy-node">
@@ -178,6 +179,8 @@ export function NodeOverviewPanel({ address }: { address: string }) {
       <p className="text-[11px] text-muted-foreground/80 text-center">
         {t("profile.node.note", "权益与收益按链上节点等级实时结算")}
       </p>
+
+      <BuyDialog open={buyOpen} onOpenChange={setBuyOpen} initialTier={null} />
     </div>
   );
 }

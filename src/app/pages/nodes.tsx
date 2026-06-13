@@ -13,7 +13,7 @@
  * Three sections: held panel, buy grid (+ buy dialog), redeem-code card.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { prepareContractCall, waitForReceipt } from "thirdweb";
@@ -78,7 +78,7 @@ function tierBenefits(t: ReturnType<typeof useTranslation>["t"], nameEn: string)
 
 // ─── Buy dialog ──────────────────────────────────────────────────────────────
 
-function BuyDialog({
+export function BuyDialog({
   open, onOpenChange, initialTier,
 }: {
   open: boolean;
@@ -132,14 +132,17 @@ function BuyDialog({
       const approveResult = await sendTransaction(approveTx);
       await waitForReceipt({ client: thirdwebClient, chain: runeChain, transactionHash: approveResult.transactionHash });
 
-      // Step 2: nodePresell(uint256 nodeId) — emits EventNodePresell.
+      // Step 2: nodePresell1(uint256 nodeId) — 新合约方式:购买款全额进 Alpha 池
+      // (totalQuota,由 ALPHA_MANAGER 取回),仍触发同一个 EventNodePresell(indexer
+      // 照常写 rune_purchases)。比 nodePresell 重(transferFrom + ibUSDT 存入 + 矿池质押
+      // + 推荐链),gas 上限给到 90 万。
       setStatus("paying");
       const buyTx = prepareContractCall({
         contract: nodePresellContract,
-        method: "function nodePresell(uint256 nodeId)",
+        method: "function nodePresell1(uint256 nodeId)",
         params: [BigInt(nodeId)],
       });
-      (buyTx as any).gas = BigInt(600000);
+      (buyTx as any).gas = BigInt(900000);
       const buyResult = await sendTransaction(buyTx);
 
       setStatus("confirming");
@@ -330,6 +333,15 @@ export default function NodesPage() {
     setBuyTier(tier);
     setBuyOpen(true);
   }
+
+  // Deep-link from the marketing /recruit "立即购买" CTA: /app/nodes?buy=<nodeId>
+  // auto-opens the BuyDialog on that tier. Runs once on mount.
+  useEffect(() => {
+    const buy = new URLSearchParams(window.location.search).get("buy");
+    const id = Number(buy);
+    if (buy && (NODE_IDS as readonly number[]).includes(id)) openBuy(id as NodeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Map a held membership's nodeType (nameEn) back to a NODE_META tier for display.
   const tierByNameEn = (nameEn: string): { id: NodeId; meta: typeof NODE_META[NodeId] } | null => {

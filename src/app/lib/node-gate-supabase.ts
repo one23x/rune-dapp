@@ -80,7 +80,8 @@ export function deriveLimits(level: number, capUsd: number | null): NodeLimits |
   const cap = capUsd ?? 0;
   const disp = LEVEL_DISPLAY[level] ?? { maxTradesPerDay: 0, maxLeverage: 0 };
   return {
-    perTradeUsd: cap,
+    // 业务规则:单笔上限 = 节点金额的 10%;日上限 = 节点金额(100%)。
+    perTradeUsd: cap * 0.1,
     dailyUsd: cap,
     maxTradesPerDay: disp.maxTradesPerDay,
     maxLeverage: disp.maxLeverage,

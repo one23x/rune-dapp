@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Grid, X, Menu, LayoutDashboard } from "lucide-react";
+import { Activity, Grid, X, Menu, LayoutDashboard, Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -25,6 +25,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { href: "/recruit",                      label: "NODES",      key: "recruit",    icon: Boxes },
   { href: "/projects",                     label: "PROJECTS",   key: "projects",   icon: Grid },
   { href: "/tools",                        label: "SIMULATORS", key: "simulators", icon: Activity },
 ];
@@ -277,7 +278,7 @@ function Navbar() {
                     "text-[13.5px] font-semibold tracking-tight leading-none transition-colors whitespace-nowrap",
                     isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
                   )}>
-                    {t(`mr.nav.${item.key}`)}
+                    {t(`mr.nav.${item.key}`, item.label)}
                   </span>
                   {!isEn && (
                     <span className={cn(
@@ -413,7 +414,7 @@ function Navbar() {
                           "text-xl font-bold tracking-tight leading-none",
                           isActive ? "text-primary" : "text-foreground/70 group-hover:text-foreground transition-colors"
                         )}>
-                          {t(`mr.nav.${item.key}`)}
+                          {t(`mr.nav.${item.key}`, item.label)}
                         </p>
                         {!isEn && (
                           <p className={cn(
