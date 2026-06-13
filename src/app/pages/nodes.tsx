@@ -44,6 +44,33 @@ function fmtPrice(n: number) {
   return `$${n.toLocaleString("en-US")}`;
 }
 
+/**
+ * Map NodePresell custom errors (decoded by the pinned ABI in contracts.ts) to
+ * friendly i18n messages. The new contract adds `ErrorReferrerNoNode` — buying
+ * requires the upline referrer to already own a node.
+ */
+function nodeErrorMessage(e: any, t: (k: string, d: string) => string): string {
+  const raw = String(e?.message ?? e ?? "");
+  const map: Array<[string, string, string]> = [
+    ["ErrorReferrerNoNode", "node.err.referrerNoNode", "你的推荐人还没有购买节点,暂时无法在其名下购买"],
+    ["ErrorNoBind", "node.err.noBind", "请先绑定推荐人,再购买节点"],
+    ["ErrorPurchased", "node.err.purchased", "该钱包已经购买过节点了"],
+    ["ErrorNodeId", "node.err.nodeId", "无效的节点档位"],
+    ["ErrorEnoughtAmount", "node.err.amount", "金额超出可用额度"],
+    ["ErrorCaller", "node.err.caller", "当前钱包无权限执行该操作"],
+    ["ErrorAddressZero", "node.err.addrZero", "地址无效"],
+    ["Limit", "node.err.limit", "该节点名额已售罄"],
+  ];
+  for (const [needle, key, def] of map) {
+    if (raw.includes(needle)) return t(key, def);
+  }
+  if (/user rejected|user denied|rejected the request|denied transaction/i.test(raw))
+    return t("node.err.rejected", "你已取消签名");
+  if (/insufficient|exceeds balance|transfer amount exceeds/i.test(raw))
+    return t("node.err.insufficient", "USDT 余额或授权不足");
+  return raw;
+}
+
 /** Tier card meta resolved from NODE_META + i18n benefit blurbs. */
 function tierBenefits(t: ReturnType<typeof useTranslation>["t"], nameEn: string): string {
   return t(`node.benefit.${nameEn}`, "");
@@ -134,7 +161,7 @@ function BuyDialog({
       setStatus("error");
       toast({
         title: t("common.error", "出错了"),
-        description: String(e?.message ?? e),
+        description: nodeErrorMessage(e, t),
         variant: "destructive",
       });
     }

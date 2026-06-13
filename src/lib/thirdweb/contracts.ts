@@ -3,6 +3,7 @@ import { thirdwebClient } from "./client";
 import { runeChain, runeChainKey, arbitrum } from "./chains";
 import { getRuneAddresses, ARB_NODE_DROP_ADDRESS } from "./addresses";
 import { usdtAbi } from "./abis/usdt";
+import nodePresellAbi from "./abis/node-presell.json";
 
 const addr = getRuneAddresses(runeChainKey);
 
@@ -30,6 +31,10 @@ export const nodePresellContract: ThirdwebContract = getContract({
   client: thirdwebClient,
   chain: runeChain,
   address: addr.nodePresell,
+  // Pin the official ABI so thirdweb decodes custom errors (ErrorNoBind /
+  // ErrorReferrerNoNode / ErrorPurchased / …) into readable names instead of
+  // raw 4-byte selectors. See nodeErrorMessage() in app/pages/nodes.tsx.
+  abi: nodePresellAbi as any,
 });
 
 /**
