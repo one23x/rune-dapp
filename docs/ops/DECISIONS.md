@@ -2,6 +2,25 @@
 
 关键决策:选了什么、为什么、否决了什么。新的在最上。
 
+## 2026-06-18 AgentChat 双 AI(与小符AI聊聊)
+
+### D1 链上脑走「用户钱包非托管签发」,平台不代签
+- **决定**:thirdweb Nebula 准备好的交易(actions)由**用户自己的钱包**在前端签名发送(`useActiveWallet().switchChain` + `sendTransaction`);平台 / 托管 engine 钱包**不代签**。
+- **为什么**:转账 / swap / 建合约动的是用户的钱,代签 = 平台替用户动钱,风险与合规成本重;非托管让用户自主、平台不碰私钥。
+- **否决**:托管 engine 钱包代执行(体验更顺、免弹窗)—— 风险/合规过高,暂不做。
+- **代价/缓解**:用户必须先连钱包(未连 → 卡片提示"请先连接钱包");多链(BSC/Arbitrum)签发前 `useActiveWallet` 自动切链。
+
+### D2 一个聊天窗口、两套 AI,按意图正则路由
+- **决定**:单浮窗内 OpenRouter(策略脑)+ thirdweb Nebula(链上脑)共存;后端按消息意图(`ONCHAIN_RE`:地址 / 转账 / 价格 / 合约等)路由 —— 命中链上词 → Nebula,其余 → OpenRouter。
+- **为什么**:策略对话与链上操作是两类能力,统一一个入口体验好;Nebula 擅长链上读写、OpenRouter 便宜稳地聊策略/行情。
+- **否决**:① 两个独立入口(割裂)② 全交给 Nebula(策略对话不如通用 LLM)③ 让 LLM 自己判定路由(首版用正则更可控,边界措辞后续可升级)。
+- **风险**:正则覆盖不全会误路由(已发生:"转 0.001 BNB 给…"漏判 → 已扩词;见 RUNBOOK)。
+
+### D3 one-agents 后端用「容器内改 + docker commit」部署,不从 Dockerfile 重建
+- **决定**:API 机后端 `tsx` 直跑 `/app/src`(无 build);部署 = 容器内改/`docker cp` 文件 + `docker commit` retag `:latest` + `compose up --no-build --no-deps --force-recreate backend`。
+- **为什么**:容器代次比宿主磁盘 main 新(split-brain),从 Dockerfile 重建会回退丢改动;tsx 改文件即生效。
+- **否决**:不带 `--no-build` 的 `compose up`(会从磁盘重建、丢容器内累积改动)。
+
 ## 2026-05-30 爱尔兰→美东迁移
 
 ### D1 迁移架构:SG=dev / US=prod / 爱尔兰退役

@@ -20,3 +20,4 @@
 | [2026-06-auth-code-gate.md](2026-06-auth-code-gate.md) | 授权码门控:真表 `rune_auth_codes` vs 空镜像;引擎 node_access 同步 | 已上线(待真实用户复测) |
 | [2026-06-engine-db-rune-not-postgres.md](2026-06-engine-db-rune-not-postgres.md) | 生产引擎库是 `rune` 不是 `postgres`,查错库 = 看到旧/空数据 | 已修复(长期注意) |
 | [2026-06-onboard-predict-500.md](2026-06-onboard-predict-500.md) | 新用户开户 500:thirdweb-engine 参数名 + lookup 单列匹配 + 缺工厂头(3 处) | 已上线 |
+| [2026-06-deploy-empty-dist-404.md](2026-06-deploy-empty-dist-404.md) | 部署空 dist(并发 build 清 dist)→ 站点深链 404「找不到网页」 | 已缓解(部署前自检纪律) |
