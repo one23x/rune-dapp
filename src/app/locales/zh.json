@@ -75,7 +75,8 @@
       "title": "暂未开放"
     },
     "copyAddress": "复制地址",
-    "myPositions": "查看仓位"
+    "myPositions": "查看仓位",
+    "close": "关闭"
   },
   "nav": {
     "home": "首页",
@@ -519,7 +520,29 @@
     "lockNotReadyTitle": "即将开放",
     "lockNotReadyDesc": "RUNE 锁仓功能将在协议正式上线后开放。",
     "burnNotReadyTitle": "即将开放",
-    "burnNotReadyDesc": "FIRE 销毁质押将在协议正式上线后开放。"
+    "burnNotReadyDesc": "FIRE 销毁质押将在协议正式上线后开放。",
+    "launch": {
+      "headline": "金库质押 · 上线倒计时",
+      "subline": "机构级质押金库即将开启 · 按 RUNE 节点等级享分层收益与生态权益",
+      "soonPill": "即将上线",
+      "livePill": "已上线",
+      "days": "天",
+      "hours": "时",
+      "minutes": "分",
+      "seconds": "秒",
+      "targetLabel": "上线时间",
+      "featLockTitle": "锁定质押",
+      "featLockDesc": "按 RUNE 节点等级解锁分层收益",
+      "featLpTitle": "流动性池",
+      "featLpDesc": "为协议提供流动性,共享交易费",
+      "featBurnTitle": "销毁通缩",
+      "featBurnDesc": "协议回购销毁,长期通缩模型",
+      "ctaSoon": "上线后开放",
+      "ctaLive": "进入金库质押",
+      "note": "质押、流动性与销毁模块将于上线时同步开放",
+      "liveHeadline": "金库质押已上线",
+      "liveSub": "质押功能现已开放,敬请体验"
+    }
   },
   "deposit": {
     "inputError": "输入错误",
@@ -588,7 +611,22 @@
     "transferSentDesc": "链上确认后余额将自动刷新",
     "transferTitle": "钱包转账",
     "transferring": "转账中…",
-    "walletBalance": "钱包余额"
+    "walletBalance": "钱包余额",
+    "stepAmount": "金额包",
+    "stepMethod": "支付方式",
+    "stepPay": "支付",
+    "nextMethod": "下一步 · 选择支付方式",
+    "pickAmountFirst": "请先选择充值金额包,再选择支付方式。",
+    "back": "上一步",
+    "selectedAmount": "已选",
+    "chooseMethod": "选择一种支付方式",
+    "methodTransferDesc": "从你连接的钱包直接转 USDC(Arbitrum)",
+    "methodGuideDesc": "查看非托管充值引导",
+    "methodAddressDesc": "复制地址 / 扫码,从任意钱包或交易所打款",
+    "methodBridgeDesc": "用其他链资产或银行卡跨链买入并充值",
+    "riskBindNote": "该金额绑定的风控(单笔限额 / 杠杆上限 / 止盈止损)将自动应用到你的跟单。",
+    "lockedSelected": "已选金额(绑定风控)",
+    "lockedTransferHint": "请准确转入 ${{amount}} USDC(该金额绑定风控规则)"
   },
   "ma": {
     "chartArea": "面积",
@@ -1481,7 +1519,9 @@
     "nodesPageSubtitle": "节点权益 · 直推奖励 · 实时上链",
     "todayPnl": "当日盈亏",
     "unrealizedPnl": "未实现盈亏",
-    "openPositions": "持仓数"
+    "openPositions": "持仓数",
+    "support": "提交工单",
+    "supportDesc": "反馈问题并追踪进度"
   },
   "market": {
     "marketAnalysis": "市场分析",
@@ -1873,7 +1913,19 @@
     "statsTabRecords": "交易记录",
     "venueHlMainnet": "HL 主网",
     "venueHlTestnet": "HL 测试网",
-    "tabStats": "交易数据"
+    "tabStats": "交易数据",
+    "stopAllOk": "已停止跟单",
+    "stopAllOkDesc": "不再开新仓,已有持仓将由智能体/市场自然平掉。",
+    "stopAllFailed": "停止跟单失败",
+    "stopAllConfirm": "确认停止全部跟单?之后不再开新仓,已有持仓将由智能体自动平掉。",
+    "stopAll": "一键停止跟单",
+    "stopAllAlready": "已全部停止",
+    "withdrawPending": "链上提现已提交",
+    "withdrawPendingDesc": "提现已提交，将在链上处理并到账到目标地址。",
+    "venuePm": "Rune 预测市场",
+    "followed": "已跟单",
+    "pickLeader": "选择交易员",
+    "pickLeaderHint": "选一位,一键跟单"
   },
   "exchange": {
     "account": "账户",
@@ -2405,7 +2457,17 @@
     "bridge2Warn": "切勿从交易所或他人钱包直接向 Bridge2 转账 —— HL 会把「发送地址」记为入金账户,资金会进入对方的 HL 账户且无法找回。请使用「钱包转账」由本人连接的钱包发出。",
     "tabDepositGuide": "充值引导",
     "transferHintAgent": "USDC 将由你连接的钱包直接发往 HL Bridge2,HL 会把发送地址(=你的钱包)记为你的 HL 账户。最低 5 USDC,约 1 分钟到账。",
-    "transferHintCustodial": "仅支持 Arbitrum 网络的 USDC,资金将进入你的托管交易地址并自动转入 HL 账户。最低 5 USDC。"
+    "transferHintCustodial": "仅支持 Arbitrum 网络的 USDC,资金将进入你的托管交易地址并自动转入 HL 账户。最低 5 USDC。",
+    "executorTitle": "执行风格",
+    "executorHint": "决定如何替你执行跟单",
+    "leaderScore": "评分",
+    "leaderHold": "持仓",
+    "leaderFollowed": "已跟单",
+    "pickLeaderTitle": "选择交易员",
+    "pickLeaderHint": "选一位,一键跟单",
+    "decisionLogTitle": "决策流",
+    "decisionLogHint": "实时决策依据",
+    "positionMargin": "保证金"
   },
   "pmLab": {
     "title": "预测 AI 实验室",
@@ -2524,5 +2586,297 @@
   "predictionMarket": {
     "optimizingTitle": "智能预测市场正在优化",
     "optimizingDesc": "尚未开放,敬请期待。"
+  },
+  "support": {
+    "pageTitle": "工单中心",
+    "pageSubtitle": "提交问题并追踪处理进度",
+    "tabCreate": "提交工单",
+    "tabList": "我的工单",
+    "connectTitle": "请先连接钱包",
+    "connectDesc": "连接钱包后即可提交工单并查看进度",
+    "walletLabel": "工单钱包",
+    "walletNote": "已自动关联当前连接的钱包",
+    "categoryLabel": "问题类型",
+    "subjectLabel": "标题",
+    "subjectPlaceholder": "一句话描述问题",
+    "descriptionLabel": "详细描述",
+    "descriptionPlaceholder": "请尽量描述清楚发生了什么、涉及的金额/币种/时间等",
+    "screenshotLabel": "截图(可选)",
+    "addScreenshot": "添加截图",
+    "contactLabel": "联系方式(可选)",
+    "contactPlaceholder": "Telegram / 邮箱,方便我们联系你",
+    "submitBtn": "提交工单",
+    "toastCreatedTitle": "工单已提交",
+    "toastCreatedDesc": "我们会尽快跟进,你可在「我的工单」查看进度",
+    "toastErrorTitle": "提交失败",
+    "toastErrorDesc": "请稍后重试",
+    "emptyTitle": "还没有工单",
+    "emptyDesc": "在「提交工单」标签中创建你的第一条工单",
+    "backToList": "返回工单列表",
+    "noMessages": "暂无回复,我们会尽快处理",
+    "you": "我",
+    "team": "客服",
+    "newReply": "客服已回复",
+    "replyPlaceholder": "补充信息或回复客服…",
+    "cat": {
+      "deposit": "充值",
+      "withdraw": "提现",
+      "copy_trade": "跟单交易",
+      "node_tier": "节点等级",
+      "wallet": "钱包",
+      "vault": "金库",
+      "account_data": "账户数据",
+      "other": "其他"
+    },
+    "status": {
+      "open": "待处理",
+      "in_progress": "处理中",
+      "resolved": "已解决",
+      "closed": "已关闭"
+    }
+  },
+  "actions": {
+    "all": "全部",
+    "catRisk": "风险",
+    "catWatch": "关注",
+    "catTrade": "成交",
+    "closeAt": "平仓 {{coin}} @ ${{px}}",
+    "realized": "已实现",
+    "opened": "开{{side}} · {{coin}}",
+    "filled": "成交 {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "跳过开仓",
+    "skipOpenCoin": "跳过开仓 · {{coin}}",
+    "gated": "已挡下",
+    "stopLoss": "止损",
+    "stopLossCoin": "止损 · {{coin}}",
+    "empty": "暂无记录",
+    "viewTx": "查看",
+    "heldPosition": "持仓 · {{coin}} {{side}}",
+    "heldDetail": "数量 {{size}} · 浮盈 {{upnl}} · ROE {{roe}}",
+    "volatile": "动荡",
+    "side_long": "多",
+    "side_short": "空",
+    "fearGreed": "市场情绪 · {{label}}",
+    "fearGreedDetail": "恐慌贪婪指数 F&G {{value}}",
+    "fgExtremeFear": "极度恐慌",
+    "fgFear": "恐慌",
+    "fgNeutral": "中性",
+    "fgGreed": "贪婪",
+    "fgExtremeGreed": "极度贪婪",
+    "fgBlocksLong": "挡做多",
+    "fgBlocksShort": "挡做空"
+  },
+  "strategyName": {
+    "crypto-trend": "加密趋势",
+    "equity-swing": "美股摆动",
+    "meme-momentum": "Meme 动量"
+  },
+  "strategySector": {
+    "crypto-trend": "加密主流",
+    "equity-swing": "美股",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "十日突破 · 回调延续 · 冲洗回升 · 双向",
+    "equity-swing": "趋势回调 · 指数洗盘 · 财报后漂移",
+    "meme-momentum": "突破首回踩 · 冲洗回升 · 破位逼空空"
+  },
+  "strategyCard": {
+    "markets": "{{n}} 币种",
+    "plays": "3 套打法",
+    "dirBoth": "双向",
+    "dirLong": "偏多"
+  },
+  "strategySelect": {
+    "confirm": "确认并进入交易引擎"
+  },
+  "strategyPick": {
+    "title": "选择策略",
+    "eyebrow": "Hyperliquid · 智能跟单",
+    "heroTitle": "选择你的策略",
+    "heroSub": "选定后进入交易引擎 —— 自动跟单,风控全程托管。"
+  },
+  "flow": {
+    "step": {
+      "qualify": "资格",
+      "wallet": "钱包",
+      "strategy": "策略",
+      "follow": "跟单",
+      "console": "数据台"
+    },
+    "continueWallet": "下一步 · 钱包充值",
+    "continueStrategy": "下一步 · 选择策略",
+    "continueConsole": "进入数据台",
+    "strategy": {
+      "title": "选择策略",
+      "desc": "选定板块策略后,引擎会按该策略匹配顶级交易员的实时信号并展示决策对话。"
+    },
+    "gate": {
+      "connectTitle": "请先连接钱包",
+      "connectDesc": "连接钱包后即可验证资格并激活交易账户。",
+      "verifyTitle": "验证资格",
+      "verifyDesc": "跟单需要节点权限。购买节点或输入授权码即可解锁开户与跟单。",
+      "activatedTitle": "交易账户已激活",
+      "activatedDescAgent": "非托管账户已开通,资金留在你自己的钱包,引擎仅持有不能提现的下单密钥。",
+      "activatedDesc": "你的交易账户已就绪,可以继续配置跟单了。",
+      "activateTitle": "激活交易账户"
+    },
+    "wallet": {
+      "account": "交易账户",
+      "viewOnHl": "在 Hyperliquid 查看",
+      "nav": "账户净值",
+      "withdrawable": "可提",
+      "fundTitle": "充值 / 提现",
+      "fundDesc": "把 USDC 充入交易账户即可开始跟单。",
+      "fundedNote": "已入金,可进入下一步",
+      "depositToContinue": "充值后才能选择策略"
+    }
+  },
+  "engine": {
+    "running": "交易引擎 · 链上实时",
+    "follow": "开启跟单",
+    "following": "跟单中 {{n}} 位",
+    "needOnboard": "请先在策略页开通交易账户",
+    "smartFollow": "智能跟单 · 自动优选 Top {{n}}",
+    "smartFollowHint": "按平台评分自动优选顶级交易员,并启用 AI ranker 智能执行(仅跟高胜率信号)",
+    "orPickManually": "或手动选择",
+    "style": "风格",
+    "noLeaders": "暂无可跟交易员",
+    "followed": "已跟单",
+    "oneClickFollow": "一键跟单",
+    "paused": "已暂停",
+    "pausedDesc": "已停止开新仓,返回策略选择。",
+    "tabDecision": "决策",
+    "tabSignals": "信号",
+    "tabPositions": "持仓",
+    "tabRisk": "风险",
+    "tabRecords": "记录",
+    "pause": "暂停",
+    "switch": "切换",
+    "watching": "盯盘",
+    "holdings": "持仓(链上真实)",
+    "fills": "成交记录 · 开/平仓"
+  },
+  "depositTier": {
+    "noLevel": "需先持有节点 / 兑换授权码",
+    "title": "选择充值金额",
+    "hint": "金额绑定风控规则(不可手输)",
+    "remaining": "剩余可充",
+    "exceedsCap": "超出剩余额度",
+    "perTrade": "单笔",
+    "daily": "每日",
+    "trades": "笔",
+    "lev": "杠杆",
+    "tpsl": "止盈/止损"
+  },
+  "agentChat": {
+    "connectFirst": "请先连接钱包",
+    "txTitle": "待签交易",
+    "txSent": "已发送",
+    "signSend": "用钱包签名并发送",
+    "greeting": "嗨,我是小符 AI。可以聊策略、看行情、帮你分析持仓与平仓时机;也能帮你发起转账、查询链上行情、创建合约等链上操作。说说你想做什么?(风控与止损始终是底线,不会被偏好覆盖。)",
+    "offline": "对话后端还在接入中,你的想法我先记下了,接通后会纳入你的专属偏好。",
+    "open": "与小符AI聊聊",
+    "title": "与小符AI聊聊",
+    "subtitle": "策略 · 行情 · 链上操作",
+    "placeholder": "聊策略 / 行情 / 持仓平仓,或链上操作…",
+    "send": "发送"
+  },
+  "decisionLog": {
+    "title": "Decision log",
+    "all": "全部",
+    "actions": "动作"
+  },
+  "console": {
+    "market": "策略市场",
+    "switchStrategy": "切换策略",
+    "balance": "余额",
+    "unrealized": "未实现",
+    "dayPnl": "当日",
+    "pause": "暂停跟单",
+    "held": "持仓币",
+    "noHeld": "暂无持仓",
+    "tabActions": "Actions",
+    "tabPerformance": "表现",
+    "colRisk": "风控台",
+    "colSignals": "信号流"
+  },
+  "engineLive": {
+    "nav": "账户净值",
+    "notFunded": "待入金",
+    "unrealized": "未实现",
+    "today": "当日盈亏",
+    "withdrawable": "可提",
+    "account": "交易账户",
+    "viewOnHl": "在 Hyperliquid 查看",
+    "noPositions": "当前无持仓(该策略盯盘范围内)",
+    "size": "数量",
+    "entry": "开仓",
+    "value": "市值",
+    "noFills": "暂无成交记录(该策略盯盘范围内)"
+  },
+  "engineSignals": {
+    "net": "净流向",
+    "empty": "该策略盯盘范围内暂无信号",
+    "close": "平仓",
+    "open": "开仓"
+  },
+  "signalSector": {
+    "all": "全部"
+  },
+  "strategyHero": {
+    "badge": "智能策略引擎",
+    "title1": "让 AI 驱动你的",
+    "title2": "链上跟单与策略执行",
+    "subtitle": "One-Agents 引擎实时跟踪顶级交易员,按板块策略自动开平仓",
+    "statLiveVal": "链上实时",
+    "cta": "选择策略 · 进入交易引擎",
+    "statStrategies": "策略板块",
+    "statLeaders": "顶级交易员",
+    "statLive": "执行"
+  },
+  "leaderWatch": {
+    "title": "顶级交易员动向",
+    "subtitle": "交易员近 24h 在交易的币",
+    "empty": "暂无近期交易员信号"
+  },
+  "perf": {
+    "positions": "持仓",
+    "history": "历史",
+    "directives": "指令",
+    "pnl": "P&L",
+    "realized": "已实现",
+    "closes": "{{n}} 笔平仓",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "需 20+ 天",
+    "maxdd": "最大回撤",
+    "equity": "净值曲线",
+    "realEquity": "真实净值",
+    "noCurve": "数据不足",
+    "time": "时间",
+    "market": "市场",
+    "phase": "阶段",
+    "outcome": "结果",
+    "conviction": "信念",
+    "marketsWatched": "盯盘市场",
+    "tradable": "可交易范围"
+  },
+  "riskConsole": {
+    "title": "风险监控台",
+    "halted": "已触发 · 只平不开",
+    "warn": "接近预算",
+    "ok": "正常",
+    "dailyBudget": "日内亏损预算",
+    "nav": "账户净值",
+    "dayPnl": "当日盈亏",
+    "unrealized": "未实现",
+    "tierRisk": "本档位风控",
+    "tierBy": "充值 ${{amount}} 档",
+    "rule1": "单币 ≤30% 净值",
+    "rule2": "止损后冷却 5min",
+    "rule3": "清算 ≥3× 止损"
+  },
+  "position": {
+    "autoManaged": "平仓由智能体自动管理"
   }
 }

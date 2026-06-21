@@ -75,7 +75,8 @@
       "title": "暫未開放"
     },
     "copyAddress": "複製地址",
-    "myPositions": "查看倉位"
+    "myPositions": "查看倉位",
+    "close": "關閉"
   },
   "nav": {
     "home": "首頁",
@@ -519,6 +520,28 @@
       "stepValueDesc": "隨着流一量減少，剩餘代幣的價值捕獲能力將持續增強。",
       "stepValueTitle": "價值提升",
       "dailyFire": "每日 FIRE"
+    },
+    "launch": {
+      "headline": "金庫質押 · 上線倒數",
+      "subline": "機構級質押金庫即將開啟 · 依 RUNE 節點等級享分層收益與生態權益",
+      "soonPill": "即將上線",
+      "livePill": "已上線",
+      "days": "天",
+      "hours": "時",
+      "minutes": "分",
+      "seconds": "秒",
+      "targetLabel": "上線時間",
+      "featLockTitle": "鎖定質押",
+      "featLockDesc": "依 RUNE 節點等級解鎖分層收益",
+      "featLpTitle": "流動性池",
+      "featLpDesc": "為協議提供流動性,共享交易費",
+      "featBurnTitle": "銷毀通縮",
+      "featBurnDesc": "協議回購銷毀,長期通縮模型",
+      "ctaSoon": "上線後開放",
+      "ctaLive": "進入金庫質押",
+      "note": "質押、流動性與銷毀模組將於上線時同步開放",
+      "liveHeadline": "金庫質押已上線",
+      "liveSub": "質押功能現已開放,敬請體驗"
     }
   },
   "deposit": {
@@ -553,7 +576,22 @@
     "customAmount": "自定義金額",
     "enterAmount": "輸入或選擇金額",
     "manualTransfer": "或轉帳到地址",
-    "onchainWaitPm": "僅支援 Polygon 網路 pUSD。鏈上確認約需 2–5 分鐘到帳，到帳後餘額會自動刷新，請耐心等待。"
+    "onchainWaitPm": "僅支援 Polygon 網路 pUSD。鏈上確認約需 2–5 分鐘到帳，到帳後餘額會自動刷新，請耐心等待。",
+    "stepAmount": "金額包",
+    "stepMethod": "付款方式",
+    "stepPay": "付款",
+    "nextMethod": "下一步 · 選擇付款方式",
+    "pickAmountFirst": "請先選擇儲值金額包,再選擇付款方式。",
+    "back": "上一步",
+    "selectedAmount": "已選",
+    "chooseMethod": "選擇一種付款方式",
+    "methodTransferDesc": "從你連接的錢包直接轉 USDC(Arbitrum)",
+    "methodGuideDesc": "查看非託管儲值引導",
+    "methodAddressDesc": "複製地址 / 掃碼,從任意錢包或交易所付款",
+    "methodBridgeDesc": "用其他鏈資產或銀行卡跨鏈買入並儲值",
+    "riskBindNote": "該金額綁定的風控(單筆限額 / 槓桿上限 / 止盈止損)將自動套用到你的跟單。",
+    "lockedSelected": "已選金額（綁定風控）",
+    "lockedTransferHint": "請準確轉入 ${{amount}} USDC（該金額綁定風控規則）"
   },
   "ma": {
     "chartArea": "面积",
@@ -1382,7 +1420,9 @@
     "nodesPageSubtitle": "節點權益 · 直推獎勵 · 即時上鏈",
     "todayPnl": "當日盈虧",
     "unrealizedPnl": "未實現盈虧",
-    "openPositions": "持倉數"
+    "openPositions": "持倉數",
+    "support": "提交工單",
+    "supportDesc": "回報問題並追蹤進度"
   },
   "market": {
     "marketAnalysis": "市場分析",
@@ -1774,7 +1814,19 @@
     "statsTabRecords": "交易記錄",
     "venueHlMainnet": "HL 主網",
     "venueHlTestnet": "HL 測試網",
-    "tabStats": "交易數據"
+    "tabStats": "交易數據",
+    "stopAllOk": "已停止跟單",
+    "stopAllOkDesc": "不再開新倉，已有持倉將由智能體／市場自然平掉。",
+    "stopAllFailed": "停止跟單失敗",
+    "stopAllConfirm": "確認停止全部跟單？之後不再開新倉，已有持倉將由智能體自動平掉。",
+    "stopAll": "一鍵停止跟單",
+    "stopAllAlready": "已全部停止",
+    "withdrawPending": "鏈上提現已提交",
+    "withdrawPendingDesc": "提現已提交，將在鏈上處理並到帳至目標地址。",
+    "venuePm": "Rune 預測市場",
+    "followed": "已跟單",
+    "pickLeader": "選擇交易員",
+    "pickLeaderHint": "選一位，一鍵跟單"
   },
   "exchange": {
     "account": "帳戶",
@@ -2331,7 +2383,17 @@
       "testnetDesc": "測試網請用官方入金口領取/充入測試 USDC:"
     },
     "deposit": "充值",
-    "mtdPnl": "當月累計"
+    "mtdPnl": "當月累計",
+    "executorTitle": "執行風格",
+    "executorHint": "決定如何替你執行跟單",
+    "leaderScore": "評分",
+    "leaderHold": "持倉",
+    "leaderFollowed": "已跟單",
+    "pickLeaderTitle": "選擇交易員",
+    "pickLeaderHint": "選一位，一鍵跟單",
+    "decisionLogTitle": "決策流",
+    "decisionLogHint": "即時決策依據",
+    "positionMargin": "保證金"
   },
   "hlVaults": {
     "title": "推薦金庫",
@@ -2483,5 +2545,297 @@
   "predictionMarket": {
     "optimizingTitle": "智能預測市場正在優化",
     "optimizingDesc": "尚未開放,敬請期待。"
+  },
+  "support": {
+    "pageTitle": "工單中心",
+    "pageSubtitle": "提交問題並追蹤處理進度",
+    "tabCreate": "提交工單",
+    "tabList": "我的工單",
+    "connectTitle": "請先連接錢包",
+    "connectDesc": "連接錢包後即可提交工單並查看進度",
+    "walletLabel": "工單錢包",
+    "walletNote": "已自動關聯目前連接的錢包",
+    "categoryLabel": "問題類型",
+    "subjectLabel": "標題",
+    "subjectPlaceholder": "一句話描述問題",
+    "descriptionLabel": "詳細描述",
+    "descriptionPlaceholder": "請盡量描述清楚發生了什麼、涉及的金額/幣種/時間等",
+    "screenshotLabel": "截圖（可選）",
+    "addScreenshot": "新增截圖",
+    "contactLabel": "聯絡方式（可選）",
+    "contactPlaceholder": "Telegram / Email,方便我們聯絡你",
+    "submitBtn": "提交工單",
+    "toastCreatedTitle": "工單已提交",
+    "toastCreatedDesc": "我們會盡快跟進,你可在「我的工單」查看進度",
+    "toastErrorTitle": "提交失敗",
+    "toastErrorDesc": "請稍後重試",
+    "emptyTitle": "還沒有工單",
+    "emptyDesc": "在「提交工單」標籤中建立你的第一筆工單",
+    "backToList": "返回工單列表",
+    "noMessages": "暫無回覆,我們會盡快處理",
+    "you": "我",
+    "team": "客服",
+    "newReply": "客服已回覆",
+    "replyPlaceholder": "補充資訊或回覆客服…",
+    "cat": {
+      "deposit": "充值",
+      "withdraw": "提現",
+      "copy_trade": "跟單交易",
+      "node_tier": "節點等級",
+      "wallet": "錢包",
+      "vault": "金庫",
+      "account_data": "帳戶資料",
+      "other": "其他"
+    },
+    "status": {
+      "open": "待處理",
+      "in_progress": "處理中",
+      "resolved": "已解決",
+      "closed": "已關閉"
+    }
+  },
+  "actions": {
+    "all": "全部",
+    "catRisk": "風險",
+    "catWatch": "關注",
+    "catTrade": "成交",
+    "closeAt": "平倉 {{coin}} @ ${{px}}",
+    "realized": "已實現",
+    "opened": "開{{side}} · {{coin}}",
+    "filled": "成交 {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "跳過開倉",
+    "skipOpenCoin": "跳過開倉 · {{coin}}",
+    "gated": "已擋下",
+    "stopLoss": "止損",
+    "stopLossCoin": "止損 · {{coin}}",
+    "empty": "暫無記錄",
+    "viewTx": "查看",
+    "heldPosition": "持倉 · {{coin}} {{side}}",
+    "heldDetail": "數量 {{size}} · 浮盈 {{upnl}} · ROE {{roe}}",
+    "volatile": "動盪",
+    "side_long": "多",
+    "side_short": "空",
+    "fearGreed": "市場情緒 · {{label}}",
+    "fearGreedDetail": "恐慌貪婪指數 F&G {{value}}",
+    "fgExtremeFear": "極度恐慌",
+    "fgFear": "恐慌",
+    "fgNeutral": "中性",
+    "fgGreed": "貪婪",
+    "fgExtremeGreed": "極度貪婪",
+    "fgBlocksLong": "擋做多",
+    "fgBlocksShort": "擋做空"
+  },
+  "strategyName": {
+    "crypto-trend": "加密趨勢",
+    "equity-swing": "美股擺動",
+    "meme-momentum": "Meme 動能"
+  },
+  "strategySector": {
+    "crypto-trend": "加密主流",
+    "equity-swing": "美股",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "十日突破 · 回調延續 · 洗盤回升 · 雙向",
+    "equity-swing": "趨勢回調 · 指數洗盤 · 財報後漂移",
+    "meme-momentum": "突破首次回踩 · 洗盤回升 · 破位軋空"
+  },
+  "strategyCard": {
+    "markets": "{{n}} 幣種",
+    "plays": "3 套打法",
+    "dirBoth": "雙向",
+    "dirLong": "偏多"
+  },
+  "strategySelect": {
+    "confirm": "確認並進入交易引擎"
+  },
+  "strategyPick": {
+    "title": "選擇策略",
+    "eyebrow": "Hyperliquid · 智慧跟單",
+    "heroTitle": "選擇你的策略",
+    "heroSub": "選定後進入交易引擎 —— 自動跟單,風控全程託管。"
+  },
+  "flow": {
+    "step": {
+      "qualify": "資格",
+      "wallet": "錢包",
+      "strategy": "策略",
+      "follow": "跟單",
+      "console": "數據台"
+    },
+    "continueWallet": "下一步 · 錢包儲值",
+    "continueStrategy": "下一步 · 選擇策略",
+    "continueConsole": "進入數據台",
+    "strategy": {
+      "title": "選擇策略",
+      "desc": "選定板塊策略後,引擎會依該策略比對頂尖交易員的即時訊號並顯示決策對話。"
+    },
+    "gate": {
+      "connectTitle": "請先連接錢包",
+      "connectDesc": "連接錢包後即可驗證資格並啟用交易帳戶。",
+      "verifyTitle": "驗證資格",
+      "verifyDesc": "跟單需要節點權限。購買節點或輸入授權碼即可解鎖開戶與跟單。",
+      "activatedTitle": "交易帳戶已啟用",
+      "activatedDescAgent": "非託管帳戶已開通，資金留在你自己的錢包，引擎僅持有不能提現的下單密鑰。",
+      "activatedDesc": "你的交易帳戶已就緒，可以繼續設定跟單了。",
+      "activateTitle": "啟用交易帳戶"
+    },
+    "wallet": {
+      "account": "交易帳戶",
+      "viewOnHl": "在 Hyperliquid 查看",
+      "nav": "帳戶淨值",
+      "withdrawable": "可提",
+      "fundTitle": "充值 / 提現",
+      "fundDesc": "把 USDC 充入交易帳戶即可開始跟單。",
+      "fundedNote": "已入金，可進入下一步",
+      "depositToContinue": "充值後才能選擇策略"
+    }
+  },
+  "engine": {
+    "running": "交易引擎 · 鏈上即時",
+    "follow": "開啟跟單",
+    "following": "跟單中 {{n}} 位",
+    "needOnboard": "請先在策略頁開通交易帳戶",
+    "smartFollow": "智慧跟單 · 自動優選 Top {{n}}",
+    "smartFollowHint": "依平台評分自動優選頂級交易員，並啟用 AI ranker 智慧執行（僅跟高勝率訊號）",
+    "orPickManually": "或手動選擇",
+    "style": "風格",
+    "noLeaders": "暫無可跟交易員",
+    "followed": "已跟單",
+    "oneClickFollow": "一鍵跟單",
+    "paused": "已暫停",
+    "pausedDesc": "已停止開新倉，返回策略選擇。",
+    "tabDecision": "決策",
+    "tabSignals": "訊號",
+    "tabPositions": "持倉",
+    "tabRisk": "風險",
+    "tabRecords": "紀錄",
+    "pause": "暫停",
+    "switch": "切換",
+    "watching": "盯盤",
+    "holdings": "持倉（鏈上真實）",
+    "fills": "成交紀錄 · 開／平倉"
+  },
+  "depositTier": {
+    "noLevel": "需先持有節點 / 兌換授權碼",
+    "title": "選擇儲值金額",
+    "hint": "金額綁定風控規則(不可手動輸入)",
+    "remaining": "剩餘可充",
+    "exceedsCap": "超出剩餘額度",
+    "perTrade": "單筆",
+    "daily": "每日",
+    "trades": "筆",
+    "lev": "槓桿",
+    "tpsl": "TP/SL"
+  },
+  "agentChat": {
+    "connectFirst": "請先連接錢包",
+    "txTitle": "待簽交易",
+    "txSent": "已送出",
+    "signSend": "用錢包簽名並送出",
+    "greeting": "嗨，我是 Rune AI。可以聊策略、看行情、幫你分析持倉與平倉時機；也能幫你發起轉帳、查詢鏈上行情、建立合約等鏈上操作。說說你想做什麼？（風控與停損始終是底線，不會被偏好覆蓋。）",
+    "offline": "對話後端還在接入中，你的想法我先記下了，接通後會納入你的專屬偏好。",
+    "open": "與 Rune AI 聊聊",
+    "title": "與 Rune AI 聊聊",
+    "subtitle": "策略 · 行情 · 鏈上操作",
+    "placeholder": "聊策略 / 行情 / 持倉平倉，或鏈上操作…",
+    "send": "送出"
+  },
+  "decisionLog": {
+    "title": "決策紀錄",
+    "all": "全部",
+    "actions": "動作"
+  },
+  "console": {
+    "market": "策略市場",
+    "switchStrategy": "切換策略",
+    "balance": "餘額",
+    "unrealized": "未實現",
+    "dayPnl": "當日",
+    "pause": "暫停跟單",
+    "held": "持倉幣",
+    "noHeld": "暫無持倉",
+    "tabActions": "動作",
+    "tabPerformance": "表現",
+    "colRisk": "風控台",
+    "colSignals": "訊號流"
+  },
+  "engineLive": {
+    "nav": "帳戶淨值",
+    "notFunded": "待入金",
+    "unrealized": "未實現",
+    "today": "當日盈虧",
+    "withdrawable": "可提",
+    "account": "交易帳戶",
+    "viewOnHl": "在 Hyperliquid 查看",
+    "noPositions": "目前無持倉（該策略盯盤範圍內）",
+    "size": "數量",
+    "entry": "開倉",
+    "value": "市值",
+    "noFills": "暫無成交紀錄（該策略盯盤範圍內）"
+  },
+  "engineSignals": {
+    "net": "淨流向",
+    "empty": "該策略盯盤範圍內暫無訊號",
+    "close": "平倉",
+    "open": "開倉"
+  },
+  "signalSector": {
+    "all": "全部"
+  },
+  "strategyHero": {
+    "badge": "智慧策略引擎",
+    "title1": "讓 AI 驅動你的",
+    "title2": "鏈上跟單與策略執行",
+    "subtitle": "One-Agents 引擎即時追蹤頂級交易員，依板塊策略自動開平倉",
+    "statLiveVal": "鏈上即時",
+    "cta": "選擇策略 · 進入交易引擎",
+    "statStrategies": "策略板塊",
+    "statLeaders": "頂級交易員",
+    "statLive": "執行"
+  },
+  "leaderWatch": {
+    "title": "頂級交易員動向",
+    "subtitle": "交易員近 24h 在交易的幣",
+    "empty": "暫無近期交易員訊號"
+  },
+  "perf": {
+    "positions": "持倉",
+    "history": "歷史",
+    "directives": "指令",
+    "pnl": "P&L",
+    "realized": "已實現",
+    "closes": "{{n}} 筆平倉",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "需 20+ 天",
+    "maxdd": "最大回撤",
+    "equity": "淨值曲線",
+    "realEquity": "真實淨值",
+    "noCurve": "資料不足",
+    "time": "時間",
+    "market": "市場",
+    "phase": "階段",
+    "outcome": "結果",
+    "conviction": "信念",
+    "marketsWatched": "盯盤市場",
+    "tradable": "可交易範圍"
+  },
+  "riskConsole": {
+    "title": "風險監控台",
+    "halted": "已觸發 · 只平不開",
+    "warn": "接近預算",
+    "ok": "正常",
+    "dailyBudget": "日內虧損預算",
+    "nav": "帳戶淨值",
+    "dayPnl": "當日盈虧",
+    "unrealized": "未實現",
+    "tierRisk": "本檔位風控",
+    "tierBy": "充值 ${{amount}} 檔",
+    "rule1": "單幣 ≤30% 淨值",
+    "rule2": "停損後冷卻 5min",
+    "rule3": "清算 ≥3× 停損"
+  },
+  "position": {
+    "autoManaged": "平倉由智能體自動管理"
   }
 }

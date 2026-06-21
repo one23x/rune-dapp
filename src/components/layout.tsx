@@ -187,7 +187,7 @@ function Navbar() {
   // Dashboard only appears in the nav when the wallet is connected — avoids
   // dead-ending unauthenticated users on the protected page.
   const visibleNavItems = activeAccount
-    ? [...NAV_ITEMS, { href: "/app/profile", label: "DASHBOARD", key: "dashboard", icon: LayoutDashboard }]
+    ? [...NAV_ITEMS, { href: "/app/vault", label: "DASHBOARD", key: "dashboard", icon: LayoutDashboard }]
     : NAV_ITEMS;
 
   function handleNavClick(_e: React.MouseEvent, _key: string) {

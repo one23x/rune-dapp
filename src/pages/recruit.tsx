@@ -5,7 +5,6 @@ import {
   ChevronDown, ChevronUp, Zap, Shield, TrendingUp, FlaskConical, X, BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetRuneOverview } from "@/lib/queries";
 import { useShowZh, useT, type Language } from "@/contexts/language-context";
@@ -97,13 +96,6 @@ const NODE_GLOW: Record<string, string> = {
   advanced: "shadow-[0_2px_24px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.10)]",
   super:    "shadow-[0_2px_40px_rgba(251,191,36,0.18),inset_0_1px_0_rgba(251,191,36,0.12)]",
   founder:  "shadow-[0_2px_24px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.10)]",
-};
-const NODE_PROGRESS_BAR: Record<string, string> = {
-  initial:  "[&>div]:bg-gradient-to-r [&>div]:from-amber-600/70 [&>div]:to-amber-400/70",
-  mid:      "[&>div]:bg-gradient-to-r [&>div]:from-amber-600/70 [&>div]:to-amber-400/70",
-  advanced: "[&>div]:bg-gradient-to-r [&>div]:from-amber-600/70 [&>div]:to-amber-400/70",
-  super:    "[&>div]:bg-gradient-to-r [&>div]:from-amber-500 [&>div]:to-amber-300",
-  founder:  "[&>div]:bg-gradient-to-r [&>div]:from-amber-600/70 [&>div]:to-amber-400/70",
 };
 const NODE_TOP_GLOW: Record<string, string> = {
   initial:  "from-zinc-300/35 to-transparent",
@@ -368,7 +360,7 @@ export default function Recruit() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => navigate("/app/profile")}
+              onClick={() => navigate("/app/vault")}
               className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 px-3 py-1 text-xs font-medium hover:bg-cyan-500/20 transition-colors"
             >
               {tt({ zh: "进入 Dashboard →", "zh-TW": "進入 Dashboard →", en: "Open Dashboard →", ja: "ダッシュボードへ →", ko: "대시보드로 →", th: "เปิด Dashboard →", vi: "Mở Dashboard →" })}
@@ -453,9 +445,8 @@ export default function Recruit() {
           </p>
 
           {/* Global metric strip */}
-          <div className="mt-7 sm:mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-6 sm:pt-8 border-t border-amber-500/20">
+          <div className="mt-7 sm:mt-10 grid grid-cols-3 gap-3 sm:gap-4 pt-6 sm:pt-8 border-t border-amber-500/20">
             {[
-              { label: { en: "Total Seats",   zh: "总席位",     "zh-TW": "總席位",     ja: "総席数",       ko: "총 좌석",   th: "ที่นั่งทั้งหมด",   vi: "Tổng số ghế" },     val: "2,420"  },
               { label: { en: "Node Tiers",    zh: "节点等级",   "zh-TW": "節點等級",   ja: "ノード等級",   ko: "노드 등급", th: "ระดับโหนด",       vi: "Cấp node"     },     val: "5"      },
               { label: { en: "Opening Price", zh: "开盘价",     "zh-TW": "開盤價",     ja: "開始価格",     ko: "오픈 가격", th: "ราคาเปิด",        vi: "Giá mở"        },     val: "$0.028" },
               { label: { en: "USDT APY",      zh: "年化收益率", "zh-TW": "年化收益率", ja: "年利",         ko: "연 수익률", th: "APY USDT",        vi: "APY USDT"     },     val: "170.82%", gold: true },
@@ -499,20 +490,7 @@ export default function Recruit() {
                 const level  = meta.level;
 
                 const investment    = onChain ? Number(onChain.payAmount / 10n ** 18n) : meta.priceUsdt;
-                const seats         = onChain ? Number(onChain.maxLimit) : (rest?.seats ?? stat.seats);
-                // seatsRemaining must be authoritative — only the on-chain
-                // `curNum` reflects real purchases. REST `seatsRemaining` is
-                // a static placeholder in the overview table and would lie
-                // about occupancy on a freshly-deployed contract. Default
-                // to full-available while the chain read is in flight.
-                const seatsRemaining = onChain
-                  ? Number(onChain.maxLimit - onChain.curNum)
-                  : seats;
-                const occupiedPct = seats > 0
-                  ? Math.round(((seats - seatsRemaining) / seats) * 100)
-                  : 0;
                 const accent = NODE_ACCENT[level];
-                const progressCls = NODE_PROGRESS_BAR[level];
 
                 const privatePrice    = rest?.privatePrice    ?? stat.privatePrice;
                 const dailyUsdt       = rest?.dailyUsdt       ?? stat.dailyUsdt;
@@ -563,25 +541,6 @@ export default function Recruit() {
                         <div className="text-[11px] text-zinc-600 mt-1 font-mono tracking-[0.15em] uppercase">USDT</div>
                       </div>
 
-                      {/* Seats — Commission column hidden per user direction
-                          2026-05-23 (pre-launch: no per-tier % shown). */}
-                      <div className="border-t border-white/[0.06] pt-3">
-                        <div className="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-medium mb-1">
-                          {tt({ zh: "席位", "zh-TW": "席位", en: "Seats", ja: "席数", ko: "좌석", th: "ที่นั่ง", vi: "Ghế" })}
-                        </div>
-                        <div className="num text-lg leading-none text-zinc-100">
-                          {showZh ? `${fmt(seats)} 席` : fmt(seats)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Seat progress */}
-                    <div className="mt-4 space-y-1.5">
-                      <div className="flex justify-between text-[11px] uppercase tracking-[0.18em] text-zinc-600">
-                        <span>{tt({ zh: "占用", "zh-TW": "占用", en: "Occupancy", ja: "充填", ko: "점유율", th: "การจอง", vi: "Lấp đầy" })}</span>
-                        <span className={`${accent}`}>{occupiedPct}%</span>
-                      </div>
-                      <Progress value={occupiedPct} className={`h-1 bg-white/8 ${progressCls}`} />
                     </div>
 
                     {/* Buy CTA — three states tied to the on-chain user state:
@@ -601,7 +560,7 @@ export default function Recruit() {
                         asChild
                         className="mt-4 w-full h-9 text-sm font-medium border-emerald-700/40 hover:border-emerald-500/60 hover:bg-emerald-500/5 text-emerald-200"
                       >
-                        <a href="/app/profile">{tt({ zh: "已购买 · 查看面板", "zh-TW": "已購買 · 查看面板", en: "Purchased · Open Dashboard", ja: "購入済 · ダッシュボードへ", ko: "구매 완료 · 대시보드 열기", th: "ซื้อแล้ว · เปิด Dashboard", vi: "Đã mua · Mở Dashboard" })}</a>
+                        <a href="/app/vault">{tt({ zh: "已购买 · 查看面板", "zh-TW": "已購買 · 查看面板", en: "Purchased · Open Dashboard", ja: "購入済 · ダッシュボードへ", ko: "구매 완료 · 대시보드 열기", th: "ซื้อแล้ว · เปิด Dashboard", vi: "Đã mua · Mở Dashboard" })}</a>
                       </Button>
                     ) : (
                       <Button
@@ -857,7 +816,7 @@ export default function Recruit() {
           </div>
           <Button
             variant="outline"
-            onClick={() => navigate("/app/profile")}
+            onClick={() => navigate("/app/vault")}
             className="w-full sm:w-auto shrink-0 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-500/60 gap-2"
           >
             <BookOpen className="h-4 w-4" />

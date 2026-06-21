@@ -75,7 +75,8 @@
       "title": "아직 사용할 수 없습니다"
     },
     "copyAddress": "주소 복사",
-    "myPositions": "내 포지션"
+    "myPositions": "내 포지션",
+    "close": "닫기"
   },
   "nav": {
     "home": "홈",
@@ -519,6 +520,28 @@
       "stepValueDesc": "유통 공급량이 줄어들수록 남은 토큰의 가치 포착력이 계속 강해집니다.",
       "stepValueTitle": "가치 상승",
       "dailyFire": "일일 FIRE"
+    },
+    "launch": {
+      "headline": "볼트 스테이킹 · 출시 카운트다운",
+      "subline": "기관급 스테이킹 볼트가 곧 시작됩니다 — RUNE 노드 등급별 차등 수익과 생태계 혜택.",
+      "soonPill": "출시 예정",
+      "livePill": "출시됨",
+      "days": "일",
+      "hours": "시",
+      "minutes": "분",
+      "seconds": "초",
+      "targetLabel": "출시 시각",
+      "featLockTitle": "락 스테이킹",
+      "featLockDesc": "RUNE 노드 등급에 따른 차등 수익",
+      "featLpTitle": "유동성 풀",
+      "featLpDesc": "프로토콜 유동성 공급, 거래 수수료 공유",
+      "featBurnTitle": "디플레이션 소각",
+      "featBurnDesc": "프로토콜 바이백 및 소각, 장기 디플레이션",
+      "ctaSoon": "출시 후 오픈",
+      "ctaLive": "볼트 스테이킹 입장",
+      "note": "스테이킹·유동성·소각 모듈은 출시 시 함께 오픈됩니다",
+      "liveHeadline": "볼트 스테이킹 출시됨",
+      "liveSub": "스테이킹이 오픈되었습니다"
     }
   },
   "deposit": {
@@ -553,7 +576,22 @@
     "customAmount": "사용자 지정 금액",
     "enterAmount": "금액 입력 또는 선택",
     "manualTransfer": "또는 주소로 송금",
-    "onchainWaitPm": "Polygon pUSD만 지원. 온체인 확인에 약 2~5분 소요되며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요."
+    "onchainWaitPm": "Polygon pUSD만 지원. 온체인 확인에 약 2~5분 소요되며 입금되면 잔액이 자동 새로고침됩니다 — 잠시 기다려 주세요.",
+    "stepAmount": "금액 팩",
+    "stepMethod": "결제 방법",
+    "stepPay": "결제",
+    "nextMethod": "다음 · 결제 방법 선택",
+    "pickAmountFirst": "먼저 입금 금액 팩을 선택한 뒤 결제 방법을 선택하세요.",
+    "back": "이전",
+    "selectedAmount": "선택됨",
+    "chooseMethod": "결제 방법을 선택하세요",
+    "methodTransferDesc": "연결된 지갑에서 USDC를 직접 전송（Arbitrum）",
+    "methodGuideDesc": "비수탁 입금 가이드 보기",
+    "methodAddressDesc": "주소 복사 / QR 스캔, 모든 지갑이나 거래소에서 결제",
+    "methodBridgeDesc": "다른 체인 자산이나 은행 카드로 브리지하여 입금",
+    "riskBindNote": "이 금액에 연결된 리스크 관리（거래당 한도 / 최대 레버리지 / 익절·손절）가 카피 트레이딩에 자동으로 적용됩니다.",
+    "lockedSelected": "선택 금액(리스크 관리 연동)",
+    "lockedTransferHint": "${{amount}} USDC를 정확히 입금하세요(이 금액은 리스크 관리 규칙과 연동됩니다)"
   },
   "ma": {
     "chartArea": "영역",
@@ -1382,7 +1420,9 @@
     "nodesPageSubtitle": "노드 혜택 · 직접 추천 보상 · 실시간 온체인",
     "todayPnl": "당일 손익",
     "unrealizedPnl": "미실현 손익",
-    "openPositions": "포지션 수"
+    "openPositions": "포지션 수",
+    "support": "티켓 제출",
+    "supportDesc": "문제 신고 및 진행 상황 추적"
   },
   "market": {
     "marketAnalysis": "시장 분석",
@@ -1774,7 +1814,19 @@
     "statsTabRecords": "거래 기록",
     "venueHlMainnet": "HL 메인넷",
     "venueHlTestnet": "HL 테스트넷",
-    "tabStats": "거래 데이터"
+    "tabStats": "거래 데이터",
+    "stopAllOk": "복사거래를 중단했습니다",
+    "stopAllOkDesc": "더 이상 신규 진입하지 않으며, 기존 포지션은 에이전트/시장에 의해 자연스럽게 청산됩니다.",
+    "stopAllFailed": "복사거래 중단 실패",
+    "stopAllConfirm": "모든 복사거래를 중단하시겠습니까? 이후 신규 진입하지 않으며, 기존 포지션은 에이전트가 자동으로 청산합니다.",
+    "stopAll": "원클릭 복사거래 중단",
+    "stopAllAlready": "모두 중단됨",
+    "withdrawPending": "온체인 출금이 제출되었습니다",
+    "withdrawPendingDesc": "출금이 제출되었으며, 온체인에서 처리되어 대상 주소로 입금됩니다.",
+    "venuePm": "Rune 예측 시장",
+    "followed": "복사 중",
+    "pickLeader": "트레이더 선택",
+    "pickLeaderHint": "한 명 선택, 원클릭 복사"
   },
   "exchange": {
     "account": "계정",
@@ -2331,7 +2383,17 @@
       "testnetDesc": "테스트넷에서는 공식 faucet에서 테스트 USDC를 받거나 입금하세요:"
     },
     "deposit": "입금",
-    "mtdPnl": "월 누적"
+    "mtdPnl": "월 누적",
+    "executorTitle": "실행 스타일",
+    "executorHint": "복사거래를 어떻게 실행할지 결정합니다",
+    "leaderScore": "점수",
+    "leaderHold": "보유",
+    "leaderFollowed": "복사 중",
+    "pickLeaderTitle": "트레이더 선택",
+    "pickLeaderHint": "한 명 선택, 원클릭 복사",
+    "decisionLogTitle": "의사결정 흐름",
+    "decisionLogHint": "실시간 의사결정 근거",
+    "positionMargin": "증거금"
   },
   "profileVault": {
     "claimed": "수령 완료!",
@@ -2483,5 +2545,297 @@
   "predictionMarket": {
     "optimizingTitle": "스마트 예측 시장을 최적화하고 있습니다",
     "optimizingDesc": "아직 오픈되지 않았습니다. 기대해 주세요."
+  },
+  "support": {
+    "pageTitle": "고객센터",
+    "pageSubtitle": "문제를 제출하고 진행 상황을 추적",
+    "tabCreate": "티켓 작성",
+    "tabList": "내 티켓",
+    "connectTitle": "먼저 지갑을 연결하세요",
+    "connectDesc": "지갑 연결 후 티켓 제출 및 진행 확인이 가능합니다",
+    "walletLabel": "티켓 지갑",
+    "walletNote": "연결된 지갑에 자동 연결됩니다",
+    "categoryLabel": "문제 유형",
+    "subjectLabel": "제목",
+    "subjectPlaceholder": "한 줄로 문제를 설명",
+    "descriptionLabel": "상세 설명",
+    "descriptionPlaceholder": "발생한 내용과 금액/자산/시간 등을 자세히 적어주세요",
+    "screenshotLabel": "스크린샷(선택)",
+    "addScreenshot": "스크린샷 추가",
+    "contactLabel": "연락처(선택)",
+    "contactPlaceholder": "텔레그램 / 이메일",
+    "submitBtn": "티켓 제출",
+    "toastCreatedTitle": "티켓이 제출되었습니다",
+    "toastCreatedDesc": "곧 처리하겠습니다. '내 티켓'에서 확인하세요",
+    "toastErrorTitle": "제출 실패",
+    "toastErrorDesc": "잠시 후 다시 시도해주세요",
+    "emptyTitle": "아직 티켓이 없습니다",
+    "emptyDesc": "'티켓 작성' 탭에서 첫 티켓을 만드세요",
+    "backToList": "목록으로",
+    "noMessages": "아직 답변이 없습니다. 처리 중입니다",
+    "you": "나",
+    "team": "고객지원",
+    "newReply": "답변 도착",
+    "replyPlaceholder": "정보 추가 또는 답변…",
+    "cat": {
+      "deposit": "입금",
+      "withdraw": "출금",
+      "copy_trade": "카피 트레이딩",
+      "node_tier": "노드 등급",
+      "wallet": "지갑",
+      "vault": "볼트",
+      "account_data": "계정 데이터",
+      "other": "기타"
+    },
+    "status": {
+      "open": "대기",
+      "in_progress": "처리 중",
+      "resolved": "해결됨",
+      "closed": "종료"
+    }
+  },
+  "actions": {
+    "all": "전체",
+    "catRisk": "리스크",
+    "catWatch": "관심",
+    "catTrade": "체결",
+    "closeAt": "청산 {{coin}} @ ${{px}}",
+    "realized": "실현",
+    "opened": "{{side}} 진입 · {{coin}}",
+    "filled": "체결 {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "진입 건너뜀",
+    "skipOpenCoin": "진입 건너뜀 · {{coin}}",
+    "gated": "차단됨",
+    "stopLoss": "손절",
+    "stopLossCoin": "손절 · {{coin}}",
+    "empty": "기록 없음",
+    "viewTx": "보기",
+    "heldPosition": "보유 · {{coin}} {{side}}",
+    "heldDetail": "수량 {{size}} · 미실현 {{upnl}} · ROE {{roe}}",
+    "volatile": "급변",
+    "side_long": "롱",
+    "side_short": "숏",
+    "fearGreed": "시장 심리 · {{label}}",
+    "fearGreedDetail": "공포·탐욕 지수 F&G {{value}}",
+    "fgExtremeFear": "극단적 공포",
+    "fgFear": "공포",
+    "fgNeutral": "중립",
+    "fgGreed": "탐욕",
+    "fgExtremeGreed": "극단적 탐욕",
+    "fgBlocksLong": "롱 차단",
+    "fgBlocksShort": "숏 차단"
+  },
+  "strategyName": {
+    "crypto-trend": "크립토 트렌드",
+    "equity-swing": "미국 주식 스윙",
+    "meme-momentum": "Meme 모멘텀"
+  },
+  "strategySector": {
+    "crypto-trend": "메이저 크립토",
+    "equity-swing": "미국 주식",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "10일 돌파 · 눌림목 연속 · 흔들기 후 회복 · 양방향",
+    "equity-swing": "추세 눌림목 · 지수 흔들기 · 실적 발표 후 드리프트",
+    "meme-momentum": "돌파 후 첫 리테스트 · 흔들기 후 회복 · 하락 돌파 숏 스퀴즈"
+  },
+  "strategyCard": {
+    "markets": "{{n}}개 종목",
+    "plays": "3가지 전략",
+    "dirBoth": "양방향",
+    "dirLong": "롱 편향"
+  },
+  "strategySelect": {
+    "confirm": "확인 후 트레이딩 엔진 진입"
+  },
+  "strategyPick": {
+    "title": "전략 선택",
+    "eyebrow": "Hyperliquid · 스마트 카피",
+    "heroTitle": "전략을 선택하세요",
+    "heroSub": "선택하면 트레이딩 엔진에 진입합니다 — 자동 카피 트레이딩, 리스크 관리는 전부 맡기세요."
+  },
+  "flow": {
+    "step": {
+      "qualify": "자격",
+      "wallet": "지갑",
+      "strategy": "전략",
+      "follow": "카피",
+      "console": "콘솔"
+    },
+    "continueWallet": "다음 · 지갑 입금",
+    "continueStrategy": "다음 · 전략 선택",
+    "continueConsole": "콘솔 진입",
+    "strategy": {
+      "title": "전략 선택",
+      "desc": "섹터 전략을 선택하면 엔진이 해당 전략에 맞춰 상위 트레이더의 실시간 시그널을 매칭하고 의사결정 대화를 보여줍니다."
+    },
+    "gate": {
+      "connectTitle": "먼저 지갑을 연결하세요",
+      "connectDesc": "지갑을 연결하면 자격을 확인하고 거래 계좌를 활성화할 수 있습니다.",
+      "verifyTitle": "자격 확인",
+      "verifyDesc": "복사거래에는 노드 권한이 필요합니다. 노드를 구매하거나 인증 코드를 입력하면 계좌 개설과 복사거래가 잠금 해제됩니다.",
+      "activatedTitle": "거래 계좌가 활성화되었습니다",
+      "activatedDescAgent": "비수탁형 계좌가 개설되었습니다. 자금은 본인 지갑에 그대로 남아 있고, 엔진은 출금할 수 없는 주문 키만 보유합니다.",
+      "activatedDesc": "거래 계좌가 준비되었습니다. 계속해서 복사거래를 설정할 수 있습니다.",
+      "activateTitle": "거래 계좌 활성화"
+    },
+    "wallet": {
+      "account": "거래 계좌",
+      "viewOnHl": "Hyperliquid에서 보기",
+      "nav": "계좌 순자산",
+      "withdrawable": "출금 가능",
+      "fundTitle": "충전 / 출금",
+      "fundDesc": "USDC를 거래 계좌에 입금하면 복사거래를 시작할 수 있습니다.",
+      "fundedNote": "입금 완료, 다음 단계로 진행 가능",
+      "depositToContinue": "충전 후에야 전략을 선택할 수 있습니다"
+    }
+  },
+  "engine": {
+    "running": "트레이딩 엔진 · 온체인 실시간",
+    "follow": "복사거래 시작",
+    "following": "{{n}}명 복사 중",
+    "needOnboard": "먼저 전략 페이지에서 거래 계좌를 개설하세요",
+    "smartFollow": "스마트 복사거래 · Top {{n}} 자동 선별",
+    "smartFollowHint": "플랫폼 점수 기준으로 최상위 트레이더를 자동 선별하고, AI ranker 스마트 실행을 활성화합니다(고승률 시그널만 복사)",
+    "orPickManually": "또는 직접 선택",
+    "style": "스타일",
+    "noLeaders": "복사 가능한 트레이더 없음",
+    "followed": "복사 중",
+    "oneClickFollow": "원클릭 복사",
+    "paused": "일시정지됨",
+    "pausedDesc": "신규 진입을 중단했습니다. 전략 선택으로 돌아갑니다.",
+    "tabDecision": "의사결정",
+    "tabSignals": "시그널",
+    "tabPositions": "포지션",
+    "tabRisk": "리스크",
+    "tabRecords": "기록",
+    "pause": "일시정지",
+    "switch": "변경",
+    "watching": "모니터링",
+    "holdings": "포지션(온체인 실제)",
+    "fills": "체결 내역 · 진입/청산"
+  },
+  "depositTier": {
+    "noLevel": "먼저 노드 보유 / 액세스 코드 교환이 필요합니다",
+    "title": "입금 금액 선택",
+    "hint": "금액이 리스크 관리 규칙에 연결됩니다（직접 입력 불가）",
+    "remaining": "입금 가능 잔여",
+    "exceedsCap": "잔여 한도 초과",
+    "perTrade": "거래당",
+    "daily": "일일",
+    "trades": "건",
+    "lev": "레버리지",
+    "tpsl": "TP/SL"
+  },
+  "agentChat": {
+    "connectFirst": "먼저 지갑을 연결하세요",
+    "txTitle": "서명 대기 트랜잭션",
+    "txSent": "전송됨",
+    "signSend": "지갑으로 서명 후 전송",
+    "greeting": "안녕하세요, Rune AI입니다. 전략 상담, 시세 확인, 포지션 및 청산 타이밍 분석을 도와드릴 수 있어요. 송금 실행, 온체인 시세 조회, 컨트랙트 생성 같은 온체인 작업도 지원합니다. 무엇을 하고 싶으신가요? (리스크 관리와 손절은 항상 최우선 기준이며, 선호 설정으로 덮어쓸 수 없습니다.)",
+    "offline": "대화 백엔드는 아직 연결 작업 중입니다. 말씀하신 내용은 먼저 기록해 두었다가 연결되면 전용 선호 설정에 반영하겠습니다.",
+    "open": "Rune AI와 대화하기",
+    "title": "Rune AI와 대화하기",
+    "subtitle": "전략 · 시세 · 온체인 작업",
+    "placeholder": "전략 / 시세 / 포지션·청산, 또는 온체인 작업에 대해 물어보세요…",
+    "send": "전송"
+  },
+  "decisionLog": {
+    "title": "의사결정 로그",
+    "all": "전체",
+    "actions": "동작"
+  },
+  "console": {
+    "market": "전략 마켓",
+    "switchStrategy": "전략 변경",
+    "balance": "잔액",
+    "unrealized": "미실현",
+    "dayPnl": "당일",
+    "pause": "복사거래 일시정지",
+    "held": "보유 코인",
+    "noHeld": "보유 포지션 없음",
+    "tabActions": "Actions",
+    "tabPerformance": "성과",
+    "colRisk": "리스크 콘솔",
+    "colSignals": "시그널 흐름"
+  },
+  "engineLive": {
+    "nav": "계좌 순자산",
+    "notFunded": "입금 대기",
+    "unrealized": "미실현",
+    "today": "당일 손익",
+    "withdrawable": "출금 가능",
+    "account": "거래 계좌",
+    "viewOnHl": "Hyperliquid에서 보기",
+    "noPositions": "현재 포지션 없음(해당 전략 모니터링 범위 내)",
+    "size": "수량",
+    "entry": "진입가",
+    "value": "평가액",
+    "noFills": "체결 내역 없음(해당 전략 모니터링 범위 내)"
+  },
+  "engineSignals": {
+    "net": "순흐름",
+    "empty": "해당 전략 모니터링 범위 내 시그널 없음",
+    "close": "청산",
+    "open": "진입"
+  },
+  "signalSector": {
+    "all": "전체"
+  },
+  "strategyHero": {
+    "badge": "스마트 전략 엔진",
+    "title1": "AI로 구동하는",
+    "title2": "온체인 복사거래와 전략 실행",
+    "subtitle": "One-Agents 엔진이 최상위 트레이더를 실시간 추적하고, 섹터 전략에 따라 자동으로 진입·청산합니다",
+    "statLiveVal": "온체인 실시간",
+    "cta": "전략 선택 · 거래 엔진 진입",
+    "statStrategies": "섹터",
+    "statLeaders": "톱 트레이더",
+    "statLive": "실행"
+  },
+  "leaderWatch": {
+    "title": "최상위 트레이더 동향",
+    "subtitle": "트레이더가 최근 24시간 동안 거래한 코인",
+    "empty": "최근 트레이더 시그널 없음"
+  },
+  "perf": {
+    "positions": "포지션",
+    "history": "내역",
+    "directives": "지시",
+    "pnl": "P&L",
+    "realized": "실현",
+    "closes": "청산 {{n}}건",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "20일 이상 필요",
+    "maxdd": "최대 낙폭",
+    "equity": "순자산 곡선",
+    "realEquity": "실제 순자산",
+    "noCurve": "데이터 부족",
+    "time": "시간",
+    "market": "시장",
+    "phase": "단계",
+    "outcome": "결과",
+    "conviction": "확신도",
+    "marketsWatched": "모니터링 시장",
+    "tradable": "거래 가능 범위"
+  },
+  "riskConsole": {
+    "title": "리스크 모니터링 콘솔",
+    "halted": "발동됨 · 청산만 가능, 진입 불가",
+    "warn": "예산 근접",
+    "ok": "정상",
+    "dailyBudget": "일중 손실 예산",
+    "nav": "계좌 순자산",
+    "dayPnl": "당일 손익",
+    "unrealized": "미실현",
+    "tierRisk": "현재 등급 리스크 관리",
+    "tierBy": "${{amount}} 충전 등급",
+    "rule1": "단일 코인 ≤ 순자산 30%",
+    "rule2": "손절 후 5분 쿨다운",
+    "rule3": "청산가 ≥ 손절가 3배"
+  },
+  "position": {
+    "autoManaged": "청산은 에이전트가 자동 관리합니다"
   }
 }

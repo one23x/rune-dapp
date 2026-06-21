@@ -75,7 +75,8 @@
       "title": "Not available yet"
     },
     "copyAddress": "Copy address",
-    "myPositions": "My positions"
+    "myPositions": "My positions",
+    "close": "Close"
   },
   "nav": {
     "home": "HOME",
@@ -519,7 +520,29 @@
     "lockNotReadyTitle": "Coming soon",
     "lockNotReadyDesc": "RUNE locking will open after the protocol launch.",
     "burnNotReadyTitle": "Coming soon",
-    "burnNotReadyDesc": "FIRE burn-staking will open after the protocol launch."
+    "burnNotReadyDesc": "FIRE burn-staking will open after the protocol launch.",
+    "launch": {
+      "headline": "Vault Staking · Launch Countdown",
+      "subline": "Institutional-grade staking vault is coming — earn tiered yield and ecosystem perks by RUNE node tier.",
+      "soonPill": "Coming Soon",
+      "livePill": "Live",
+      "days": "Days",
+      "hours": "Hrs",
+      "minutes": "Min",
+      "seconds": "Sec",
+      "targetLabel": "Goes live",
+      "featLockTitle": "Lock Staking",
+      "featLockDesc": "Tiered yield unlocked by your RUNE node tier",
+      "featLpTitle": "Liquidity Pool",
+      "featLpDesc": "Provide protocol liquidity, share trading fees",
+      "featBurnTitle": "Deflationary Burn",
+      "featBurnDesc": "Protocol buyback & burn, long-term deflation",
+      "ctaSoon": "Opens at launch",
+      "ctaLive": "Enter Vault Staking",
+      "note": "Staking, liquidity and burn modules open together at launch",
+      "liveHeadline": "Vault Staking is Live",
+      "liveSub": "Staking is now open — give it a try"
+    }
   },
   "deposit": {
     "inputError": "Input Error",
@@ -588,7 +611,22 @@
     "transferSentDesc": "Balance refreshes automatically after on-chain confirmation",
     "transferTitle": "Wallet Transfer",
     "transferring": "Transferring…",
-    "walletBalance": "Wallet balance"
+    "walletBalance": "Wallet balance",
+    "stepAmount": "Amount pack",
+    "stepMethod": "Payment",
+    "stepPay": "Pay",
+    "nextMethod": "Next · Choose payment",
+    "pickAmountFirst": "Pick a deposit amount pack first, then choose a payment method.",
+    "back": "Back",
+    "selectedAmount": "Selected",
+    "chooseMethod": "Choose a payment method",
+    "methodTransferDesc": "Transfer USDC directly from your connected wallet (Arbitrum)",
+    "methodGuideDesc": "View the non-custodial deposit guide",
+    "methodAddressDesc": "Copy address / scan QR, pay from any wallet or exchange",
+    "methodBridgeDesc": "Bridge in from another chain's assets or a bank card",
+    "riskBindNote": "The risk controls bound to this amount (per-trade limit / max leverage / take-profit & stop-loss) apply automatically to your copy-trading.",
+    "lockedSelected": "Selected amount (bound to risk control)",
+    "lockedTransferHint": "Transfer exactly ${{amount}} USDC (this amount is bound to risk-control rules)"
   },
   "ma": {
     "chartArea": "Area",
@@ -1481,7 +1519,9 @@
     "nodesPageSubtitle": "Node benefits · Direct referral rewards · Real-time on-chain",
     "todayPnl": "Today P&L",
     "unrealizedPnl": "Unrealized",
-    "openPositions": "Positions"
+    "openPositions": "Positions",
+    "support": "Submit Ticket",
+    "supportDesc": "Report an issue & track progress"
   },
   "market": {
     "marketAnalysis": "Market Analysis",
@@ -1873,7 +1913,19 @@
     "statsTabRecords": "Trade Records",
     "venueHlMainnet": "HL Mainnet",
     "venueHlTestnet": "HL Testnet",
-    "tabStats": "Trade Data"
+    "tabStats": "Trade Data",
+    "stopAllOk": "Copy-trading stopped",
+    "stopAllOkDesc": "No new positions will open; existing positions will be closed naturally by the agent/market.",
+    "stopAllFailed": "Failed to stop copy-trading",
+    "stopAllConfirm": "Stop all copy-trading? No new positions will open afterward, and existing positions will be closed automatically by the agent.",
+    "stopAll": "Stop all copy-trading",
+    "stopAllAlready": "All stopped",
+    "withdrawPending": "On-chain withdrawal submitted",
+    "withdrawPendingDesc": "The withdrawal has been submitted and will be processed on-chain and credited to the target address.",
+    "venuePm": "Rune prediction market",
+    "followed": "Following",
+    "pickLeader": "Pick a trader",
+    "pickLeaderHint": "Pick one, follow in one click"
   },
   "exchange": {
     "account": "Account",
@@ -2405,7 +2457,17 @@
     "bridge2Warn": "Never send to Bridge2 directly from an exchange or someone else's wallet.",
     "tabDepositGuide": "Deposit Guide",
     "transferHintAgent": "USDC will be sent from your connected wallet directly to HL Bridge2.",
-    "transferHintCustodial": "Only USDC on the Arbitrum network. Funds go to your custodial address."
+    "transferHintCustodial": "Only USDC on the Arbitrum network. Funds go to your custodial address.",
+    "executorTitle": "Execution style",
+    "executorHint": "Determines how copy-trading runs for you",
+    "leaderScore": "Score",
+    "leaderHold": "Holding",
+    "leaderFollowed": "Following",
+    "pickLeaderTitle": "Pick a trader",
+    "pickLeaderHint": "Pick one, follow in one click",
+    "decisionLogTitle": "Decision log",
+    "decisionLogHint": "Live decision rationale",
+    "positionMargin": "Margin"
   },
   "pmLab": {
     "title": "Prediction AI Lab",
@@ -2524,5 +2586,297 @@
   "predictionMarket": {
     "optimizingTitle": "Smart Prediction Market is being optimized",
     "optimizingDesc": "Not yet available — stay tuned."
+  },
+  "support": {
+    "pageTitle": "Support Center",
+    "pageSubtitle": "Submit issues and track their progress",
+    "tabCreate": "New Ticket",
+    "tabList": "My Tickets",
+    "connectTitle": "Connect your wallet first",
+    "connectDesc": "Connect a wallet to submit tickets and view progress",
+    "walletLabel": "Ticket wallet",
+    "walletNote": "Auto-linked to your connected wallet",
+    "categoryLabel": "Issue type",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "Describe the issue in one line",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Please describe what happened, with amounts / assets / time if relevant",
+    "screenshotLabel": "Screenshots (optional)",
+    "addScreenshot": "Add screenshot",
+    "contactLabel": "Contact (optional)",
+    "contactPlaceholder": "Telegram / email so we can reach you",
+    "submitBtn": "Submit Ticket",
+    "toastCreatedTitle": "Ticket submitted",
+    "toastCreatedDesc": "We'll follow up soon — track it under My Tickets",
+    "toastErrorTitle": "Submission failed",
+    "toastErrorDesc": "Please try again later",
+    "emptyTitle": "No tickets yet",
+    "emptyDesc": "Create your first ticket from the New Ticket tab",
+    "backToList": "Back to tickets",
+    "noMessages": "No replies yet — we're on it",
+    "you": "You",
+    "team": "Support",
+    "newReply": "Support replied",
+    "replyPlaceholder": "Add details or reply to support…",
+    "cat": {
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "copy_trade": "Copy Trading",
+      "node_tier": "Node Tier",
+      "wallet": "Wallet",
+      "vault": "Vault",
+      "account_data": "Account Data",
+      "other": "Other"
+    },
+    "status": {
+      "open": "Open",
+      "in_progress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    }
+  },
+  "actions": {
+    "all": "All",
+    "catRisk": "Risk",
+    "catWatch": "Watch",
+    "catTrade": "Fills",
+    "closeAt": "Close {{coin}} @ ${{px}}",
+    "realized": "realized",
+    "opened": "Open {{side}} · {{coin}}",
+    "filled": "Filled {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "Skipped open",
+    "skipOpenCoin": "Skipped open · {{coin}}",
+    "gated": "gated",
+    "stopLoss": "Stop-loss",
+    "stopLossCoin": "Stop-loss · {{coin}}",
+    "empty": "No records",
+    "viewTx": "View",
+    "heldPosition": "Held · {{coin}} {{side}}",
+    "heldDetail": "Size {{size}} · uPnL {{upnl}} · ROE {{roe}}",
+    "volatile": "Volatile",
+    "side_long": "Long",
+    "side_short": "Short",
+    "fearGreed": "Market mood · {{label}}",
+    "fearGreedDetail": "Fear & Greed index {{value}}",
+    "fgExtremeFear": "Extreme fear",
+    "fgFear": "Fear",
+    "fgNeutral": "Neutral",
+    "fgGreed": "Greed",
+    "fgExtremeGreed": "Extreme greed",
+    "fgBlocksLong": "blocks longs",
+    "fgBlocksShort": "blocks shorts"
+  },
+  "strategyName": {
+    "crypto-trend": "Crypto Trend",
+    "equity-swing": "Equity Swing",
+    "meme-momentum": "Meme Momentum"
+  },
+  "strategySector": {
+    "crypto-trend": "Major Crypto",
+    "equity-swing": "US Equities",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "10-day breakout · pullback continuation · shakeout reclaim · two-way",
+    "equity-swing": "trend pullback · index shakeout · post-earnings drift",
+    "meme-momentum": "breakout first retest · shakeout reclaim · breakdown short squeeze"
+  },
+  "strategyCard": {
+    "markets": "{{n}} markets",
+    "plays": "3 plays",
+    "dirBoth": "Two-way",
+    "dirLong": "Long bias"
+  },
+  "strategySelect": {
+    "confirm": "Confirm & enter trading engine"
+  },
+  "strategyPick": {
+    "title": "Choose strategy",
+    "eyebrow": "Hyperliquid · Smart copy",
+    "heroTitle": "Choose your strategy",
+    "heroSub": "Once selected you enter the trading engine — auto copy-trading, risk fully managed."
+  },
+  "flow": {
+    "step": {
+      "qualify": "Eligibility",
+      "wallet": "Wallet",
+      "strategy": "Strategy",
+      "follow": "Copy",
+      "console": "Console"
+    },
+    "continueWallet": "Next · Fund wallet",
+    "continueStrategy": "Next · Choose strategy",
+    "continueConsole": "Enter console",
+    "strategy": {
+      "title": "Choose strategy",
+      "desc": "After picking a sector strategy, the engine matches top traders' live signals to it and shows the decision dialogue."
+    },
+    "gate": {
+      "connectTitle": "Connect your wallet first",
+      "connectDesc": "Connect your wallet to verify eligibility and activate your trading account.",
+      "verifyTitle": "Verify eligibility",
+      "verifyDesc": "Copy-trading requires node access. Buy a node or enter an access code to unlock account setup and copy-trading.",
+      "activatedTitle": "Trading account activated",
+      "activatedDescAgent": "Your non-custodial account is set up. Funds stay in your own wallet; the engine only holds an order-signing key that cannot withdraw.",
+      "activatedDesc": "Your trading account is ready. You can continue configuring copy-trading.",
+      "activateTitle": "Activate trading account"
+    },
+    "wallet": {
+      "account": "Trading account",
+      "viewOnHl": "View on Hyperliquid",
+      "nav": "Account value",
+      "withdrawable": "Withdrawable",
+      "fundTitle": "Deposit / Withdraw",
+      "fundDesc": "Deposit USDC into your trading account to start copy-trading.",
+      "fundedNote": "Deposit received, you can proceed",
+      "depositToContinue": "Deposit before selecting a strategy"
+    }
+  },
+  "engine": {
+    "running": "Trading engine · live on-chain",
+    "follow": "Start copy-trading",
+    "following": "Following {{n}}",
+    "needOnboard": "Open a trading account on the strategy page first",
+    "smartFollow": "Smart copy-trading · Auto-pick Top {{n}}",
+    "smartFollowHint": "Auto-picks top traders by platform score and uses the AI ranker for smart execution (only follows high-win-rate signals)",
+    "orPickManually": "Or pick manually",
+    "style": "Style",
+    "noLeaders": "No traders to follow",
+    "followed": "Following",
+    "oneClickFollow": "One-click follow",
+    "paused": "Paused",
+    "pausedDesc": "Stopped opening new positions. Returning to strategy selection.",
+    "tabDecision": "Decision",
+    "tabSignals": "Signals",
+    "tabPositions": "Positions",
+    "tabRisk": "Risk",
+    "tabRecords": "Records",
+    "pause": "Pause",
+    "switch": "Switch",
+    "watching": "Watching",
+    "holdings": "Holdings (live on-chain)",
+    "fills": "Fills · Open/Close"
+  },
+  "depositTier": {
+    "noLevel": "Hold a node / redeem an access code first",
+    "title": "Choose deposit amount",
+    "hint": "Amount binds risk-control rules (not free-entry)",
+    "remaining": "Remaining",
+    "exceedsCap": "Exceeds remaining limit",
+    "perTrade": "Per trade",
+    "daily": "Daily",
+    "trades": "trades",
+    "lev": "Leverage",
+    "tpsl": "TP/SL"
+  },
+  "agentChat": {
+    "connectFirst": "Connect your wallet first",
+    "txTitle": "Pending transaction",
+    "txSent": "Sent",
+    "signSend": "Sign and send with wallet",
+    "greeting": "Hi, I'm Rune AI. We can talk strategy, check markets, and analyze your positions and exit timing; I can also help you initiate transfers, query on-chain markets, create contracts and other on-chain actions. Tell me what you'd like to do. (Risk control and stop-loss are always the bottom line and won't be overridden by preferences.)",
+    "offline": "The chat backend is still being connected. I've noted your idea and will fold it into your personal preferences once we're online.",
+    "open": "Chat with Rune AI",
+    "title": "Chat with Rune AI",
+    "subtitle": "Strategy · Markets · On-chain actions",
+    "placeholder": "Talk strategy / markets / open & close positions, or on-chain actions…",
+    "send": "Send"
+  },
+  "decisionLog": {
+    "title": "Decision log",
+    "all": "All",
+    "actions": "Actions"
+  },
+  "console": {
+    "market": "Strategy market",
+    "switchStrategy": "Switch strategy",
+    "balance": "Balance",
+    "unrealized": "Unrealized",
+    "dayPnl": "Today",
+    "pause": "Pause copy-trading",
+    "held": "Held coins",
+    "noHeld": "No positions",
+    "tabActions": "Actions",
+    "tabPerformance": "Performance",
+    "colRisk": "Risk console",
+    "colSignals": "Signal feed"
+  },
+  "engineLive": {
+    "nav": "Account value",
+    "notFunded": "Awaiting deposit",
+    "unrealized": "Unrealized",
+    "today": "Today's P&L",
+    "withdrawable": "Withdrawable",
+    "account": "Trading account",
+    "viewOnHl": "View on Hyperliquid",
+    "noPositions": "No open positions (within this strategy's watched markets)",
+    "size": "Size",
+    "entry": "Entry",
+    "value": "Value",
+    "noFills": "No fills yet (within this strategy's watched markets)"
+  },
+  "engineSignals": {
+    "net": "Net flow",
+    "empty": "No signals within this strategy's watched markets",
+    "close": "Close",
+    "open": "Open"
+  },
+  "signalSector": {
+    "all": "All"
+  },
+  "strategyHero": {
+    "badge": "Smart strategy engine",
+    "title1": "Let AI drive your",
+    "title2": "on-chain copy-trading & strategy execution",
+    "subtitle": "The One-Agents engine tracks top traders in real time and auto-opens/closes positions by sector strategy",
+    "statLiveVal": "Live on-chain",
+    "cta": "Pick a strategy · Enter the trading engine",
+    "statStrategies": "Sectors",
+    "statLeaders": "Top traders",
+    "statLive": "Execution"
+  },
+  "leaderWatch": {
+    "title": "Top trader moves",
+    "subtitle": "Coins traders have traded in the last 24h",
+    "empty": "No recent trader signals"
+  },
+  "perf": {
+    "positions": "Positions",
+    "history": "History",
+    "directives": "Directives",
+    "pnl": "P&L",
+    "realized": "Realized",
+    "closes": "{{n}} closes",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "Needs 20+ days",
+    "maxdd": "Max drawdown",
+    "equity": "Equity curve",
+    "realEquity": "Real equity",
+    "noCurve": "Not enough data",
+    "time": "Time",
+    "market": "Market",
+    "phase": "Phase",
+    "outcome": "Outcome",
+    "conviction": "Conviction",
+    "marketsWatched": "Watched markets",
+    "tradable": "Tradable range"
+  },
+  "riskConsole": {
+    "title": "Risk console",
+    "halted": "Triggered · Close-only",
+    "warn": "Near budget",
+    "ok": "Normal",
+    "dailyBudget": "Daily loss budget",
+    "nav": "Account value",
+    "dayPnl": "Today's P&L",
+    "unrealized": "Unrealized",
+    "tierRisk": "This tier's risk control",
+    "tierBy": "${{amount}} deposit tier",
+    "rule1": "Single coin ≤30% of equity",
+    "rule2": "5min cooldown after stop-loss",
+    "rule3": "Liquidation ≥3× stop-loss"
+  },
+  "position": {
+    "autoManaged": "Closing is managed automatically by the agent"
   }
 }

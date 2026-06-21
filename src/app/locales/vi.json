@@ -75,7 +75,8 @@
       "title": "Chưa khả dụng"
     },
     "copyAddress": "Sao chép địa chỉ",
-    "myPositions": "Vị thế của tôi"
+    "myPositions": "Vị thế của tôi",
+    "close": "Đóng"
   },
   "nav": {
     "home": "TRANG CHỦ",
@@ -519,6 +520,28 @@
       "stepValueDesc": "Khi nguồn cung lưu hành thu hẹp, khả năng tích lũy giá trị của các token còn lại tiếp tục được củng cố.",
       "stepValueTitle": "Tích lũy giá trị",
       "dailyFire": "FIRE hằng ngày"
+    },
+    "launch": {
+      "headline": "Staking Kho · Đếm ngược ra mắt",
+      "subline": "Kho staking cấp tổ chức sắp ra mắt — lợi suất theo bậc và đặc quyền theo hạng node RUNE.",
+      "soonPill": "Sắp ra mắt",
+      "livePill": "Đang mở",
+      "days": "Ngày",
+      "hours": "Giờ",
+      "minutes": "Phút",
+      "seconds": "Giây",
+      "targetLabel": "Ra mắt lúc",
+      "featLockTitle": "Staking khóa",
+      "featLockDesc": "Lợi suất theo bậc mở khóa theo hạng node RUNE",
+      "featLpTitle": "Bể thanh khoản",
+      "featLpDesc": "Cung cấp thanh khoản và chia sẻ phí giao dịch",
+      "featBurnTitle": "Đốt giảm phát",
+      "featBurnDesc": "Giao thức mua lại & đốt, giảm phát dài hạn",
+      "ctaSoon": "Mở khi ra mắt",
+      "ctaLive": "Vào Staking Kho",
+      "note": "Các mô-đun staking, thanh khoản và đốt mở cùng lúc khi ra mắt",
+      "liveHeadline": "Staking Kho đã mở",
+      "liveSub": "Staking đã sẵn sàng, hãy trải nghiệm"
     }
   },
   "deposit": {
@@ -553,7 +576,22 @@
     "customAmount": "Số tiền tùy chỉnh",
     "enterAmount": "Nhập hoặc chọn một số tiền",
     "manualTransfer": "Hoặc chuyển tới địa chỉ",
-    "onchainWaitPm": "Chỉ pUSD trên Polygon. Xác nhận on-chain mất ~2–5 phút; số dư tự động làm mới khi nhận được — vui lòng đợi."
+    "onchainWaitPm": "Chỉ pUSD trên Polygon. Xác nhận on-chain mất ~2–5 phút; số dư tự động làm mới khi nhận được — vui lòng đợi.",
+    "stepAmount": "Gói số tiền",
+    "stepMethod": "Thanh toán",
+    "stepPay": "Trả",
+    "nextMethod": "Tiếp · Chọn thanh toán",
+    "pickAmountFirst": "Hãy chọn gói số tiền nạp trước, rồi chọn phương thức thanh toán.",
+    "back": "Quay lại",
+    "selectedAmount": "Đã chọn",
+    "chooseMethod": "Chọn một phương thức thanh toán",
+    "methodTransferDesc": "Chuyển USDC trực tiếp từ ví đã kết nối của bạn (Arbitrum)",
+    "methodGuideDesc": "Xem hướng dẫn nạp tiền phi lưu ký",
+    "methodAddressDesc": "Sao chép địa chỉ / quét QR, thanh toán từ bất kỳ ví hoặc sàn nào",
+    "methodBridgeDesc": "Bridge từ tài sản trên chuỗi khác hoặc thẻ ngân hàng",
+    "riskBindNote": "Bộ kiểm soát rủi ro gắn với số tiền này (giới hạn mỗi lệnh / đòn bẩy tối đa / chốt lời & cắt lỗ) tự động áp dụng cho copy trading của bạn.",
+    "lockedSelected": "Số tiền đã chọn (gắn với quản trị rủi ro)",
+    "lockedTransferHint": "Vui lòng chuyển chính xác ${{amount}} USDC (số tiền này gắn với quy tắc quản trị rủi ro)"
   },
   "ma": {
     "chartArea": "Vùng",
@@ -1382,7 +1420,9 @@
     "nodesPageSubtitle": "Quyền lợi nút · Thưởng giới thiệu trực tiếp · On-chain thời gian thực",
     "todayPnl": "P&L hôm nay",
     "unrealizedPnl": "Chưa thực hiện",
-    "openPositions": "Vị thế"
+    "openPositions": "Vị thế",
+    "support": "Gửi yêu cầu hỗ trợ",
+    "supportDesc": "Báo cáo sự cố và theo dõi tiến độ"
   },
   "market": {
     "marketAnalysis": "Phân tích thị trường",
@@ -1774,7 +1814,19 @@
     "statsTabRecords": "Lịch sử giao dịch",
     "venueHlMainnet": "HL Mainnet",
     "venueHlTestnet": "HL Testnet",
-    "tabStats": "Dữ liệu"
+    "tabStats": "Dữ liệu",
+    "stopAllOk": "Đã dừng copy-trading",
+    "stopAllOkDesc": "Không mở vị thế mới nữa, các vị thế hiện có sẽ được agent/thị trường đóng một cách tự nhiên.",
+    "stopAllFailed": "Dừng copy-trading thất bại",
+    "stopAllConfirm": "Xác nhận dừng toàn bộ copy-trading? Sau đó không mở vị thế mới nữa, các vị thế hiện có sẽ được agent tự động đóng.",
+    "stopAll": "Dừng copy-trading một chạm",
+    "stopAllAlready": "Đã dừng toàn bộ",
+    "withdrawPending": "Lệnh rút on-chain đã gửi",
+    "withdrawPendingDesc": "Lệnh rút đã được gửi, sẽ được xử lý on-chain và về đến địa chỉ đích.",
+    "venuePm": "Thị trường dự đoán Rune",
+    "followed": "Đã copy",
+    "pickLeader": "Chọn trader",
+    "pickLeaderHint": "Chọn một người, copy một chạm"
   },
   "exchange": {
     "account": "Tài Khoản",
@@ -2331,7 +2383,17 @@
       "testnetDesc": "Trên testnet, hãy dùng faucet chính thức để nhận/nạp USDC thử nghiệm:"
     },
     "deposit": "Nạp tiền",
-    "mtdPnl": "P&L tháng"
+    "mtdPnl": "P&L tháng",
+    "executorTitle": "Phong cách thực thi",
+    "executorHint": "Quyết định cách thực thi copy-trading thay bạn",
+    "leaderScore": "Điểm",
+    "leaderHold": "Vị thế",
+    "leaderFollowed": "Đã copy",
+    "pickLeaderTitle": "Chọn trader",
+    "pickLeaderHint": "Chọn một người, copy một chạm",
+    "decisionLogTitle": "Luồng quyết định",
+    "decisionLogHint": "Căn cứ quyết định thời gian thực",
+    "positionMargin": "Ký quỹ"
   },
   "profileVault": {
     "claimed": "Đã nhận!",
@@ -2483,5 +2545,297 @@
   "predictionMarket": {
     "optimizingTitle": "Thị trường dự đoán thông minh đang được tối ưu hóa",
     "optimizingDesc": "Chưa khả dụng. Vui lòng chờ đợi."
+  },
+  "support": {
+    "pageTitle": "Trung tâm hỗ trợ",
+    "pageSubtitle": "Gửi sự cố và theo dõi tiến độ xử lý",
+    "tabCreate": "Tạo yêu cầu",
+    "tabList": "Yêu cầu của tôi",
+    "connectTitle": "Vui lòng kết nối ví trước",
+    "connectDesc": "Kết nối ví để gửi yêu cầu và xem tiến độ",
+    "walletLabel": "Ví của yêu cầu",
+    "walletNote": "Tự động liên kết với ví đang kết nối",
+    "categoryLabel": "Loại sự cố",
+    "subjectLabel": "Tiêu đề",
+    "subjectPlaceholder": "Mô tả sự cố trong một dòng",
+    "descriptionLabel": "Mô tả chi tiết",
+    "descriptionPlaceholder": "Mô tả điều đã xảy ra, kèm số tiền / tài sản / thời gian nếu có",
+    "screenshotLabel": "Ảnh chụp màn hình (tùy chọn)",
+    "addScreenshot": "Thêm ảnh",
+    "contactLabel": "Liên hệ (tùy chọn)",
+    "contactPlaceholder": "Telegram / email để chúng tôi liên hệ",
+    "submitBtn": "Gửi yêu cầu",
+    "toastCreatedTitle": "Đã gửi yêu cầu",
+    "toastCreatedDesc": "Chúng tôi sẽ phản hồi sớm, theo dõi trong Yêu cầu của tôi",
+    "toastErrorTitle": "Gửi thất bại",
+    "toastErrorDesc": "Vui lòng thử lại sau",
+    "emptyTitle": "Chưa có yêu cầu",
+    "emptyDesc": "Tạo yêu cầu đầu tiên ở tab Tạo yêu cầu",
+    "backToList": "Về danh sách",
+    "noMessages": "Chưa có phản hồi, chúng tôi đang xử lý",
+    "you": "Bạn",
+    "team": "Hỗ trợ",
+    "newReply": "Hỗ trợ đã trả lời",
+    "replyPlaceholder": "Thêm thông tin hoặc trả lời hỗ trợ…",
+    "cat": {
+      "deposit": "Nạp tiền",
+      "withdraw": "Rút tiền",
+      "copy_trade": "Copy trade",
+      "node_tier": "Hạng node",
+      "wallet": "Ví",
+      "vault": "Kho",
+      "account_data": "Dữ liệu tài khoản",
+      "other": "Khác"
+    },
+    "status": {
+      "open": "Mở",
+      "in_progress": "Đang xử lý",
+      "resolved": "Đã giải quyết",
+      "closed": "Đã đóng"
+    }
+  },
+  "actions": {
+    "all": "Tất cả",
+    "catRisk": "Rủi ro",
+    "catWatch": "Theo dõi",
+    "catTrade": "Khớp lệnh",
+    "closeAt": "Đóng {{coin}} @ ${{px}}",
+    "realized": "đã thực hiện",
+    "opened": "Mở {{side}} · {{coin}}",
+    "filled": "Đã khớp {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "Bỏ qua mở lệnh",
+    "skipOpenCoin": "Bỏ qua mở lệnh · {{coin}}",
+    "gated": "đã chặn",
+    "stopLoss": "Cắt lỗ",
+    "stopLossCoin": "Cắt lỗ · {{coin}}",
+    "empty": "Chưa có bản ghi",
+    "viewTx": "Xem",
+    "heldPosition": "Đang giữ · {{coin}} {{side}}",
+    "heldDetail": "Khối lượng {{size}} · PnL chưa thực hiện {{upnl}} · ROE {{roe}}",
+    "volatile": "Biến động",
+    "side_long": "Mua",
+    "side_short": "Bán",
+    "fearGreed": "Tâm lý thị trường · {{label}}",
+    "fearGreedDetail": "Chỉ số sợ hãi & tham lam F&G {{value}}",
+    "fgExtremeFear": "Cực kỳ sợ hãi",
+    "fgFear": "Sợ hãi",
+    "fgNeutral": "Trung lập",
+    "fgGreed": "Tham lam",
+    "fgExtremeGreed": "Cực kỳ tham lam",
+    "fgBlocksLong": "chặn lệnh mua",
+    "fgBlocksShort": "chặn lệnh bán"
+  },
+  "strategyName": {
+    "crypto-trend": "Xu hướng Crypto",
+    "equity-swing": "Swing Cổ phiếu",
+    "meme-momentum": "Momentum Meme"
+  },
+  "strategySector": {
+    "crypto-trend": "Crypto Chủ đạo",
+    "equity-swing": "Cổ phiếu Mỹ",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "phá vỡ 10 ngày · tiếp diễn sau pullback · lấy lại sau shakeout · hai chiều",
+    "equity-swing": "pullback theo xu hướng · shakeout chỉ số · trôi sau báo cáo lợi nhuận",
+    "meme-momentum": "retest đầu sau phá vỡ · lấy lại sau shakeout · short squeeze khi gãy"
+  },
+  "strategyCard": {
+    "markets": "{{n}} thị trường",
+    "plays": "3 chiến thuật",
+    "dirBoth": "Hai chiều",
+    "dirLong": "Thiên về mua"
+  },
+  "strategySelect": {
+    "confirm": "Xác nhận & vào engine giao dịch"
+  },
+  "strategyPick": {
+    "title": "Chọn chiến lược",
+    "eyebrow": "Hyperliquid · Copy thông minh",
+    "heroTitle": "Chọn chiến lược của bạn",
+    "heroSub": "Sau khi chọn, bạn vào engine giao dịch — copy trading tự động, rủi ro được quản lý toàn bộ."
+  },
+  "flow": {
+    "step": {
+      "qualify": "Điều kiện",
+      "wallet": "Ví",
+      "strategy": "Chiến lược",
+      "follow": "Copy",
+      "console": "Console"
+    },
+    "continueWallet": "Tiếp · Nạp ví",
+    "continueStrategy": "Tiếp · Chọn chiến lược",
+    "continueConsole": "Vào console",
+    "strategy": {
+      "title": "Chọn chiến lược",
+      "desc": "Sau khi chọn chiến lược theo nhóm ngành, engine sẽ khớp tín hiệu trực tiếp của các trader hàng đầu với nó và hiển thị hội thoại quyết định."
+    },
+    "gate": {
+      "connectTitle": "Vui lòng kết nối ví trước",
+      "connectDesc": "Sau khi kết nối ví, bạn có thể xác minh điều kiện và kích hoạt tài khoản giao dịch.",
+      "verifyTitle": "Xác minh điều kiện",
+      "verifyDesc": "Copy-trading cần quyền node. Mua node hoặc nhập mã kích hoạt để mở khóa mở tài khoản và copy-trading.",
+      "activatedTitle": "Tài khoản giao dịch đã kích hoạt",
+      "activatedDescAgent": "Tài khoản phi giám hộ đã được mở, tiền của bạn vẫn nằm trong ví của chính bạn, engine chỉ giữ khóa đặt lệnh và không thể rút tiền.",
+      "activatedDesc": "Tài khoản giao dịch của bạn đã sẵn sàng, có thể tiếp tục cấu hình copy-trading.",
+      "activateTitle": "Kích hoạt tài khoản giao dịch"
+    },
+    "wallet": {
+      "account": "Tài khoản giao dịch",
+      "viewOnHl": "Xem trên Hyperliquid",
+      "nav": "Giá trị tài khoản",
+      "withdrawable": "Có thể rút",
+      "fundTitle": "Nạp / Rút",
+      "fundDesc": "Nạp USDC vào tài khoản giao dịch để bắt đầu copy-trading.",
+      "fundedNote": "Đã nạp tiền, có thể sang bước tiếp theo",
+      "depositToContinue": "Phải nạp tiền mới có thể chọn chiến lược"
+    }
+  },
+  "engine": {
+    "running": "Engine giao dịch · trực tiếp on-chain",
+    "follow": "Bật copy-trading",
+    "following": "Đang copy {{n}} trader",
+    "needOnboard": "Vui lòng kích hoạt tài khoản giao dịch ở trang chiến lược trước",
+    "smartFollow": "Copy thông minh · Tự động chọn lọc Top {{n}}",
+    "smartFollowHint": "Tự động chọn lọc các trader hàng đầu theo điểm đánh giá của nền tảng, và bật thực thi thông minh bằng AI ranker (chỉ copy tín hiệu thắng cao)",
+    "orPickManually": "Hoặc chọn thủ công",
+    "style": "Phong cách",
+    "noLeaders": "Chưa có trader nào để copy",
+    "followed": "Đã copy",
+    "oneClickFollow": "Copy một chạm",
+    "paused": "Đã tạm dừng",
+    "pausedDesc": "Đã dừng mở vị thế mới, quay lại chọn chiến lược.",
+    "tabDecision": "Quyết định",
+    "tabSignals": "Tín hiệu",
+    "tabPositions": "Vị thế",
+    "tabRisk": "Rủi ro",
+    "tabRecords": "Lịch sử",
+    "pause": "Tạm dừng",
+    "switch": "Đổi",
+    "watching": "Theo dõi",
+    "holdings": "Vị thế (thực tế on-chain)",
+    "fills": "Lịch sử khớp lệnh · Mở/Đóng vị thế"
+  },
+  "depositTier": {
+    "noLevel": "Cần sở hữu node / đổi mã truy cập trước",
+    "title": "Chọn số tiền nạp",
+    "hint": "Số tiền gắn với quy tắc kiểm soát rủi ro (không nhập tự do)",
+    "remaining": "Còn lại",
+    "exceedsCap": "Vượt hạn mức còn lại",
+    "perTrade": "Mỗi lệnh",
+    "daily": "Hằng ngày",
+    "trades": "lệnh",
+    "lev": "Đòn bẩy",
+    "tpsl": "TP/SL"
+  },
+  "agentChat": {
+    "connectFirst": "Vui lòng kết nối ví trước",
+    "txTitle": "Giao dịch chờ ký",
+    "txSent": "Đã gửi",
+    "signSend": "Ký và gửi bằng ví",
+    "greeting": "Chào bạn, tôi là Rune AI. Có thể trò chuyện về chiến lược, xem thị trường, giúp bạn phân tích vị thế và thời điểm đóng vị thế; cũng có thể giúp bạn khởi tạo chuyển khoản, tra cứu giá thị trường on-chain, tạo hợp đồng và các thao tác on-chain khác. Bạn muốn làm gì? (Quản trị rủi ro và cắt lỗ luôn là giới hạn cuối cùng, sẽ không bị tùy chọn ghi đè.)",
+    "offline": "Backend trò chuyện vẫn đang được kết nối, tôi đã ghi lại ý tưởng của bạn và sẽ đưa vào tùy chọn riêng của bạn khi kết nối xong.",
+    "open": "Trò chuyện với Rune AI",
+    "title": "Trò chuyện với Rune AI",
+    "subtitle": "Chiến lược · Thị trường · Thao tác on-chain",
+    "placeholder": "Trò chuyện về chiến lược / thị trường / mở đóng vị thế, hoặc thao tác on-chain…",
+    "send": "Gửi"
+  },
+  "decisionLog": {
+    "title": "Nhật ký quyết định",
+    "all": "Tất cả",
+    "actions": "Hành động"
+  },
+  "console": {
+    "market": "Chợ chiến lược",
+    "switchStrategy": "Đổi chiến lược",
+    "balance": "Số dư",
+    "unrealized": "Chưa thực hiện",
+    "dayPnl": "Trong ngày",
+    "pause": "Tạm dừng copy-trading",
+    "held": "Coin đang giữ",
+    "noHeld": "Chưa có vị thế",
+    "tabActions": "Hành động",
+    "tabPerformance": "Hiệu suất",
+    "colRisk": "Bảng rủi ro",
+    "colSignals": "Luồng tín hiệu"
+  },
+  "engineLive": {
+    "nav": "Giá trị tài khoản",
+    "notFunded": "Chờ nạp tiền",
+    "unrealized": "Chưa thực hiện",
+    "today": "Lãi/lỗ trong ngày",
+    "withdrawable": "Có thể rút",
+    "account": "Tài khoản giao dịch",
+    "viewOnHl": "Xem trên Hyperliquid",
+    "noPositions": "Hiện không có vị thế (trong phạm vi theo dõi của chiến lược này)",
+    "size": "Khối lượng",
+    "entry": "Mở vị thế",
+    "value": "Giá trị thị trường",
+    "noFills": "Chưa có lịch sử khớp lệnh (trong phạm vi theo dõi của chiến lược này)"
+  },
+  "engineSignals": {
+    "net": "Dòng tiền ròng",
+    "empty": "Chưa có tín hiệu trong phạm vi theo dõi của chiến lược này",
+    "close": "Đóng vị thế",
+    "open": "Mở vị thế"
+  },
+  "signalSector": {
+    "all": "Tất cả"
+  },
+  "strategyHero": {
+    "badge": "Engine chiến lược thông minh",
+    "title1": "Để AI dẫn dắt",
+    "title2": "copy-trading on-chain và thực thi chiến lược của bạn",
+    "subtitle": "Engine One-Agents theo dõi các trader hàng đầu theo thời gian thực, tự động mở đóng vị thế theo chiến lược ngành",
+    "statLiveVal": "Thời gian thực on-chain",
+    "cta": "Chọn chiến lược · Vào engine giao dịch",
+    "statStrategies": "Lĩnh vực",
+    "statLeaders": "Trader hàng đầu",
+    "statLive": "Thực thi"
+  },
+  "leaderWatch": {
+    "title": "Động thái trader hàng đầu",
+    "subtitle": "Coin mà trader đang giao dịch trong 24h gần đây",
+    "empty": "Chưa có tín hiệu trader gần đây"
+  },
+  "perf": {
+    "positions": "Vị thế",
+    "history": "Lịch sử",
+    "directives": "Chỉ thị",
+    "pnl": "P&L",
+    "realized": "Đã thực hiện",
+    "closes": "{{n}} lệnh đóng vị thế",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "Cần 20+ ngày",
+    "maxdd": "Sụt giảm tối đa",
+    "equity": "Đường cong giá trị tài khoản",
+    "realEquity": "Giá trị tài khoản thực",
+    "noCurve": "Không đủ dữ liệu",
+    "time": "Thời gian",
+    "market": "Thị trường",
+    "phase": "Giai đoạn",
+    "outcome": "Kết quả",
+    "conviction": "Niềm tin",
+    "marketsWatched": "Thị trường theo dõi",
+    "tradable": "Phạm vi giao dịch"
+  },
+  "riskConsole": {
+    "title": "Bảng giám sát rủi ro",
+    "halted": "Đã kích hoạt · Chỉ đóng không mở",
+    "warn": "Gần ngưỡng",
+    "ok": "Bình thường",
+    "dailyBudget": "Hạn mức lỗ trong ngày",
+    "nav": "Giá trị tài khoản",
+    "dayPnl": "Lãi/lỗ trong ngày",
+    "unrealized": "Chưa thực hiện",
+    "tierRisk": "Quản trị rủi ro hạng này",
+    "tierBy": "Hạng nạp ${{amount}}",
+    "rule1": "Mỗi coin ≤30% giá trị tài khoản",
+    "rule2": "Hạ nhiệt 5 phút sau khi cắt lỗ",
+    "rule3": "Thanh lý ≥3× điểm cắt lỗ"
+  },
+  "position": {
+    "autoManaged": "Việc đóng vị thế do agent tự động quản lý"
   }
 }

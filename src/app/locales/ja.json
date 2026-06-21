@@ -75,7 +75,8 @@
       "title": "まだ利用できません"
     },
     "copyAddress": "アドレスをコピー",
-    "myPositions": "ポジションを見る"
+    "myPositions": "ポジションを見る",
+    "close": "閉じる"
   },
   "nav": {
     "home": "ホーム",
@@ -519,7 +520,29 @@
     "lockNotReadyTitle": "近日公開",
     "lockNotReadyDesc": "RUNE のロックはプロトコル正式リリース後に公開予定です。",
     "burnNotReadyTitle": "近日公開",
-    "burnNotReadyDesc": "FIRE のバーンステーキングはプロトコル正式リリース後に公開予定です。"
+    "burnNotReadyDesc": "FIRE のバーンステーキングはプロトコル正式リリース後に公開予定です。",
+    "launch": {
+      "headline": "ボールトステーキング · ローンチまで",
+      "subline": "機関級ステーキングボールトがまもなく開始 — RUNEノードティアに応じた段階的利回りと特典。",
+      "soonPill": "近日公開",
+      "livePill": "公開中",
+      "days": "日",
+      "hours": "時",
+      "minutes": "分",
+      "seconds": "秒",
+      "targetLabel": "公開日時",
+      "featLockTitle": "ロックステーキング",
+      "featLockDesc": "RUNEノードティアに応じた段階的利回り",
+      "featLpTitle": "流動性プール",
+      "featLpDesc": "プロトコルに流動性を提供し取引手数料を分配",
+      "featBurnTitle": "デフレバーン",
+      "featBurnDesc": "プロトコルの買い戻し＆バーンで長期デフレ",
+      "ctaSoon": "ローンチ時に開放",
+      "ctaLive": "ボールトステーキングへ",
+      "note": "ステーキング・流動性・バーンの各機能はローンチ時に同時開放されます",
+      "liveHeadline": "ボールトステーキング公開中",
+      "liveSub": "ステーキングが利用可能になりました"
+    }
   },
   "deposit": {
     "inputError": "入力エラー",
@@ -553,7 +576,22 @@
     "customAmount": "カスタム金額",
     "enterAmount": "金額を入力または選択",
     "manualTransfer": "またはアドレスへ送金",
-    "onchainWaitPm": "Polygon の pUSD のみ。オンチェーン確認に約 2〜5 分かかります。着金後に残高が自動更新されます。お待ちください。"
+    "onchainWaitPm": "Polygon の pUSD のみ。オンチェーン確認に約 2〜5 分かかります。着金後に残高が自動更新されます。お待ちください。",
+    "stepAmount": "金額パック",
+    "stepMethod": "支払い方法",
+    "stepPay": "支払い",
+    "nextMethod": "次へ · 支払い方法を選択",
+    "pickAmountFirst": "先に入金金額パックを選び、それから支払い方法を選んでください。",
+    "back": "戻る",
+    "selectedAmount": "選択中",
+    "chooseMethod": "支払い方法を選択",
+    "methodTransferDesc": "接続中のウォレットから USDC を直接送金（Arbitrum）",
+    "methodGuideDesc": "ノンカストディアル入金ガイドを見る",
+    "methodAddressDesc": "アドレスをコピー / QR をスキャンし、任意のウォレットや取引所から支払い",
+    "methodBridgeDesc": "他チェーンの資産や銀行カードからブリッジして入金",
+    "riskBindNote": "この金額に紐づくリスク管理（1取引あたりの上限 / 最大レバレッジ / 利確・損切り）が、あなたのコピートレードに自動で適用されます。",
+    "lockedSelected": "選択した金額（リスク管理に連動）",
+    "lockedTransferHint": "正確に ${{amount}} USDC を送金してください（この金額はリスク管理ルールに連動しています）"
   },
   "ma": {
     "chartArea": "エリア",
@@ -1446,7 +1484,9 @@
     "nodesPageSubtitle": "ノード特典 · 直接紹介報酬 · リアルタイムオンチェーン",
     "todayPnl": "本日損益",
     "unrealizedPnl": "未実現損益",
-    "openPositions": "ポジション数"
+    "openPositions": "ポジション数",
+    "support": "チケット送信",
+    "supportDesc": "問題を報告し進捗を追跡"
   },
   "market": {
     "marketAnalysis": "市場分析",
@@ -1838,7 +1878,19 @@
     "statsTabRecords": "取引履歴",
     "venueHlMainnet": "HL メインネット",
     "venueHlTestnet": "HL テストネット",
-    "tabStats": "取引データ"
+    "tabStats": "取引データ",
+    "stopAllOk": "コピートレードを停止しました",
+    "stopAllOkDesc": "新規建玉は行わず、既存ポジションはエージェント/マーケットが自然に決済します。",
+    "stopAllFailed": "コピートレードの停止に失敗しました",
+    "stopAllConfirm": "すべてのコピートレードを停止しますか？以後は新規建玉を行わず、既存ポジションはエージェントが自動的に決済します。",
+    "stopAll": "コピートレードを一括停止",
+    "stopAllAlready": "すべて停止済み",
+    "withdrawPending": "オンチェーン出金を送信しました",
+    "withdrawPendingDesc": "出金が送信されました。オンチェーンで処理され、対象アドレスに着金します。",
+    "venuePm": "Rune 予測マーケット",
+    "followed": "フォロー中",
+    "pickLeader": "トレーダーを選ぶ",
+    "pickLeaderHint": "1 人選んでワンクリックでフォロー"
   },
   "exchange": {
     "account": "アカウント",
@@ -2365,7 +2417,17 @@
       "testnetDesc": "テストネットでは公式 faucet からテスト用 USDC を取得/入金してください:"
     },
     "deposit": "入金",
-    "mtdPnl": "月間累計"
+    "mtdPnl": "月間累計",
+    "executorTitle": "執行スタイル",
+    "executorHint": "コピートレードの執行方法を決定します",
+    "leaderScore": "スコア",
+    "leaderHold": "保有",
+    "leaderFollowed": "フォロー中",
+    "pickLeaderTitle": "トレーダーを選ぶ",
+    "pickLeaderHint": "1 人選んでワンクリックでフォロー",
+    "decisionLogTitle": "意思決定フロー",
+    "decisionLogHint": "リアルタイムの判断根拠",
+    "positionMargin": "証拠金"
   },
   "pmLab": {
     "title": "予測 AI ラボ",
@@ -2483,5 +2545,297 @@
   "predictionMarket": {
     "optimizingTitle": "スマート予測市場は最適化中です",
     "optimizingDesc": "まだ公開されていません。お楽しみに。"
+  },
+  "support": {
+    "pageTitle": "サポートセンター",
+    "pageSubtitle": "問題を送信し進捗を追跡",
+    "tabCreate": "チケット作成",
+    "tabList": "マイチケット",
+    "connectTitle": "先にウォレットを接続してください",
+    "connectDesc": "ウォレット接続後にチケット送信・進捗確認が可能です",
+    "walletLabel": "チケットのウォレット",
+    "walletNote": "接続中のウォレットに自動で紐付けられます",
+    "categoryLabel": "問題の種類",
+    "subjectLabel": "件名",
+    "subjectPlaceholder": "問題を一行で説明",
+    "descriptionLabel": "詳細",
+    "descriptionPlaceholder": "発生した内容、金額・銘柄・時刻などをできるだけ詳しく",
+    "screenshotLabel": "スクリーンショット（任意）",
+    "addScreenshot": "画像を追加",
+    "contactLabel": "連絡先（任意）",
+    "contactPlaceholder": "Telegram / メール",
+    "submitBtn": "チケット送信",
+    "toastCreatedTitle": "チケットを送信しました",
+    "toastCreatedDesc": "順次対応します。「マイチケット」で確認できます",
+    "toastErrorTitle": "送信に失敗しました",
+    "toastErrorDesc": "後ほど再試行してください",
+    "emptyTitle": "チケットはまだありません",
+    "emptyDesc": "「チケット作成」タブから最初のチケットを作成",
+    "backToList": "一覧へ戻る",
+    "noMessages": "返信はまだありません。対応中です",
+    "you": "あなた",
+    "team": "サポート",
+    "newReply": "サポートが返信",
+    "replyPlaceholder": "情報を追加、またはサポートに返信…",
+    "cat": {
+      "deposit": "入金",
+      "withdraw": "出金",
+      "copy_trade": "コピートレード",
+      "node_tier": "ノードティア",
+      "wallet": "ウォレット",
+      "vault": "ボールト",
+      "account_data": "アカウントデータ",
+      "other": "その他"
+    },
+    "status": {
+      "open": "未対応",
+      "in_progress": "対応中",
+      "resolved": "解決済み",
+      "closed": "クローズ"
+    }
+  },
+  "actions": {
+    "all": "すべて",
+    "catRisk": "リスク",
+    "catWatch": "注目",
+    "catTrade": "約定",
+    "closeAt": "クローズ {{coin}} @ ${{px}}",
+    "realized": "実現",
+    "opened": "{{side}}建て · {{coin}}",
+    "filled": "約定 {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "エントリー見送り",
+    "skipOpenCoin": "エントリー見送り · {{coin}}",
+    "gated": "ブロック",
+    "stopLoss": "ストップロス",
+    "stopLossCoin": "ストップロス · {{coin}}",
+    "empty": "記録なし",
+    "viewTx": "表示",
+    "heldPosition": "保有 · {{coin}} {{side}}",
+    "heldDetail": "数量 {{size}} · 含み損益 {{upnl}} · ROE {{roe}}",
+    "volatile": "急変",
+    "side_long": "ロング",
+    "side_short": "ショート",
+    "fearGreed": "市場心理 · {{label}}",
+    "fearGreedDetail": "恐怖と強欲指数 F&G {{value}}",
+    "fgExtremeFear": "極度の恐怖",
+    "fgFear": "恐怖",
+    "fgNeutral": "中立",
+    "fgGreed": "強欲",
+    "fgExtremeGreed": "極度の強欲",
+    "fgBlocksLong": "買い停止",
+    "fgBlocksShort": "売り停止"
+  },
+  "strategyName": {
+    "crypto-trend": "クリプトトレンド",
+    "equity-swing": "米国株スイング",
+    "meme-momentum": "Meme モメンタム"
+  },
+  "strategySector": {
+    "crypto-trend": "主要クリプト",
+    "equity-swing": "米国株",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "10日ブレイクアウト · 押し目継続 · 振るい落とし反発 · 両建て",
+    "equity-swing": "トレンド押し目 · 指数の振るい落とし · 決算後ドリフト",
+    "meme-momentum": "ブレイク後の初押し · 振るい落とし反発 · ブレイクダウン踏み上げ"
+  },
+  "strategyCard": {
+    "markets": "{{n}} 銘柄",
+    "plays": "3 つの手法",
+    "dirBoth": "両建て",
+    "dirLong": "ロング寄り"
+  },
+  "strategySelect": {
+    "confirm": "確定して取引エンジンへ"
+  },
+  "strategyPick": {
+    "title": "戦略を選択",
+    "eyebrow": "Hyperliquid · スマートコピー",
+    "heroTitle": "戦略を選びましょう",
+    "heroSub": "選択すると取引エンジンに入ります — 自動コピートレード、リスク管理はすべておまかせ。"
+  },
+  "flow": {
+    "step": {
+      "qualify": "資格",
+      "wallet": "ウォレット",
+      "strategy": "戦略",
+      "follow": "コピー",
+      "console": "コンソール"
+    },
+    "continueWallet": "次へ · ウォレット入金",
+    "continueStrategy": "次へ · 戦略を選択",
+    "continueConsole": "コンソールへ",
+    "strategy": {
+      "title": "戦略を選択",
+      "desc": "セクター戦略を選ぶと、エンジンがその戦略に合うトップトレーダーのリアルタイムシグナルをマッチングし、判断の対話を表示します。"
+    },
+    "gate": {
+      "connectTitle": "まずウォレットを接続してください",
+      "connectDesc": "ウォレットを接続すると、資格を確認し取引口座を有効化できます。",
+      "verifyTitle": "資格を確認",
+      "verifyDesc": "コピートレードにはノード権限が必要です。ノードを購入するか認証コードを入力すると、口座開設とコピートレードがロック解除されます。",
+      "activatedTitle": "取引口座を有効化しました",
+      "activatedDescAgent": "ノンカストディアル口座を開設しました。資金はあなた自身のウォレットに残り、エンジンは出金できない発注用キーのみを保持します。",
+      "activatedDesc": "取引口座の準備ができました。引き続きコピートレードを設定できます。",
+      "activateTitle": "取引口座を有効化"
+    },
+    "wallet": {
+      "account": "取引口座",
+      "viewOnHl": "Hyperliquid で表示",
+      "nav": "口座純資産",
+      "withdrawable": "出金可能",
+      "fundTitle": "入金 / 出金",
+      "fundDesc": "USDC を取引口座に入金するとコピートレードを開始できます。",
+      "fundedNote": "入金完了、次へ進めます",
+      "depositToContinue": "入金後に戦略を選択できます"
+    }
+  },
+  "engine": {
+    "running": "取引エンジン · オンチェーンでライブ",
+    "follow": "コピートレードを開始",
+    "following": "{{n}} 人をフォロー中",
+    "needOnboard": "まず戦略ページで取引口座を開設してください",
+    "smartFollow": "スマートコピートレード · Top {{n}} を自動選定",
+    "smartFollowHint": "プラットフォームのスコアでトップトレーダーを自動選定し、AI ranker でスマートに執行します（高勝率シグナルのみフォロー）",
+    "orPickManually": "または手動で選択",
+    "style": "スタイル",
+    "noLeaders": "フォロー可能なトレーダーがいません",
+    "followed": "フォロー中",
+    "oneClickFollow": "ワンクリックでフォロー",
+    "paused": "一時停止中",
+    "pausedDesc": "新規建玉を停止し、戦略選択に戻ります。",
+    "tabDecision": "意思決定",
+    "tabSignals": "シグナル",
+    "tabPositions": "ポジション",
+    "tabRisk": "リスク",
+    "tabRecords": "記録",
+    "pause": "一時停止",
+    "switch": "切り替え",
+    "watching": "監視中",
+    "holdings": "保有（オンチェーン実データ）",
+    "fills": "約定記録 · 建玉/決済"
+  },
+  "depositTier": {
+    "noLevel": "先にノードの保有 / アクセスコードの引き換えが必要",
+    "title": "入金金額を選択",
+    "hint": "金額がリスク管理ルールに紐づきます（自由入力不可）",
+    "remaining": "残り入金可能",
+    "exceedsCap": "残り上限を超えています",
+    "perTrade": "1取引",
+    "daily": "1日",
+    "trades": "回",
+    "lev": "レバレッジ",
+    "tpsl": "TP/SL"
+  },
+  "agentChat": {
+    "connectFirst": "まずウォレットを接続してください",
+    "txTitle": "署名待ちのトランザクション",
+    "txSent": "送信済み",
+    "signSend": "ウォレットで署名して送信",
+    "greeting": "こんにちは、Rune AI です。戦略の相談、相場の確認、ポジションや決済タイミングの分析ができます。送金の実行、オンチェーン相場の照会、コントラクトの作成などのオンチェーン操作もお手伝いします。何をしたいか教えてください。（リスク管理と損切りは常に最優先で、好みによって上書きされることはありません。）",
+    "offline": "対話バックエンドは現在接続作業中です。あなたのアイデアはメモしておき、接続後にあなた専用の好みに反映します。",
+    "open": "Rune AI と話す",
+    "title": "Rune AI と話す",
+    "subtitle": "戦略 · 相場 · オンチェーン操作",
+    "placeholder": "戦略 / 相場 / ポジション決済、またはオンチェーン操作について…",
+    "send": "送信"
+  },
+  "decisionLog": {
+    "title": "意思決定ログ",
+    "all": "すべて",
+    "actions": "アクション"
+  },
+  "console": {
+    "market": "戦略マーケット",
+    "switchStrategy": "戦略を切り替え",
+    "balance": "残高",
+    "unrealized": "含み損益",
+    "dayPnl": "当日",
+    "pause": "コピートレードを一時停止",
+    "held": "保有コイン",
+    "noHeld": "ポジションなし",
+    "tabActions": "アクション",
+    "tabPerformance": "パフォーマンス",
+    "colRisk": "リスクコンソール",
+    "colSignals": "シグナルフィード"
+  },
+  "engineLive": {
+    "nav": "口座純資産",
+    "notFunded": "入金待ち",
+    "unrealized": "含み損益",
+    "today": "当日 P&L",
+    "withdrawable": "出金可能",
+    "account": "取引口座",
+    "viewOnHl": "Hyperliquid で表示",
+    "noPositions": "現在ポジションなし（この戦略の監視対象範囲内）",
+    "size": "数量",
+    "entry": "建玉",
+    "value": "時価",
+    "noFills": "約定記録なし（この戦略の監視対象範囲内）"
+  },
+  "engineSignals": {
+    "net": "ネットフロー",
+    "empty": "この戦略の監視対象範囲内にシグナルはありません",
+    "close": "決済",
+    "open": "建玉"
+  },
+  "signalSector": {
+    "all": "すべて"
+  },
+  "strategyHero": {
+    "badge": "スマート戦略エンジン",
+    "title1": "AI に任せる、あなたの",
+    "title2": "オンチェーンコピートレードと戦略執行",
+    "subtitle": "One-Agents エンジンがトップトレーダーをリアルタイムで追跡し、セクター戦略に沿って自動で建玉/決済します",
+    "statLiveVal": "オンチェーンでリアルタイム",
+    "cta": "戦略を選ぶ · 取引エンジンへ",
+    "statStrategies": "セクター",
+    "statLeaders": "トップトレーダー",
+    "statLive": "実行"
+  },
+  "leaderWatch": {
+    "title": "トップトレーダーの動向",
+    "subtitle": "トレーダーが直近 24h に取引したコイン",
+    "empty": "直近のトレーダーシグナルはありません"
+  },
+  "perf": {
+    "positions": "ポジション",
+    "history": "履歴",
+    "directives": "指示",
+    "pnl": "P&L",
+    "realized": "実現済み",
+    "closes": "{{n}} 件の決済",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "20日以上必要",
+    "maxdd": "最大ドローダウン",
+    "equity": "純資産推移",
+    "realEquity": "実純資産",
+    "noCurve": "データ不足",
+    "time": "時刻",
+    "market": "マーケット",
+    "phase": "フェーズ",
+    "outcome": "結果",
+    "conviction": "確信度",
+    "marketsWatched": "監視マーケット",
+    "tradable": "取引可能範囲"
+  },
+  "riskConsole": {
+    "title": "リスク監視コンソール",
+    "halted": "発動済み · 決済のみ",
+    "warn": "予算に接近",
+    "ok": "正常",
+    "dailyBudget": "日中の損失予算",
+    "nav": "口座純資産",
+    "dayPnl": "当日 P&L",
+    "unrealized": "含み損益",
+    "tierRisk": "この階層のリスク管理",
+    "tierBy": "${{amount}} 入金階層",
+    "rule1": "単一コインは純資産の ≤30%",
+    "rule2": "損切り後 5min クールダウン",
+    "rule3": "清算 ≥3× 損切り"
+  },
+  "position": {
+    "autoManaged": "決済はエージェントが自動管理します"
   }
 }

@@ -75,7 +75,8 @@
       "title": "Noch nicht verfügbar"
     },
     "copyAddress": "Adresse kopieren",
-    "myPositions": "Meine Positionen"
+    "myPositions": "Meine Positionen",
+    "close": "Schließen"
   },
   "nav": {
     "home": "START",
@@ -519,6 +520,28 @@
       "stepValueDesc": "Mit schrumpfendem Umlaufangebot verstärkt sich die Wertschöpfung der verbleibenden Token kontinuierlich.",
       "stepValueTitle": "Wertzuwachs",
       "dailyFire": "Tägliches FIRE"
+    },
+    "launch": {
+      "headline": "Vault-Staking · Countdown zum Start",
+      "subline": "Der institutionelle Staking-Vault kommt bald — gestaffelte Rendite und Vorteile je nach RUNE-Node-Stufe.",
+      "soonPill": "Demnächst",
+      "livePill": "Live",
+      "days": "Tage",
+      "hours": "Std",
+      "minutes": "Min",
+      "seconds": "Sek",
+      "targetLabel": "Start am",
+      "featLockTitle": "Lock-Staking",
+      "featLockDesc": "Gestaffelte Rendite je nach RUNE-Node-Stufe",
+      "featLpTitle": "Liquiditätspool",
+      "featLpDesc": "Stelle Liquidität bereit und teile Handelsgebühren",
+      "featBurnTitle": "Deflationäres Burn",
+      "featBurnDesc": "Protokoll-Rückkauf & Burn, langfristige Deflation",
+      "ctaSoon": "Öffnet zum Start",
+      "ctaLive": "Zum Vault-Staking",
+      "note": "Staking, Liquidität und Burn öffnen gemeinsam zum Start",
+      "liveHeadline": "Vault-Staking ist live",
+      "liveSub": "Staking ist jetzt geöffnet"
     }
   },
   "deposit": {
@@ -553,7 +576,22 @@
     "customAmount": "Eigener Betrag",
     "enterAmount": "Betrag eingeben oder auswählen",
     "manualTransfer": "Oder an Adresse überweisen",
-    "onchainWaitPm": "Nur Polygon-pUSD. Die On-Chain-Bestätigung dauert ca. 2–5 Min.; dein Guthaben aktualisiert sich automatisch nach Eingang — bitte warten."
+    "onchainWaitPm": "Nur Polygon-pUSD. Die On-Chain-Bestätigung dauert ca. 2–5 Min.; dein Guthaben aktualisiert sich automatisch nach Eingang — bitte warten.",
+    "stepAmount": "Betragspaket",
+    "stepMethod": "Zahlung",
+    "stepPay": "Bezahlen",
+    "nextMethod": "Weiter · Zahlungsart wählen",
+    "pickAmountFirst": "Wähle zuerst ein Einzahlungs-Betragspaket, dann eine Zahlungsart.",
+    "back": "Zurück",
+    "selectedAmount": "Ausgewählt",
+    "chooseMethod": "Zahlungsart wählen",
+    "methodTransferDesc": "USDC direkt aus deiner verbundenen Wallet überweisen (Arbitrum)",
+    "methodGuideDesc": "Anleitung zur nicht-verwahrten Einzahlung ansehen",
+    "methodAddressDesc": "Adresse kopieren / QR scannen, aus beliebiger Wallet oder Börse zahlen",
+    "methodBridgeDesc": "Von Assets einer anderen Chain oder per Bankkarte einbridgen",
+    "riskBindNote": "Die an diesen Betrag gebundenen Risikokontrollen (Limit pro Trade / max. Hebel / Take-Profit & Stop-Loss) gelten automatisch für dein Copy-Trading.",
+    "lockedSelected": "Gewählter Betrag (an Risikokontrolle gebunden)",
+    "lockedTransferHint": "Bitte genau ${{amount}} USDC überweisen (dieser Betrag ist an die Risikokontrollregeln gebunden)"
   },
   "ma": {
     "chartArea": "Fläche",
@@ -1382,7 +1420,9 @@
     "nodesPageSubtitle": "Node-Vorteile · Direkte Empfehlungsprämien · Echtzeit on-chain",
     "todayPnl": "Heute G&V",
     "unrealizedPnl": "Unrealisiert",
-    "openPositions": "Positionen"
+    "openPositions": "Positionen",
+    "support": "Ticket senden",
+    "supportDesc": "Problem melden & Fortschritt verfolgen"
   },
   "market": {
     "marketAnalysis": "Marktanalyse",
@@ -1774,7 +1814,19 @@
     "statsTabRecords": "Handelshistorie",
     "venueHlMainnet": "HL Mainnet",
     "venueHlTestnet": "HL Testnet",
-    "tabStats": "Handelsdaten"
+    "tabStats": "Handelsdaten",
+    "stopAllOk": "Copy-Trading gestoppt",
+    "stopAllOkDesc": "Es werden keine neuen Positionen mehr eröffnet; bestehende Positionen werden vom Agenten/Markt natürlich geschlossen.",
+    "stopAllFailed": "Stoppen des Copy-Tradings fehlgeschlagen",
+    "stopAllConfirm": "Gesamtes Copy-Trading wirklich stoppen? Danach werden keine neuen Positionen eröffnet; bestehende Positionen schließt der Agent automatisch.",
+    "stopAll": "Copy-Trading mit einem Klick stoppen",
+    "stopAllAlready": "Bereits vollständig gestoppt",
+    "withdrawPending": "On-Chain-Auszahlung übermittelt",
+    "withdrawPendingDesc": "Die Auszahlung wurde übermittelt und wird on-chain verarbeitet und an die Zieladresse gutgeschrieben.",
+    "venuePm": "Rune Prognosemarkt",
+    "followed": "Wird kopiert",
+    "pickLeader": "Trader auswählen",
+    "pickLeaderHint": "Einen wählen, mit einem Klick kopieren"
   },
   "exchange": {
     "account": "Konto",
@@ -2331,7 +2383,17 @@
       "testnetDesc": "Verwende im Testnet den offiziellen Faucet, um Test-USDC zu erhalten/einzuzahlen:"
     },
     "deposit": "Einzahlen",
-    "mtdPnl": "Monats-P&L"
+    "mtdPnl": "Monats-P&L",
+    "executorTitle": "Ausführungsstil",
+    "executorHint": "Legt fest, wie das Copy-Trading für dich ausgeführt wird",
+    "leaderScore": "Score",
+    "leaderHold": "Position",
+    "leaderFollowed": "Wird kopiert",
+    "pickLeaderTitle": "Trader auswählen",
+    "pickLeaderHint": "Einen wählen, mit einem Klick kopieren",
+    "decisionLogTitle": "Entscheidungsfluss",
+    "decisionLogHint": "Entscheidungsgrundlage in Echtzeit",
+    "positionMargin": "Margin"
   },
   "profileVault": {
     "claimed": "Beansprucht!",
@@ -2483,5 +2545,297 @@
   "predictionMarket": {
     "optimizingTitle": "Der Smart-Prognosemarkt wird optimiert",
     "optimizingDesc": "Noch nicht verfügbar. Bleiben Sie dran."
+  },
+  "support": {
+    "pageTitle": "Support-Center",
+    "pageSubtitle": "Probleme einreichen und Fortschritt verfolgen",
+    "tabCreate": "Neues Ticket",
+    "tabList": "Meine Tickets",
+    "connectTitle": "Bitte zuerst Wallet verbinden",
+    "connectDesc": "Verbinde eine Wallet, um Tickets einzureichen und den Fortschritt zu sehen",
+    "walletLabel": "Ticket-Wallet",
+    "walletNote": "Automatisch mit deiner verbundenen Wallet verknüpft",
+    "categoryLabel": "Art des Problems",
+    "subjectLabel": "Betreff",
+    "subjectPlaceholder": "Beschreibe das Problem in einer Zeile",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Beschreibe, was passiert ist – mit Beträgen / Assets / Zeit falls relevant",
+    "screenshotLabel": "Screenshots (optional)",
+    "addScreenshot": "Screenshot hinzufügen",
+    "contactLabel": "Kontakt (optional)",
+    "contactPlaceholder": "Telegram / E-Mail für Rückfragen",
+    "submitBtn": "Ticket senden",
+    "toastCreatedTitle": "Ticket gesendet",
+    "toastCreatedDesc": "Wir melden uns bald — verfolge es unter Meine Tickets",
+    "toastErrorTitle": "Senden fehlgeschlagen",
+    "toastErrorDesc": "Bitte später erneut versuchen",
+    "emptyTitle": "Noch keine Tickets",
+    "emptyDesc": "Erstelle dein erstes Ticket im Tab Neues Ticket",
+    "backToList": "Zurück zu Tickets",
+    "noMessages": "Noch keine Antwort, wir kümmern uns darum",
+    "you": "Du",
+    "team": "Support",
+    "newReply": "Support hat geantwortet",
+    "replyPlaceholder": "Details ergänzen oder dem Support antworten…",
+    "cat": {
+      "deposit": "Einzahlung",
+      "withdraw": "Auszahlung",
+      "copy_trade": "Copy-Trading",
+      "node_tier": "Node-Stufe",
+      "wallet": "Wallet",
+      "vault": "Vault",
+      "account_data": "Kontodaten",
+      "other": "Sonstiges"
+    },
+    "status": {
+      "open": "Offen",
+      "in_progress": "In Bearbeitung",
+      "resolved": "Gelöst",
+      "closed": "Geschlossen"
+    }
+  },
+  "actions": {
+    "all": "Alle",
+    "catRisk": "Risiko",
+    "catWatch": "Beobachten",
+    "catTrade": "Ausführungen",
+    "closeAt": "Schließen {{coin}} @ ${{px}}",
+    "realized": "realisiert",
+    "opened": "{{side}} eröffnen · {{coin}}",
+    "filled": "Ausgeführt {{sz}} {{coin}} @ {{px}}",
+    "skipOpen": "Eröffnung übersprungen",
+    "skipOpenCoin": "Eröffnung übersprungen · {{coin}}",
+    "gated": "blockiert",
+    "stopLoss": "Stop-Loss",
+    "stopLossCoin": "Stop-Loss · {{coin}}",
+    "empty": "Keine Einträge",
+    "viewTx": "Ansehen",
+    "heldPosition": "Gehalten · {{coin}} {{side}}",
+    "heldDetail": "Größe {{size}} · unreal. PnL {{upnl}} · ROE {{roe}}",
+    "volatile": "Volatil",
+    "side_long": "Long",
+    "side_short": "Short",
+    "fearGreed": "Marktstimmung · {{label}}",
+    "fearGreedDetail": "Angst-&-Gier-Index F&G {{value}}",
+    "fgExtremeFear": "Extreme Angst",
+    "fgFear": "Angst",
+    "fgNeutral": "Neutral",
+    "fgGreed": "Gier",
+    "fgExtremeGreed": "Extreme Gier",
+    "fgBlocksLong": "blockiert Longs",
+    "fgBlocksShort": "blockiert Shorts"
+  },
+  "strategyName": {
+    "crypto-trend": "Krypto-Trend",
+    "equity-swing": "Aktien-Swing",
+    "meme-momentum": "Meme-Momentum"
+  },
+  "strategySector": {
+    "crypto-trend": "Große Kryptos",
+    "equity-swing": "US-Aktien",
+    "meme-momentum": "Meme"
+  },
+  "strategyBlurb": {
+    "crypto-trend": "10-Tage-Ausbruch · Pullback-Fortsetzung · Shakeout-Rückeroberung · beidseitig",
+    "equity-swing": "Trend-Pullback · Index-Shakeout · Drift nach Quartalszahlen",
+    "meme-momentum": "Ausbruch erster Retest · Shakeout-Rückeroberung · Breakdown Short Squeeze"
+  },
+  "strategyCard": {
+    "markets": "{{n}} Märkte",
+    "plays": "3 Setups",
+    "dirBoth": "Beidseitig",
+    "dirLong": "Long-Bias"
+  },
+  "strategySelect": {
+    "confirm": "Bestätigen & Trading-Engine starten"
+  },
+  "strategyPick": {
+    "title": "Strategie wählen",
+    "eyebrow": "Hyperliquid · Smartes Copy-Trading",
+    "heroTitle": "Wähle deine Strategie",
+    "heroSub": "Nach der Auswahl startest du die Trading-Engine — automatisches Copy-Trading, Risiko vollständig verwaltet."
+  },
+  "flow": {
+    "step": {
+      "qualify": "Berechtigung",
+      "wallet": "Wallet",
+      "strategy": "Strategie",
+      "follow": "Copy",
+      "console": "Konsole"
+    },
+    "continueWallet": "Weiter · Wallet aufladen",
+    "continueStrategy": "Weiter · Strategie wählen",
+    "continueConsole": "Konsole öffnen",
+    "strategy": {
+      "title": "Strategie wählen",
+      "desc": "Nach Auswahl einer Sektor-Strategie gleicht die Engine die Live-Signale von Top-Tradern damit ab und zeigt den Entscheidungsdialog."
+    },
+    "gate": {
+      "connectTitle": "Bitte zuerst Wallet verbinden",
+      "connectDesc": "Nach dem Verbinden der Wallet kannst du die Berechtigung prüfen und das Handelskonto aktivieren.",
+      "verifyTitle": "Berechtigung prüfen",
+      "verifyDesc": "Copy-Trading erfordert Node-Berechtigung. Kaufe einen Node oder gib einen Zugangscode ein, um Kontoeröffnung und Copy-Trading freizuschalten.",
+      "activatedTitle": "Handelskonto aktiviert",
+      "activatedDescAgent": "Das nicht-verwahrte Konto ist eröffnet. Die Mittel bleiben in deiner eigenen Wallet, die Engine hält nur den Orderschlüssel, der keine Auszahlung erlaubt.",
+      "activatedDesc": "Dein Handelskonto ist bereit, du kannst jetzt das Copy-Trading konfigurieren.",
+      "activateTitle": "Handelskonto aktivieren"
+    },
+    "wallet": {
+      "account": "Handelskonto",
+      "viewOnHl": "Auf Hyperliquid ansehen",
+      "nav": "Kontowert",
+      "withdrawable": "Auszahlbar",
+      "fundTitle": "Einzahlen / Auszahlen",
+      "fundDesc": "Zahle USDC auf das Handelskonto ein, um mit dem Copy-Trading zu beginnen.",
+      "fundedNote": "Eingezahlt, weiter zum nächsten Schritt",
+      "depositToContinue": "Strategieauswahl erst nach Einzahlung möglich"
+    }
+  },
+  "engine": {
+    "running": "Trading-Engine · live on-chain",
+    "follow": "Copy-Trading starten",
+    "following": "{{n}} werden kopiert",
+    "needOnboard": "Bitte zuerst auf der Strategieseite ein Handelskonto eröffnen",
+    "smartFollow": "Smartes Copy-Trading · automatische Top-{{n}}-Auswahl",
+    "smartFollowHint": "Wählt automatisch Top-Trader nach Plattform-Score aus und aktiviert die smarte Ausführung per AI ranker (kopiert nur Signale mit hoher Trefferquote)",
+    "orPickManually": "Oder manuell auswählen",
+    "style": "Stil",
+    "noLeaders": "Keine kopierbaren Trader",
+    "followed": "Wird kopiert",
+    "oneClickFollow": "Mit einem Klick kopieren",
+    "paused": "Pausiert",
+    "pausedDesc": "Eröffnung neuer Positionen gestoppt, zurück zur Strategieauswahl.",
+    "tabDecision": "Entscheidung",
+    "tabSignals": "Signale",
+    "tabPositions": "Positionen",
+    "tabRisk": "Risiko",
+    "tabRecords": "Verlauf",
+    "pause": "Pausieren",
+    "switch": "Wechseln",
+    "watching": "Beobachtung",
+    "holdings": "Positionen (on-chain real)",
+    "fills": "Ausführungen · Eröffnen/Schließen"
+  },
+  "depositTier": {
+    "noLevel": "Halte zuerst eine Node / löse einen Zugangscode ein",
+    "title": "Einzahlungsbetrag wählen",
+    "hint": "Der Betrag bindet Risikokontroll-Regeln (keine freie Eingabe)",
+    "remaining": "Verbleibend",
+    "exceedsCap": "Überschreitet verbleibendes Limit",
+    "perTrade": "Pro Trade",
+    "daily": "Täglich",
+    "trades": "Trades",
+    "lev": "Hebel",
+    "tpsl": "TP/SL"
+  },
+  "agentChat": {
+    "connectFirst": "Bitte zuerst Wallet verbinden",
+    "txTitle": "Transaktion zur Signatur ausstehend",
+    "txSent": "Gesendet",
+    "signSend": "Mit Wallet signieren und senden",
+    "greeting": "Hi, ich bin Rune AI. Ich kann über Strategien sprechen, Kurse ansehen und dir helfen, Positionen und den richtigen Zeitpunkt zum Schließen zu analysieren; ich kann auch On-Chain-Aktionen wie Überweisungen anstoßen, On-Chain-Kurse abfragen oder Verträge erstellen. Sag mir, was du vorhast. (Risikokontrolle und Stop-Loss sind immer die Grundlinie und werden nicht von Präferenzen überschrieben.)",
+    "offline": "Das Chat-Backend wird noch angebunden. Deine Gedanken habe ich schon notiert und werde sie nach der Verbindung in deine persönlichen Präferenzen aufnehmen.",
+    "open": "Mit Rune AI chatten",
+    "title": "Mit Rune AI chatten",
+    "subtitle": "Strategie · Kurse · On-Chain-Aktionen",
+    "placeholder": "Über Strategie / Kurse / Positionen schließen oder On-Chain-Aktionen sprechen…",
+    "send": "Senden"
+  },
+  "decisionLog": {
+    "title": "Entscheidungsprotokoll",
+    "all": "Alle",
+    "actions": "Aktionen"
+  },
+  "console": {
+    "market": "Strategiemarkt",
+    "switchStrategy": "Strategie wechseln",
+    "balance": "Guthaben",
+    "unrealized": "Nicht realisiert",
+    "dayPnl": "Heute",
+    "pause": "Copy-Trading pausieren",
+    "held": "Gehaltene Coins",
+    "noHeld": "Keine Positionen",
+    "tabActions": "Actions",
+    "tabPerformance": "Performance",
+    "colRisk": "Risiko-Konsole",
+    "colSignals": "Signalfluss"
+  },
+  "engineLive": {
+    "nav": "Kontowert",
+    "notFunded": "Einzahlung ausstehend",
+    "unrealized": "Nicht realisiert",
+    "today": "Heutiger P&L",
+    "withdrawable": "Auszahlbar",
+    "account": "Handelskonto",
+    "viewOnHl": "Auf Hyperliquid ansehen",
+    "noPositions": "Aktuell keine Positionen (im Beobachtungsbereich dieser Strategie)",
+    "size": "Menge",
+    "entry": "Einstieg",
+    "value": "Marktwert",
+    "noFills": "Keine Ausführungen (im Beobachtungsbereich dieser Strategie)"
+  },
+  "engineSignals": {
+    "net": "Nettofluss",
+    "empty": "Keine Signale im Beobachtungsbereich dieser Strategie",
+    "close": "Schließen",
+    "open": "Eröffnen"
+  },
+  "signalSector": {
+    "all": "Alle"
+  },
+  "strategyHero": {
+    "badge": "Smarte Strategie-Engine",
+    "title1": "Lass AI dein",
+    "title2": "On-Chain-Copy-Trading und Strategieausführung antreiben",
+    "subtitle": "Die One-Agents-Engine verfolgt Top-Trader in Echtzeit und eröffnet/schließt Positionen automatisch nach Sektor-Strategie",
+    "statLiveVal": "On-Chain in Echtzeit",
+    "cta": "Strategie wählen · Zur Handels-Engine",
+    "statStrategies": "Sektoren",
+    "statLeaders": "Top-Trader",
+    "statLive": "Ausführung"
+  },
+  "leaderWatch": {
+    "title": "Bewegungen der Top-Trader",
+    "subtitle": "Coins, die Trader in den letzten 24 h gehandelt haben",
+    "empty": "Keine aktuellen Trader-Signale"
+  },
+  "perf": {
+    "positions": "Positionen",
+    "history": "Verlauf",
+    "directives": "Anweisungen",
+    "pnl": "P&L",
+    "realized": "Realisiert",
+    "closes": "{{n}} Schließungen",
+    "sharpe": "Sharpe",
+    "sharpeNeed": "20+ Tage nötig",
+    "maxdd": "Max. Drawdown",
+    "equity": "Kontowertkurve",
+    "realEquity": "Realer Kontowert",
+    "noCurve": "Nicht genug Daten",
+    "time": "Zeit",
+    "market": "Markt",
+    "phase": "Phase",
+    "outcome": "Ergebnis",
+    "conviction": "Überzeugung",
+    "marketsWatched": "Beobachtete Märkte",
+    "tradable": "Handelbarer Bereich"
+  },
+  "riskConsole": {
+    "title": "Risiko-Überwachungskonsole",
+    "halted": "Ausgelöst · nur Schließen, kein Eröffnen",
+    "warn": "Budget fast erreicht",
+    "ok": "Normal",
+    "dailyBudget": "Tägliches Verlustbudget",
+    "nav": "Kontowert",
+    "dayPnl": "Heutiger P&L",
+    "unrealized": "Nicht realisiert",
+    "tierRisk": "Risikokontrolle dieser Stufe",
+    "tierBy": "Stufe bei ${{amount}} Einzahlung",
+    "rule1": "Einzelcoin ≤ 30 % Kontowert",
+    "rule2": "5 min Abklingzeit nach Stop-Loss",
+    "rule3": "Liquidation ≥ 3× Stop-Loss"
+  },
+  "position": {
+    "autoManaged": "Das Schließen wird automatisch vom Agenten verwaltet"
   }
 }

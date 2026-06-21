@@ -337,7 +337,7 @@ export default function Home() {
               // CTA row doesn't reflow once the wallet status resolves.
               <span aria-hidden className="inline-flex h-12 w-40 items-center justify-center rounded-md border border-border/40 bg-background/30 backdrop-blur" />
             ) : isConnected ? (
-              <Link href="/app/profile" className="inline-flex h-12 items-center justify-center rounded-md border border-border/60 bg-background/50 backdrop-blur px-8 text-sm font-medium shadow-sm transition-all hover:bg-card hover:border-primary/30 hover:-translate-y-0.5 active:translate-y-0">
+              <Link href="/app/vault" className="inline-flex h-12 items-center justify-center rounded-md border border-border/60 bg-background/50 backdrop-blur px-8 text-sm font-medium shadow-sm transition-all hover:bg-card hover:border-primary/30 hover:-translate-y-0.5 active:translate-y-0">
                 {t("mr.home.hero.btn.dashboard")}{!isEn && <span className="ml-1.5 opacity-60 text-xs">DASHBOARD</span>}
               </Link>
             ) : (
