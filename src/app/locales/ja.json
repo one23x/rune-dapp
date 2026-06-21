@@ -591,7 +591,42 @@
     "methodBridgeDesc": "他チェーンの資産や銀行カードからブリッジして入金",
     "riskBindNote": "この金額に紐づくリスク管理（1取引あたりの上限 / 最大レバレッジ / 利確・損切り）が、あなたのコピートレードに自動で適用されます。",
     "lockedSelected": "選択した金額（リスク管理に連動）",
-    "lockedTransferHint": "正確に ${{amount}} USDC を送金してください（この金額はリスク管理ルールに連動しています）"
+    "lockedTransferHint": "正確に ${{amount}} USDC を送金してください（この金額はリスク管理ルールに連動しています）",
+    "capChecking": "上限を確認中…",
+    "capRange": "1回あたり最低 ${{min}} · 今回は最大 ${{max}}",
+    "capBelowMin": "1回の入金は最低 ${{min}} 必要です",
+    "capAboveRemaining": "利用可能枠を超えています（最大 ${{max}}）",
+    "capNoCodeTitle": "入金できません",
+    "capNoCodeDesc": "このウォレットにはまだ認証コードがありません。入金前にノードを購入／コードをバインドしてください。",
+    "capReachedTitle": "入金上限に達しました",
+    "capReachedDesc": "認証コードで許可された累計入金上限に達したため、これ以上入金できません。",
+    "addrPreparing": "入金アドレスを準備中です。お待ちください…",
+    "addressWarn": "Polygon ネットワークの pUSD のみ。他の資産やネットワークを送ると永久に失う可能性があります。",
+    "connectFirst": "先にウォレットを接続してください",
+    "depositAddress": "入金アドレス",
+    "gasGrantFailed": "gas 不足、自動補充に失敗しました",
+    "gasGrantFailedDesc": "このウォレットに少量の {{native}} を gas として送ってください。",
+    "gasGranting": "gas 不足を検出、補充中です…",
+    "gasGrantingDesc": "操作は不要です——着金後に転送は自動で続行します（約 10〜30 秒）。",
+    "gasGrantingShort": "gas を補充中…",
+    "gasLimitReached": "gas 受取回数の上限に達しました。サポートにお問い合わせください。",
+    "gasNotEligible": "このウォレットには認証コードがバインドされていないため、gas を自動受取できません。",
+    "insufficientWalletToken": "ウォレットの {{token}} 残高が不足しています",
+    "max": "最大",
+    "remainingHint": "残りの入金枠：${{max}}",
+    "switchChainFailed": "{{chain}} ネットワークに切り替えてください",
+    "switchingChainTo": "{{chain}} に切り替え中…",
+    "tabAddress": "アドレス／QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "ウォレット送金",
+    "transferDescToken": "接続中のウォレットから {{token}} を直接送金",
+    "transferHint": "Polygon の pUSD のみ。資金は入金アドレスに送られます。",
+    "transferNow": "今すぐ送金",
+    "transferSent": "送金を送信しました",
+    "transferSentDesc": "オンチェーン確認後、残高は自動で更新されます",
+    "transferTitle": "ウォレット送金",
+    "transferring": "送金中…",
+    "walletBalance": "ウォレット残高"
   },
   "ma": {
     "chartArea": "エリア",
@@ -1486,7 +1521,35 @@
     "unrealizedPnl": "未実現損益",
     "openPositions": "ポジション数",
     "support": "チケット送信",
-    "supportDesc": "問題を報告し進捗を追跡"
+    "supportDesc": "問題を報告し進捗を追跡",
+    "node": {
+      "b": {
+        "direct": "直接紹介コミッション",
+        "directD": "下位ユーザーのノード購入で即時還元",
+        "airdrop": "ノードエアドロップ",
+        "airdropD": "階層ごとにバッチでトークンを配布",
+        "weight": "ウェイト配当",
+        "weightD": "ノードのウェイトに応じてプロトコル収益を分配",
+        "pool": "プール配当",
+        "poolD": "全体プールから比率に応じて配当",
+        "streams": "複数の収益",
+        "streamsD": "6つの収益ストリームを重ねて還元",
+        "platform": "プラットフォーム特典",
+        "platformD": "上位機能とガバナンス参加"
+      },
+      "active": "有効",
+      "paid": "保有価値",
+      "buy": "ノードを購入",
+      "buySub": "ノードを有効化してすべての特典と収益を解放",
+      "boundTo": "紹介者",
+      "notBound": "未バインド",
+      "predCode": "スマート予測コード",
+      "copyCode": "予測コードをコピー",
+      "copied": "コピー済み",
+      "copy": "コピー",
+      "benefits": "ノード特典",
+      "note": "特典と収益はオンチェーンのノード等級に応じてリアルタイム精算"
+    }
   },
   "market": {
     "marketAnalysis": "市場分析",
@@ -2427,7 +2490,30 @@
     "pickLeaderHint": "1 人選んでワンクリックでフォロー",
     "decisionLogTitle": "意思決定フロー",
     "decisionLogHint": "リアルタイムの判断根拠",
-    "positionMargin": "証拠金"
+    "positionMargin": "証拠金",
+    "executor": {
+      "mirror": {
+        "label": "ミラー",
+        "blurb": "トレーダーをそのまま追従、最速エントリー（デフォルト）"
+      },
+      "steady": {
+        "label": "堅実",
+        "blurb": "小ロット・トップトレーダーのみ追従"
+      },
+      "aggressive": {
+        "label": "積極",
+        "blurb": "大ロット・幅広く網を張る"
+      },
+      "smart": {
+        "label": "スマート",
+        "blurb": "AI が有望と判断したときだけ厳選してエントリー"
+      }
+    },
+    "addressWarn": "Arbitrum ネットワークの USDC のみ。他の資産を送ると永久に失う可能性があります。",
+    "bridge2Warn": "取引所や他人のウォレットから Bridge2 へ直接送らないでください。",
+    "tabDepositGuide": "入金ガイド",
+    "transferHintAgent": "USDC は接続中のウォレットから HL Bridge2 へ直接送られます。",
+    "transferHintCustodial": "Arbitrum ネットワークの USDC のみ。資金は託管アドレスに送られます。"
   },
   "pmLab": {
     "title": "予測 AI ラボ",
@@ -2525,7 +2611,20 @@
     "pageTitle": "マイノード",
     "payHint": "USDT で支払う · {{chain}}",
     "redeemDesc": "コードをお持ちですか？入力してノードアクセスを有効化します。",
-    "redeemTitle": "認証コードを引き換える"
+    "redeemTitle": "認証コードを引き換える",
+    "err": {
+      "referrerNoNode": "紹介者がまだノードを購入していないため、その配下では購入できません",
+      "noBind": "先に紹介者をバインドしてからノードを購入してください",
+      "purchased": "このウォレットはすでにノードを購入済みです",
+      "nodeId": "無効なノード階層です",
+      "amount": "金額が利用可能枠を超えています",
+      "caller": "現在のウォレットにはこの操作の権限がありません",
+      "addrZero": "無効なアドレスです",
+      "limit": "このノード階層は売り切れです",
+      "rejected": "署名をキャンセルしました",
+      "insufficient": "USDT の残高または承認額が不足しています"
+    },
+    "connectFirst": "先にウォレットを接続してください"
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2592,7 +2691,11 @@
       "in_progress": "対応中",
       "resolved": "解決済み",
       "closed": "クローズ"
-    }
+    },
+    "toastFileTypeTitle": "サポートされていないファイル形式",
+    "toastFileTypeDesc": "PNG / JPG / WebP / GIF 画像のみ対応",
+    "toastFileSizeTitle": "画像が大きすぎます",
+    "toastFileSizeDesc": "1枚あたり 5MB を超えることはできません"
   },
   "actions": {
     "all": "すべて",
@@ -2781,7 +2884,10 @@
     "open": "建玉"
   },
   "signalSector": {
-    "all": "すべて"
+    "all": "すべて",
+    "crypto": "クリプト",
+    "equity": "米国株",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "スマート戦略エンジン",
@@ -2837,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "決済はエージェントが自動管理します"
+  },
+  "walletGate": {
+    "title": "ウォレットを接続",
+    "desc": "ウォレットを接続すると、ダッシュボード・取引戦略・資産管理にアクセスできます。"
   }
 }

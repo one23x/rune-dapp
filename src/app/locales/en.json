@@ -1521,7 +1521,35 @@
     "unrealizedPnl": "Unrealized",
     "openPositions": "Positions",
     "support": "Submit Ticket",
-    "supportDesc": "Report an issue & track progress"
+    "supportDesc": "Report an issue & track progress",
+    "node": {
+      "b": {
+        "direct": "Direct Referral Commission",
+        "directD": "Instant rebate when a downline buys a node",
+        "airdrop": "Node Airdrop",
+        "airdropD": "Token airdrops released in tiered batches",
+        "weight": "Weighted Dividends",
+        "weightD": "Protocol revenue split by node weight",
+        "pool": "Pool Dividends",
+        "poolD": "Pro-rata payout from the network-wide pool",
+        "streams": "Multiple Streams",
+        "streamsD": "Six revenue streams released in tandem",
+        "platform": "Platform Perks",
+        "platformD": "Advanced features and governance access"
+      },
+      "active": "Active",
+      "paid": "Holdings Value",
+      "buy": "Buy Node",
+      "buySub": "Activate a node to unlock all perks and rewards",
+      "boundTo": "Referrer",
+      "notBound": "Not bound",
+      "predCode": "Smart Prediction Code",
+      "copyCode": "Copy prediction code",
+      "copied": "Copied",
+      "copy": "Copy",
+      "benefits": "Node Benefits",
+      "note": "Perks and rewards settle in real time by on-chain node tier"
+    }
   },
   "market": {
     "marketAnalysis": "Market Analysis",
@@ -2467,7 +2495,25 @@
     "pickLeaderHint": "Pick one, follow in one click",
     "decisionLogTitle": "Decision log",
     "decisionLogHint": "Live decision rationale",
-    "positionMargin": "Margin"
+    "positionMargin": "Margin",
+    "executor": {
+      "mirror": {
+        "label": "Mirror",
+        "blurb": "Follow the trader exactly, fastest entry (default)"
+      },
+      "steady": {
+        "label": "Steady",
+        "blurb": "Small size · only follow top traders"
+      },
+      "aggressive": {
+        "label": "Aggressive",
+        "blurb": "Large size · cast a wide net"
+      },
+      "smart": {
+        "label": "Smart",
+        "blurb": "Only act when AI is bullish on the pick"
+      }
+    }
   },
   "pmLab": {
     "title": "Prediction AI Lab",
@@ -2566,7 +2612,19 @@
       "MID": "Mid-tier limits suited for active traders.",
       "INITIAL": "Entry tier — unlocks account opening and basic copy-trading."
     },
-    "connectFirst": "Connect your wallet first"
+    "connectFirst": "Connect your wallet first",
+    "err": {
+      "referrerNoNode": "Your referrer hasn't bought a node yet, so you can't purchase under them right now",
+      "noBind": "Bind a referrer first, then buy a node",
+      "purchased": "This wallet has already purchased a node",
+      "nodeId": "Invalid node tier",
+      "amount": "Amount exceeds the available limit",
+      "caller": "This wallet isn't authorized to perform this action",
+      "addrZero": "Invalid address",
+      "limit": "This node tier is sold out",
+      "rejected": "You cancelled the signature",
+      "insufficient": "Insufficient USDT balance or allowance"
+    }
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2633,7 +2691,11 @@
       "in_progress": "In Progress",
       "resolved": "Resolved",
       "closed": "Closed"
-    }
+    },
+    "toastFileTypeTitle": "Unsupported file type",
+    "toastFileTypeDesc": "Only PNG / JPG / WebP / GIF images are supported",
+    "toastFileSizeTitle": "Image too large",
+    "toastFileSizeDesc": "Each image must not exceed 5MB"
   },
   "actions": {
     "all": "All",
@@ -2822,7 +2884,10 @@
     "open": "Open"
   },
   "signalSector": {
-    "all": "All"
+    "all": "All",
+    "crypto": "Crypto",
+    "equity": "Equities",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "Smart strategy engine",
@@ -2878,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "Closing is managed automatically by the agent"
+  },
+  "walletGate": {
+    "title": "Connect your wallet",
+    "desc": "Connect your wallet to access the dashboard, trading strategies, and portfolio management."
   }
 }

@@ -1521,7 +1521,35 @@
     "unrealizedPnl": "未实现盈亏",
     "openPositions": "持仓数",
     "support": "提交工单",
-    "supportDesc": "反馈问题并追踪进度"
+    "supportDesc": "反馈问题并追踪进度",
+    "node": {
+      "b": {
+        "direct": "直推佣金",
+        "directD": "下级购买节点即时返佣",
+        "airdrop": "节点空投",
+        "airdropD": "按层级批次发放代币空投",
+        "weight": "权重分红",
+        "weightD": "按节点权重分配协议收益",
+        "pool": "资金池分红",
+        "poolD": "全网资金池按比例派息",
+        "streams": "多重收益",
+        "streamsD": "六大收益流叠加释放",
+        "platform": "平台权益",
+        "platformD": "高阶功能与治理参与"
+      },
+      "active": "已激活",
+      "paid": "持有价值",
+      "buy": "购买节点",
+      "buySub": "激活节点解锁全部权益与收益",
+      "boundTo": "上级",
+      "notBound": "未绑定",
+      "predCode": "智能预测码",
+      "copyCode": "复制预测码",
+      "copied": "已复制",
+      "copy": "复制",
+      "benefits": "节点权益",
+      "note": "权益与收益按链上节点等级实时结算"
+    }
   },
   "market": {
     "marketAnalysis": "市场分析",
@@ -2467,7 +2495,25 @@
     "pickLeaderHint": "选一位,一键跟单",
     "decisionLogTitle": "决策流",
     "decisionLogHint": "实时决策依据",
-    "positionMargin": "保证金"
+    "positionMargin": "保证金",
+    "executor": {
+      "mirror": {
+        "label": "镜像",
+        "blurb": "原样跟随交易员,最快进场(默认)"
+      },
+      "steady": {
+        "label": "稳健",
+        "blurb": "小仓位·只跟顶级交易员"
+      },
+      "aggressive": {
+        "label": "激进",
+        "blurb": "大仓位·广撒网"
+      },
+      "smart": {
+        "label": "智能",
+        "blurb": "只在 AI 看好时精选出手"
+      }
+    }
   },
   "pmLab": {
     "title": "预测 AI 实验室",
@@ -2566,7 +2612,19 @@
       "MID": "中档额度,适合活跃交易者。",
       "INITIAL": "入门档位 —— 解锁开户与基础跟单。"
     },
-    "connectFirst": "请先连接钱包"
+    "connectFirst": "请先连接钱包",
+    "err": {
+      "referrerNoNode": "你的推荐人还没有购买节点,暂时无法在其名下购买",
+      "noBind": "请先绑定推荐人,再购买节点",
+      "purchased": "该钱包已经购买过节点了",
+      "nodeId": "无效的节点档位",
+      "amount": "金额超出可用额度",
+      "caller": "当前钱包无权限执行该操作",
+      "addrZero": "地址无效",
+      "limit": "该节点名额已售罄",
+      "rejected": "你已取消签名",
+      "insufficient": "USDT 余额或授权不足"
+    }
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2633,7 +2691,11 @@
       "in_progress": "处理中",
       "resolved": "已解决",
       "closed": "已关闭"
-    }
+    },
+    "toastFileTypeTitle": "不支持的文件类型",
+    "toastFileTypeDesc": "仅支持 PNG / JPG / WebP / GIF 图片",
+    "toastFileSizeTitle": "图片过大",
+    "toastFileSizeDesc": "单张图片不能超过 5MB"
   },
   "actions": {
     "all": "全部",
@@ -2822,7 +2884,10 @@
     "open": "开仓"
   },
   "signalSector": {
-    "all": "全部"
+    "all": "全部",
+    "crypto": "加密",
+    "equity": "美股",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "智能策略引擎",
@@ -2878,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "平仓由智能体自动管理"
+  },
+  "walletGate": {
+    "title": "连接钱包以继续",
+    "desc": "连接钱包后即可访问仪表盘、交易策略和资产管理。"
   }
 }

@@ -591,7 +591,42 @@
     "methodBridgeDesc": "Bridge từ tài sản trên chuỗi khác hoặc thẻ ngân hàng",
     "riskBindNote": "Bộ kiểm soát rủi ro gắn với số tiền này (giới hạn mỗi lệnh / đòn bẩy tối đa / chốt lời & cắt lỗ) tự động áp dụng cho copy trading của bạn.",
     "lockedSelected": "Số tiền đã chọn (gắn với quản trị rủi ro)",
-    "lockedTransferHint": "Vui lòng chuyển chính xác ${{amount}} USDC (số tiền này gắn với quy tắc quản trị rủi ro)"
+    "lockedTransferHint": "Vui lòng chuyển chính xác ${{amount}} USDC (số tiền này gắn với quy tắc quản trị rủi ro)",
+    "capChecking": "Đang kiểm tra hạn mức của bạn…",
+    "capRange": "Tối thiểu ${{min}} mỗi lần nạp · tối đa ${{max}} lần này",
+    "capBelowMin": "Mỗi lần nạp phải tối thiểu ${{min}}",
+    "capAboveRemaining": "Vượt quá hạn mức khả dụng của bạn (tối đa ${{max}})",
+    "capNoCodeTitle": "Không thể nạp tiền",
+    "capNoCodeDesc": "Ví này chưa có mã ủy quyền. Hãy mua node / liên kết mã trước khi nạp.",
+    "capReachedTitle": "Đã đạt hạn mức nạp",
+    "capReachedDesc": "Bạn đã đạt hạn mức nạp tích lũy mà mã ủy quyền cho phép và không thể nạp thêm.",
+    "addrPreparing": "Đang chuẩn bị địa chỉ nạp, vui lòng chờ…",
+    "addressWarn": "Chỉ pUSD trên mạng Polygon. Gửi tài sản hoặc mạng khác có thể gây mất vĩnh viễn.",
+    "connectFirst": "Kết nối ví của bạn trước",
+    "depositAddress": "Địa chỉ nạp",
+    "gasGrantFailed": "Gas không đủ, tự động nạp thất bại",
+    "gasGrantFailedDesc": "Vui lòng gửi một lượng nhỏ {{native}} đến ví này để làm gas.",
+    "gasGranting": "Phát hiện gas không đủ, đang nạp giúp bạn…",
+    "gasGrantingDesc": "Không cần thao tác — chuyển khoản tự động tiếp tục sau khi nhận được (~10–30 giây).",
+    "gasGrantingShort": "Đang nạp gas…",
+    "gasLimitReached": "Đã đạt giới hạn nhận gas, vui lòng liên hệ hỗ trợ.",
+    "gasNotEligible": "Ví này chưa liên kết mã ủy quyền, không thể tự nhận gas.",
+    "insufficientWalletToken": "Số dư {{token}} trong ví không đủ",
+    "max": "Tối đa",
+    "remainingHint": "Hạn mức nạp còn lại: ${{max}}",
+    "switchChainFailed": "Vui lòng chuyển sang mạng {{chain}}",
+    "switchingChainTo": "Đang chuyển sang {{chain}}…",
+    "tabAddress": "Địa chỉ / QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "Chuyển từ ví",
+    "transferDescToken": "Chuyển {{token}} trực tiếp từ ví đã kết nối của bạn",
+    "transferHint": "Chỉ pUSD trên Polygon. Tiền sẽ vào địa chỉ nạp của bạn.",
+    "transferNow": "Chuyển ngay",
+    "transferSent": "Đã gửi chuyển khoản",
+    "transferSentDesc": "Số dư tự động làm mới sau khi xác nhận on-chain",
+    "transferTitle": "Chuyển từ ví",
+    "transferring": "Đang chuyển…",
+    "walletBalance": "Số dư ví"
   },
   "ma": {
     "chartArea": "Vùng",
@@ -1422,7 +1457,35 @@
     "unrealizedPnl": "Chưa thực hiện",
     "openPositions": "Vị thế",
     "support": "Gửi yêu cầu hỗ trợ",
-    "supportDesc": "Báo cáo sự cố và theo dõi tiến độ"
+    "supportDesc": "Báo cáo sự cố và theo dõi tiến độ",
+    "node": {
+      "b": {
+        "direct": "Hoa hồng giới thiệu trực tiếp",
+        "directD": "Hoàn hoa hồng tức thì khi cấp dưới mua node",
+        "airdrop": "Airdrop node",
+        "airdropD": "Phát token qua airdrop theo từng đợt cấp bậc",
+        "weight": "Chia thưởng theo trọng số",
+        "weightD": "Phân bổ lợi nhuận giao thức theo trọng số node",
+        "pool": "Chia thưởng quỹ chung",
+        "poolD": "Quỹ chung toàn mạng chia lãi theo tỷ lệ",
+        "streams": "Đa nguồn thu",
+        "streamsD": "Sáu dòng thu nhập cộng dồn giải phóng",
+        "platform": "Quyền lợi nền tảng",
+        "platformD": "Tính năng nâng cao và tham gia quản trị"
+      },
+      "active": "Đã kích hoạt",
+      "paid": "Giá trị nắm giữ",
+      "buy": "Mua node",
+      "buySub": "Kích hoạt node để mở khóa toàn bộ quyền lợi và lợi nhuận",
+      "boundTo": "Người giới thiệu",
+      "notBound": "Chưa liên kết",
+      "predCode": "Mã dự đoán thông minh",
+      "copyCode": "Sao chép mã dự đoán",
+      "copied": "Đã sao chép",
+      "copy": "Sao chép",
+      "benefits": "Quyền lợi node",
+      "note": "Quyền lợi và lợi nhuận được quyết toán theo thời gian thực dựa trên cấp node on-chain"
+    }
   },
   "market": {
     "marketAnalysis": "Phân tích thị trường",
@@ -2393,7 +2456,30 @@
     "pickLeaderHint": "Chọn một người, copy một chạm",
     "decisionLogTitle": "Luồng quyết định",
     "decisionLogHint": "Căn cứ quyết định thời gian thực",
-    "positionMargin": "Ký quỹ"
+    "positionMargin": "Ký quỹ",
+    "executor": {
+      "mirror": {
+        "label": "Sao chép",
+        "blurb": "Theo y hệt trader, vào lệnh nhanh nhất (mặc định)"
+      },
+      "steady": {
+        "label": "Ổn định",
+        "blurb": "Vị thế nhỏ · chỉ theo trader hàng đầu"
+      },
+      "aggressive": {
+        "label": "Mạnh tay",
+        "blurb": "Vị thế lớn · trải rộng"
+      },
+      "smart": {
+        "label": "Thông minh",
+        "blurb": "Chỉ ra tay chọn lọc khi AI lạc quan"
+      }
+    },
+    "addressWarn": "Chỉ USDC trên mạng Arbitrum. Gửi tài sản khác có thể gây mất vĩnh viễn.",
+    "bridge2Warn": "Tuyệt đối không gửi tới Bridge2 trực tiếp từ sàn giao dịch hoặc ví của người khác.",
+    "tabDepositGuide": "Hướng dẫn nạp",
+    "transferHintAgent": "USDC sẽ được gửi từ ví đã kết nối của bạn trực tiếp tới HL Bridge2.",
+    "transferHintCustodial": "Chỉ USDC trên mạng Arbitrum. Tiền sẽ vào địa chỉ ký quỹ của bạn."
   },
   "profileVault": {
     "claimed": "Đã nhận!",
@@ -2525,7 +2611,20 @@
     "pageTitle": "Node của tôi",
     "payHint": "Thanh toán bằng USDT · {{chain}}",
     "redeemDesc": "Đã có mã? Nhập để kích hoạt quyền truy cập node.",
-    "redeemTitle": "Đổi mã uỷ quyền"
+    "redeemTitle": "Đổi mã uỷ quyền",
+    "err": {
+      "referrerNoNode": "Người giới thiệu của bạn chưa mua node nên tạm thời không thể mua dưới tài khoản của họ",
+      "noBind": "Vui lòng liên kết người giới thiệu trước khi mua node",
+      "purchased": "Ví này đã mua node rồi",
+      "nodeId": "Bậc node không hợp lệ",
+      "amount": "Số tiền vượt quá hạn mức khả dụng",
+      "caller": "Ví hiện tại không có quyền thực hiện thao tác này",
+      "addrZero": "Địa chỉ không hợp lệ",
+      "limit": "Node này đã hết suất",
+      "rejected": "Bạn đã hủy ký",
+      "insufficient": "Số dư hoặc hạn mức ủy quyền USDT không đủ"
+    },
+    "connectFirst": "Kết nối ví của bạn trước"
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2592,7 +2691,11 @@
       "in_progress": "Đang xử lý",
       "resolved": "Đã giải quyết",
       "closed": "Đã đóng"
-    }
+    },
+    "toastFileTypeTitle": "Loại tệp không được hỗ trợ",
+    "toastFileTypeDesc": "Chỉ hỗ trợ ảnh PNG / JPG / WebP / GIF",
+    "toastFileSizeTitle": "Ảnh quá lớn",
+    "toastFileSizeDesc": "Mỗi ảnh không được vượt quá 5MB"
   },
   "actions": {
     "all": "Tất cả",
@@ -2781,7 +2884,10 @@
     "open": "Mở vị thế"
   },
   "signalSector": {
-    "all": "Tất cả"
+    "all": "Tất cả",
+    "crypto": "Crypto",
+    "equity": "Cổ phiếu",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "Engine chiến lược thông minh",
@@ -2837,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "Việc đóng vị thế do agent tự động quản lý"
+  },
+  "walletGate": {
+    "title": "Kết nối ví",
+    "desc": "Kết nối ví để truy cập bảng điều khiển, chiến lược giao dịch và quản lý danh mục."
   }
 }

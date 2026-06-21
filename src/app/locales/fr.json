@@ -591,7 +591,42 @@
     "methodBridgeDesc": "Faites un bridge depuis les actifs d'une autre chaîne ou par carte bancaire",
     "riskBindNote": "Les contrôles de risque liés à ce montant (limite par trade / levier max / take-profit et stop-loss) s'appliquent automatiquement à votre copy-trading.",
     "lockedSelected": "Montant sélectionné (lié au contrôle du risque)",
-    "lockedTransferHint": "Veuillez transférer exactement ${{amount}} USDC (ce montant est lié aux règles de contrôle du risque)"
+    "lockedTransferHint": "Veuillez transférer exactement ${{amount}} USDC (ce montant est lié aux règles de contrôle du risque)",
+    "capChecking": "Vérification de votre limite…",
+    "capRange": "Min. ${{min}} par dépôt · jusqu'à ${{max}} cette fois",
+    "capBelowMin": "Chaque dépôt doit être d'au moins ${{min}}",
+    "capAboveRemaining": "Dépasse votre limite disponible (jusqu'à ${{max}})",
+    "capNoCodeTitle": "Dépôt indisponible",
+    "capNoCodeDesc": "Ce portefeuille n'a pas encore de code d'autorisation. Achetez un node / liez un code avant de déposer.",
+    "capReachedTitle": "Limite de dépôt atteinte",
+    "capReachedDesc": "Vous avez atteint la limite de dépôt cumulée autorisée par votre code d'autorisation et ne pouvez plus déposer.",
+    "addrPreparing": "Préparation de l'adresse de dépôt, veuillez patienter…",
+    "addressWarn": "Uniquement pUSD sur le réseau Polygon. Envoyer d'autres actifs ou réseaux peut entraîner une perte permanente.",
+    "connectFirst": "Connectez d'abord votre portefeuille",
+    "depositAddress": "Adresse de dépôt",
+    "gasGrantFailed": "Gas insuffisant, recharge automatique échouée",
+    "gasGrantFailedDesc": "Veuillez envoyer une petite quantité de {{native}} à ce portefeuille pour le gas.",
+    "gasGranting": "Gas insuffisant détecté, recharge en cours…",
+    "gasGrantingDesc": "Aucune action requise — le transfert se poursuit automatiquement une fois reçu (~10–30 s).",
+    "gasGrantingShort": "Recharge du gas…",
+    "gasLimitReached": "Limite de demande de gas atteinte, veuillez contacter le support.",
+    "gasNotEligible": "Ce portefeuille n'a aucun code d'autorisation lié, impossible de réclamer le gas automatiquement.",
+    "insufficientWalletToken": "Solde {{token}} insuffisant dans le portefeuille",
+    "max": "Max.",
+    "remainingHint": "Limite de dépôt restante : ${{max}}",
+    "switchChainFailed": "Veuillez basculer vers le réseau {{chain}}",
+    "switchingChainTo": "Basculement vers {{chain}}…",
+    "tabAddress": "Adresse / QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "Transfert de portefeuille",
+    "transferDescToken": "Transférez {{token}} directement depuis votre portefeuille connecté",
+    "transferHint": "Uniquement pUSD sur Polygon. Les fonds vont vers votre adresse de dépôt.",
+    "transferNow": "Transférer maintenant",
+    "transferSent": "Transfert soumis",
+    "transferSentDesc": "Le solde se met à jour automatiquement après confirmation on-chain",
+    "transferTitle": "Transfert de portefeuille",
+    "transferring": "Transfert en cours…",
+    "walletBalance": "Solde du portefeuille"
   },
   "ma": {
     "chartArea": "Zone",
@@ -1422,7 +1457,35 @@
     "unrealizedPnl": "Latent",
     "openPositions": "Positions",
     "support": "Envoyer un ticket",
-    "supportDesc": "Signalez un problème et suivez son avancement"
+    "supportDesc": "Signalez un problème et suivez son avancement",
+    "node": {
+      "b": {
+        "direct": "Commission de parrainage direct",
+        "directD": "Commission instantanée lorsqu'un filleul achète un node",
+        "airdrop": "Airdrop de node",
+        "airdropD": "Airdrop de tokens distribué par lots selon le niveau",
+        "weight": "Dividende pondéré",
+        "weightD": "Revenus du protocole répartis selon le poids du node",
+        "pool": "Dividende du pool",
+        "poolD": "Distribution proportionnelle depuis le pool global",
+        "streams": "Revenus multiples",
+        "streamsD": "Six flux de revenus libérés de façon cumulée",
+        "platform": "Avantages de la plateforme",
+        "platformD": "Fonctions avancées et participation à la gouvernance"
+      },
+      "active": "Activé",
+      "paid": "Valeur détenue",
+      "buy": "Acheter un node",
+      "buySub": "Activez un node pour débloquer tous les avantages et revenus",
+      "boundTo": "Parrain",
+      "notBound": "Non lié",
+      "predCode": "Code de prédiction intelligent",
+      "copyCode": "Copier le code de prédiction",
+      "copied": "Copié",
+      "copy": "Copier",
+      "benefits": "Avantages du node",
+      "note": "Les avantages et revenus sont réglés en temps réel selon le niveau de node on-chain"
+    }
   },
   "market": {
     "marketAnalysis": "Analyse de Marché",
@@ -2393,7 +2456,30 @@
     "pickLeaderHint": "Choisissez-en un, copiez en un clic",
     "decisionLogTitle": "Flux de décision",
     "decisionLogHint": "Base de décision en temps réel",
-    "positionMargin": "Marge"
+    "positionMargin": "Marge",
+    "executor": {
+      "mirror": {
+        "label": "Mirror",
+        "blurb": "Suit le trader à l'identique, entrée la plus rapide (par défaut)"
+      },
+      "steady": {
+        "label": "Steady",
+        "blurb": "Petites positions · uniquement les meilleurs traders"
+      },
+      "aggressive": {
+        "label": "Aggressive",
+        "blurb": "Grandes positions · large diversification"
+      },
+      "smart": {
+        "label": "Smart",
+        "blurb": "N'intervient que lorsque l'AI est favorable"
+      }
+    },
+    "addressWarn": "Uniquement USDC sur le réseau Arbitrum. Envoyer d'autres actifs peut entraîner une perte permanente.",
+    "bridge2Warn": "N'envoyez jamais vers Bridge2 directement depuis une plateforme d'échange ou le portefeuille d'autrui.",
+    "tabDepositGuide": "Guide de dépôt",
+    "transferHintAgent": "L'USDC sera envoyé de votre portefeuille connecté directement vers HL Bridge2.",
+    "transferHintCustodial": "Uniquement USDC sur le réseau Arbitrum. Les fonds vont vers votre adresse de garde."
   },
   "profileVault": {
     "claimed": "Réclamé !",
@@ -2525,7 +2611,20 @@
     "pageTitle": "Mes nœuds",
     "payHint": "Payer en USDT · {{chain}}",
     "redeemDesc": "Tu as déjà un code ? Saisis-le pour activer l'accès au nœud.",
-    "redeemTitle": "Utiliser le code d'autorisation"
+    "redeemTitle": "Utiliser le code d'autorisation",
+    "err": {
+      "referrerNoNode": "Votre parrain n'a pas encore acheté de node, l'achat sous son compte est impossible pour le moment",
+      "noBind": "Liez d'abord un parrain avant d'acheter un node",
+      "purchased": "Ce portefeuille a déjà acheté un node",
+      "nodeId": "Niveau de node invalide",
+      "amount": "Le montant dépasse la limite disponible",
+      "caller": "Le portefeuille actuel n'a pas l'autorisation d'effectuer cette opération",
+      "addrZero": "Adresse invalide",
+      "limit": "Ce node est épuisé",
+      "rejected": "Vous avez annulé la signature",
+      "insufficient": "Solde ou autorisation USDT insuffisant"
+    },
+    "connectFirst": "Connectez d'abord votre portefeuille"
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2592,7 +2691,11 @@
       "in_progress": "En cours",
       "resolved": "Résolu",
       "closed": "Fermé"
-    }
+    },
+    "toastFileTypeTitle": "Type de fichier non pris en charge",
+    "toastFileTypeDesc": "Seules les images PNG / JPG / WebP / GIF sont prises en charge",
+    "toastFileSizeTitle": "Image trop volumineuse",
+    "toastFileSizeDesc": "Une image ne peut pas dépasser 5 Mo"
   },
   "actions": {
     "all": "Tout",
@@ -2781,7 +2884,10 @@
     "open": "Ouvrir"
   },
   "signalSector": {
-    "all": "Tout"
+    "all": "Tout",
+    "crypto": "Crypto",
+    "equity": "Actions",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "Moteur de stratégie intelligent",
@@ -2837,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "La clôture est gérée automatiquement par l'agent"
+  },
+  "walletGate": {
+    "title": "Connectez votre portefeuille",
+    "desc": "Connectez votre portefeuille pour accéder au tableau de bord, aux stratégies de trading et à la gestion de portefeuille."
   }
 }

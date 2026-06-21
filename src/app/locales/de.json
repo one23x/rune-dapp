@@ -591,7 +591,42 @@
     "methodBridgeDesc": "Von Assets einer anderen Chain oder per Bankkarte einbridgen",
     "riskBindNote": "Die an diesen Betrag gebundenen Risikokontrollen (Limit pro Trade / max. Hebel / Take-Profit & Stop-Loss) gelten automatisch für dein Copy-Trading.",
     "lockedSelected": "Gewählter Betrag (an Risikokontrolle gebunden)",
-    "lockedTransferHint": "Bitte genau ${{amount}} USDC überweisen (dieser Betrag ist an die Risikokontrollregeln gebunden)"
+    "lockedTransferHint": "Bitte genau ${{amount}} USDC überweisen (dieser Betrag ist an die Risikokontrollregeln gebunden)",
+    "capChecking": "Limit wird geprüft…",
+    "capRange": "Mind. ${{min}} pro Einzahlung · diesmal bis zu ${{max}}",
+    "capBelowMin": "Jede Einzahlung muss mindestens ${{min}} betragen",
+    "capAboveRemaining": "Überschreitet dein verfügbares Limit (bis zu ${{max}})",
+    "capNoCodeTitle": "Einzahlung nicht verfügbar",
+    "capNoCodeDesc": "Diese Wallet hat noch keinen Autorisierungscode. Kaufe einen Node / binde einen Code, bevor du einzahlst.",
+    "capReachedTitle": "Einzahlungslimit erreicht",
+    "capReachedDesc": "Du hast das von deinem Autorisierungscode erlaubte kumulierte Einzahlungslimit erreicht und kannst nicht weiter einzahlen.",
+    "addrPreparing": "Einzahlungsadresse wird vorbereitet, bitte warten…",
+    "addressWarn": "Nur pUSD im Polygon-Netzwerk. Das Senden anderer Assets oder über andere Netzwerke kann zu dauerhaftem Verlust führen.",
+    "connectFirst": "Verbinde zuerst deine Wallet",
+    "depositAddress": "Einzahlungsadresse",
+    "gasGrantFailed": "Unzureichendes Gas, automatisches Aufladen fehlgeschlagen",
+    "gasGrantFailedDesc": "Bitte sende einen kleinen Betrag {{native}} an diese Wallet für Gas.",
+    "gasGranting": "Unzureichendes Gas erkannt, wird für dich aufgeladen…",
+    "gasGrantingDesc": "Keine Aktion erforderlich — der Transfer wird nach Eingang automatisch fortgesetzt (~10–30 s).",
+    "gasGrantingShort": "Gas wird aufgeladen…",
+    "gasLimitReached": "Gas-Anforderungslimit erreicht, bitte kontaktiere den Support.",
+    "gasNotEligible": "Diese Wallet hat keinen Auth-Code gebunden, Gas kann nicht automatisch angefordert werden.",
+    "insufficientWalletToken": "Unzureichendes {{token}}-Guthaben in der Wallet",
+    "max": "Max.",
+    "remainingHint": "Verbleibendes Einzahlungslimit: ${{max}}",
+    "switchChainFailed": "Bitte wechsle zum {{chain}}-Netzwerk",
+    "switchingChainTo": "Wechsel zu {{chain}}…",
+    "tabAddress": "Adresse / QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "Wallet-Transfer",
+    "transferDescToken": "Übertrage {{token}} direkt aus deiner verbundenen Wallet",
+    "transferHint": "Nur pUSD auf Polygon. Die Mittel gehen an deine Einzahlungsadresse.",
+    "transferNow": "Jetzt übertragen",
+    "transferSent": "Transfer übermittelt",
+    "transferSentDesc": "Guthaben wird nach On-Chain-Bestätigung automatisch aktualisiert",
+    "transferTitle": "Wallet-Transfer",
+    "transferring": "Übertragung läuft…",
+    "walletBalance": "Wallet-Guthaben"
   },
   "ma": {
     "chartArea": "Fläche",
@@ -1422,7 +1457,35 @@
     "unrealizedPnl": "Unrealisiert",
     "openPositions": "Positionen",
     "support": "Ticket senden",
-    "supportDesc": "Problem melden & Fortschritt verfolgen"
+    "supportDesc": "Problem melden & Fortschritt verfolgen",
+    "node": {
+      "b": {
+        "direct": "Direkte Empfehlungsprovision",
+        "directD": "Sofortige Provision, wenn ein Untergeordneter einen Node kauft",
+        "airdrop": "Node-Airdrop",
+        "airdropD": "Token-Airdrop in Chargen je nach Stufe",
+        "weight": "Gewichtungs-Dividende",
+        "weightD": "Protokollerträge nach Node-Gewichtung verteilt",
+        "pool": "Pool-Dividende",
+        "poolD": "Anteilige Ausschüttung aus dem netzwerkweiten Pool",
+        "streams": "Mehrfache Erträge",
+        "streamsD": "Sechs Ertragsströme kumulativ freigeschaltet",
+        "platform": "Plattform-Vorteile",
+        "platformD": "Erweiterte Funktionen und Governance-Teilnahme"
+      },
+      "active": "Aktiviert",
+      "paid": "Gehaltener Wert",
+      "buy": "Node kaufen",
+      "buySub": "Node aktivieren, um alle Vorteile und Erträge freizuschalten",
+      "boundTo": "Übergeordnet",
+      "notBound": "Nicht verbunden",
+      "predCode": "Smart-Prognosecode",
+      "copyCode": "Prognosecode kopieren",
+      "copied": "Kopiert",
+      "copy": "Kopieren",
+      "benefits": "Node-Vorteile",
+      "note": "Vorteile und Erträge werden in Echtzeit nach On-Chain-Node-Stufe abgerechnet"
+    }
   },
   "market": {
     "marketAnalysis": "Marktanalyse",
@@ -2393,7 +2456,30 @@
     "pickLeaderHint": "Einen wählen, mit einem Klick kopieren",
     "decisionLogTitle": "Entscheidungsfluss",
     "decisionLogHint": "Entscheidungsgrundlage in Echtzeit",
-    "positionMargin": "Margin"
+    "positionMargin": "Margin",
+    "executor": {
+      "mirror": {
+        "label": "Mirror",
+        "blurb": "Folgt dem Trader 1:1, schnellster Einstieg (Standard)"
+      },
+      "steady": {
+        "label": "Steady",
+        "blurb": "Kleine Positionen · nur Top-Trader"
+      },
+      "aggressive": {
+        "label": "Aggressive",
+        "blurb": "Große Positionen · breit gestreut"
+      },
+      "smart": {
+        "label": "Smart",
+        "blurb": "Greift nur ein, wenn die AI es befürwortet"
+      }
+    },
+    "addressWarn": "Nur USDC im Arbitrum-Netzwerk. Das Senden anderer Assets kann zu dauerhaftem Verlust führen.",
+    "bridge2Warn": "Sende niemals direkt von einer Börse oder der Wallet einer anderen Person an Bridge2.",
+    "tabDepositGuide": "Einzahlungsanleitung",
+    "transferHintAgent": "USDC wird aus deiner verbundenen Wallet direkt an HL Bridge2 gesendet.",
+    "transferHintCustodial": "Nur USDC im Arbitrum-Netzwerk. Die Mittel gehen an deine Verwahradresse."
   },
   "profileVault": {
     "claimed": "Beansprucht!",
@@ -2525,7 +2611,20 @@
     "pageTitle": "Meine Nodes",
     "payHint": "Zahlen mit USDT · {{chain}}",
     "redeemDesc": "Schon einen Code? Gib ihn ein, um den Node-Zugang zu aktivieren.",
-    "redeemTitle": "Autorisierungscode einlösen"
+    "redeemTitle": "Autorisierungscode einlösen",
+    "err": {
+      "referrerNoNode": "Dein Empfehler hat noch keinen Node gekauft, ein Kauf unter ihm ist vorerst nicht möglich",
+      "noBind": "Verbinde zuerst einen Empfehler, bevor du einen Node kaufst",
+      "purchased": "Diese Wallet hat bereits einen Node gekauft",
+      "nodeId": "Ungültige Node-Stufe",
+      "amount": "Betrag überschreitet das verfügbare Limit",
+      "caller": "Aktuelle Wallet hat keine Berechtigung für diese Aktion",
+      "addrZero": "Ungültige Adresse",
+      "limit": "Dieser Node ist ausverkauft",
+      "rejected": "Du hast die Signatur abgebrochen",
+      "insufficient": "Unzureichendes USDT-Guthaben oder unzureichende Freigabe"
+    },
+    "connectFirst": "Verbinde zuerst deine Wallet"
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2592,7 +2691,11 @@
       "in_progress": "In Bearbeitung",
       "resolved": "Gelöst",
       "closed": "Geschlossen"
-    }
+    },
+    "toastFileTypeTitle": "Nicht unterstützter Dateityp",
+    "toastFileTypeDesc": "Nur PNG / JPG / WebP / GIF-Bilder werden unterstützt",
+    "toastFileSizeTitle": "Bild zu groß",
+    "toastFileSizeDesc": "Ein einzelnes Bild darf 5 MB nicht überschreiten"
   },
   "actions": {
     "all": "Alle",
@@ -2781,7 +2884,10 @@
     "open": "Eröffnen"
   },
   "signalSector": {
-    "all": "Alle"
+    "all": "Alle",
+    "crypto": "Krypto",
+    "equity": "Aktien",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "Smarte Strategie-Engine",
@@ -2837,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "Das Schließen wird automatisch vom Agenten verwaltet"
+  },
+  "walletGate": {
+    "title": "Wallet verbinden",
+    "desc": "Verbinde deine Wallet, um auf Dashboard, Trading-Strategien und Portfolioverwaltung zuzugreifen."
   }
 }

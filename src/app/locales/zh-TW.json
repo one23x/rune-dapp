@@ -591,7 +591,42 @@
     "methodBridgeDesc": "用其他鏈資產或銀行卡跨鏈買入並儲值",
     "riskBindNote": "該金額綁定的風控(單筆限額 / 槓桿上限 / 止盈止損)將自動套用到你的跟單。",
     "lockedSelected": "已選金額（綁定風控）",
-    "lockedTransferHint": "請準確轉入 ${{amount}} USDC（該金額綁定風控規則）"
+    "lockedTransferHint": "請準確轉入 ${{amount}} USDC（該金額綁定風控規則）",
+    "capChecking": "正在檢查你的額度…",
+    "capRange": "每筆最低 ${{min}} · 本次最高 ${{max}}",
+    "capBelowMin": "每筆充值至少需 ${{min}}",
+    "capAboveRemaining": "超出你的可用額度（最高 ${{max}}）",
+    "capNoCodeTitle": "暫無法充值",
+    "capNoCodeDesc": "此錢包尚無授權碼。請先購買節點／綁定授權碼再充值。",
+    "capReachedTitle": "已達充值上限",
+    "capReachedDesc": "你已達授權碼允許的累計充值上限，無法再充值。",
+    "addrPreparing": "正在準備充值地址，請稍候…",
+    "addressWarn": "僅限 Polygon 網路上的 pUSD。發送其他資產或網路可能造成永久損失。",
+    "connectFirst": "請先連接錢包",
+    "depositAddress": "充值地址",
+    "gasGrantFailed": "gas 不足，自動補充失敗",
+    "gasGrantFailedDesc": "請向此錢包發送少量 {{native}} 作為 gas。",
+    "gasGranting": "偵測到 gas 不足，正在為你補充…",
+    "gasGrantingDesc": "無需操作——到帳後轉帳將自動繼續（約 10–30 秒）。",
+    "gasGrantingShort": "正在補充 gas…",
+    "gasLimitReached": "gas 領取次數已達上限，請聯絡客服。",
+    "gasNotEligible": "此錢包未綁定授權碼，無法自動領取 gas。",
+    "insufficientWalletToken": "錢包 {{token}} 餘額不足",
+    "max": "最大",
+    "remainingHint": "剩餘充值額度：${{max}}",
+    "switchChainFailed": "請切換至 {{chain}} 網路",
+    "switchingChainTo": "正在切換至 {{chain}}…",
+    "tabAddress": "地址／QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "錢包轉帳",
+    "transferDescToken": "從已連接錢包直接轉入 {{token}}",
+    "transferHint": "僅限 Polygon 上的 pUSD。資金將轉入你的充值地址。",
+    "transferNow": "立即轉帳",
+    "transferSent": "轉帳已提交",
+    "transferSentDesc": "鏈上確認後餘額將自動刷新",
+    "transferTitle": "錢包轉帳",
+    "transferring": "轉帳中…",
+    "walletBalance": "錢包餘額"
   },
   "ma": {
     "chartArea": "面积",
@@ -1422,7 +1457,35 @@
     "unrealizedPnl": "未實現盈虧",
     "openPositions": "持倉數",
     "support": "提交工單",
-    "supportDesc": "回報問題並追蹤進度"
+    "supportDesc": "回報問題並追蹤進度",
+    "node": {
+      "b": {
+        "direct": "直推佣金",
+        "directD": "下級購買節點即時返佣",
+        "airdrop": "節點空投",
+        "airdropD": "按層級批次發放代幣空投",
+        "weight": "權重分紅",
+        "weightD": "按節點權重分配協議收益",
+        "pool": "資金池分紅",
+        "poolD": "全網資金池按比例派息",
+        "streams": "多重收益",
+        "streamsD": "六大收益流疊加釋放",
+        "platform": "平台權益",
+        "platformD": "高階功能與治理參與"
+      },
+      "active": "已啟用",
+      "paid": "持有價值",
+      "buy": "購買節點",
+      "buySub": "啟用節點解鎖全部權益與收益",
+      "boundTo": "上級",
+      "notBound": "未綁定",
+      "predCode": "智能預測碼",
+      "copyCode": "複製預測碼",
+      "copied": "已複製",
+      "copy": "複製",
+      "benefits": "節點權益",
+      "note": "權益與收益按鏈上節點等級即時結算"
+    }
   },
   "market": {
     "marketAnalysis": "市場分析",
@@ -2393,7 +2456,30 @@
     "pickLeaderHint": "選一位，一鍵跟單",
     "decisionLogTitle": "決策流",
     "decisionLogHint": "即時決策依據",
-    "positionMargin": "保證金"
+    "positionMargin": "保證金",
+    "executor": {
+      "mirror": {
+        "label": "鏡像",
+        "blurb": "原樣跟隨交易員，最快進場（預設）"
+      },
+      "steady": {
+        "label": "穩健",
+        "blurb": "小倉位·只跟頂級交易員"
+      },
+      "aggressive": {
+        "label": "激進",
+        "blurb": "大倉位·廣撒網"
+      },
+      "smart": {
+        "label": "智能",
+        "blurb": "只在 AI 看好時精選出手"
+      }
+    },
+    "addressWarn": "僅限 Arbitrum 網路上的 USDC。發送其他資產可能造成永久損失。",
+    "bridge2Warn": "切勿從交易所或他人錢包直接發送至 Bridge2。",
+    "tabDepositGuide": "充值指南",
+    "transferHintAgent": "USDC 將從你已連接的錢包直接發送至 HL Bridge2。",
+    "transferHintCustodial": "僅限 Arbitrum 網路上的 USDC。資金將轉入你的託管地址。"
   },
   "hlVaults": {
     "title": "推薦金庫",
@@ -2525,7 +2611,20 @@
     "pageTitle": "我的節點",
     "payHint": "USDT 支付 · {{chain}}",
     "redeemDesc": "已有授權碼？輸入即可開通節點權限。",
-    "redeemTitle": "授權碼兌換"
+    "redeemTitle": "授權碼兌換",
+    "err": {
+      "referrerNoNode": "你的推薦人還沒有購買節點，暫時無法在其名下購買",
+      "noBind": "請先綁定推薦人，再購買節點",
+      "purchased": "該錢包已經購買過節點了",
+      "nodeId": "無效的節點檔位",
+      "amount": "金額超出可用額度",
+      "caller": "目前錢包無權限執行該操作",
+      "addrZero": "地址無效",
+      "limit": "該節點名額已售罄",
+      "rejected": "你已取消簽名",
+      "insufficient": "USDT 餘額或授權不足"
+    },
+    "connectFirst": "請先連接錢包"
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2592,7 +2691,11 @@
       "in_progress": "處理中",
       "resolved": "已解決",
       "closed": "已關閉"
-    }
+    },
+    "toastFileTypeTitle": "不支援的檔案類型",
+    "toastFileTypeDesc": "僅支援 PNG / JPG / WebP / GIF 圖片",
+    "toastFileSizeTitle": "圖片過大",
+    "toastFileSizeDesc": "單張圖片不能超過 5MB"
   },
   "actions": {
     "all": "全部",
@@ -2781,7 +2884,10 @@
     "open": "開倉"
   },
   "signalSector": {
-    "all": "全部"
+    "all": "全部",
+    "crypto": "加密",
+    "equity": "美股",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "智慧策略引擎",
@@ -2837,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "平倉由智能體自動管理"
+  },
+  "walletGate": {
+    "title": "連接錢包以繼續",
+    "desc": "連接錢包後即可存取儀表板、交易策略與資產管理。"
   }
 }

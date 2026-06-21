@@ -591,7 +591,42 @@
     "methodBridgeDesc": "Faça bridge de ativos de outra rede ou de um cartão bancário",
     "riskBindNote": "Os controles de risco vinculados a este valor (limite por operação / alavancagem máxima / take-profit & stop-loss) se aplicam automaticamente ao seu copy trading.",
     "lockedSelected": "Valor selecionado (vinculado ao controle de risco)",
-    "lockedTransferHint": "Transfira exatamente ${{amount}} USDC (este valor está vinculado às regras de controle de risco)"
+    "lockedTransferHint": "Transfira exatamente ${{amount}} USDC (este valor está vinculado às regras de controle de risco)",
+    "capChecking": "Verificando seu limite…",
+    "capRange": "Mín. ${{min}} por depósito · até ${{max}} desta vez",
+    "capBelowMin": "Cada depósito deve ser de pelo menos ${{min}}",
+    "capAboveRemaining": "Excede seu limite disponível (até ${{max}})",
+    "capNoCodeTitle": "Depósito indisponível",
+    "capNoCodeDesc": "Esta carteira ainda não tem código de autorização. Compre um nó / vincule um código antes de depositar.",
+    "capReachedTitle": "Limite de depósito atingido",
+    "capReachedDesc": "Você atingiu o limite cumulativo de depósito permitido pelo seu código de autorização e não pode depositar mais.",
+    "addrPreparing": "Preparando o endereço de depósito, aguarde…",
+    "addressWarn": "Apenas pUSD na rede Polygon. Enviar outros ativos ou redes pode causar perda permanente.",
+    "connectFirst": "Conecte sua carteira primeiro",
+    "depositAddress": "Endereço de depósito",
+    "gasGrantFailed": "Gas insuficiente, a recarga automática falhou",
+    "gasGrantFailedDesc": "Envie uma pequena quantia de {{native}} para esta carteira para o gas.",
+    "gasGranting": "Gas insuficiente detectado, recarregando para você…",
+    "gasGrantingDesc": "Nenhuma ação necessária — a transferência continua automaticamente após o recebimento (~10–30s).",
+    "gasGrantingShort": "Recarregando gas…",
+    "gasLimitReached": "Limite de reivindicação de gas atingido, contate o suporte.",
+    "gasNotEligible": "Esta carteira não tem código de autorização vinculado, não é possível reivindicar gas automaticamente.",
+    "insufficientWalletToken": "Saldo de {{token}} insuficiente na carteira",
+    "max": "Máx.",
+    "remainingHint": "Limite de depósito restante: ${{max}}",
+    "switchChainFailed": "Mude para a rede {{chain}}",
+    "switchingChainTo": "Mudando para {{chain}}…",
+    "tabAddress": "Endereço / QR",
+    "tabBridge": "Bridge",
+    "tabTransfer": "Transferência de carteira",
+    "transferDescToken": "Transfira {{token}} diretamente da sua carteira conectada",
+    "transferHint": "Apenas pUSD na Polygon. Os fundos vão para seu endereço de depósito.",
+    "transferNow": "Transferir agora",
+    "transferSent": "Transferência enviada",
+    "transferSentDesc": "O saldo é atualizado automaticamente após a confirmação na cadeia",
+    "transferTitle": "Transferência de carteira",
+    "transferring": "Transferindo…",
+    "walletBalance": "Saldo da carteira"
   },
   "ma": {
     "chartArea": "Área",
@@ -1486,7 +1521,35 @@
     "unrealizedPnl": "Não realizado",
     "openPositions": "Posições",
     "support": "Enviar ticket",
-    "supportDesc": "Relate um problema e acompanhe o progresso"
+    "supportDesc": "Relate um problema e acompanhe o progresso",
+    "node": {
+      "b": {
+        "direct": "Comissão por indicação direta",
+        "directD": "Comissão instantânea quando um subordinado compra um nó",
+        "airdrop": "Airdrop de nó",
+        "airdropD": "Airdrops de tokens distribuídos em lotes por nível",
+        "weight": "Dividendo por peso",
+        "weightD": "Distribuição da receita do protocolo conforme o peso do nó",
+        "pool": "Dividendo do fundo comum",
+        "poolD": "Distribuição proporcional do fundo comum de toda a rede",
+        "streams": "Receita múltipla",
+        "streamsD": "Seis fluxos de receita liberados de forma cumulativa",
+        "platform": "Benefícios da plataforma",
+        "platformD": "Recursos avançados e participação na governança"
+      },
+      "active": "Ativado",
+      "paid": "Valor em posse",
+      "buy": "Comprar nó",
+      "buySub": "Ative o nó para desbloquear todos os benefícios e receitas",
+      "boundTo": "Superior",
+      "notBound": "Não vinculado",
+      "predCode": "Código de previsão inteligente",
+      "copyCode": "Copiar código de previsão",
+      "copied": "Copiado",
+      "copy": "Copiar",
+      "benefits": "Benefícios do nó",
+      "note": "Os benefícios e a receita são liquidados em tempo real conforme o nível do nó na cadeia"
+    }
   },
   "market": {
     "marketAnalysis": "Análise de Mercado",
@@ -2427,7 +2490,30 @@
     "pickLeaderHint": "Escolha um, copie com um clique",
     "decisionLogTitle": "Fluxo de decisões",
     "decisionLogHint": "Base de decisão em tempo real",
-    "positionMargin": "Margem"
+    "positionMargin": "Margem",
+    "executor": {
+      "mirror": {
+        "label": "Espelho",
+        "blurb": "Segue o trader tal como está, entrada mais rápida (padrão)"
+      },
+      "steady": {
+        "label": "Estável",
+        "blurb": "Posição pequena · segue apenas traders Top"
+      },
+      "aggressive": {
+        "label": "Agressivo",
+        "blurb": "Posição grande · ampla cobertura"
+      },
+      "smart": {
+        "label": "Inteligente",
+        "blurb": "Age de forma seletiva apenas quando a AI vê com bons olhos"
+      }
+    },
+    "addressWarn": "Apenas USDC na rede Arbitrum. Enviar outros ativos pode causar perda permanente.",
+    "bridge2Warn": "Nunca envie para a Bridge2 diretamente de uma exchange ou da carteira de outra pessoa.",
+    "tabDepositGuide": "Guia de depósito",
+    "transferHintAgent": "USDC será enviado da sua carteira conectada diretamente para a HL Bridge2.",
+    "transferHintCustodial": "Apenas USDC na rede Arbitrum. Os fundos vão para seu endereço de custódia."
   },
   "pmLab": {
     "title": "Laboratório de IA de Previsão",
@@ -2525,7 +2611,20 @@
     "pageTitle": "Meus nós",
     "payHint": "Pagar com USDT · {{chain}}",
     "redeemDesc": "Já tem um código? Insira-o para ativar o acesso ao nó.",
-    "redeemTitle": "Resgatar código de autorização"
+    "redeemTitle": "Resgatar código de autorização",
+    "err": {
+      "referrerNoNode": "Seu indicador ainda não comprou um nó, no momento não é possível comprar em nome dele",
+      "noBind": "Vincule primeiro um indicador antes de comprar um nó",
+      "purchased": "Esta carteira já comprou um nó",
+      "nodeId": "Nível de nó inválido",
+      "amount": "O valor excede o limite disponível",
+      "caller": "A carteira atual não tem permissão para executar esta operação",
+      "addrZero": "Endereço inválido",
+      "limit": "As vagas deste nó estão esgotadas",
+      "rejected": "Você cancelou a assinatura",
+      "insufficient": "Saldo ou autorização de USDT insuficientes"
+    },
+    "connectFirst": "Conecte sua carteira primeiro"
   },
   "arbNode": {
     "tab": "Arbitrum",
@@ -2592,7 +2691,11 @@
       "in_progress": "Em andamento",
       "resolved": "Resolvido",
       "closed": "Fechado"
-    }
+    },
+    "toastFileTypeTitle": "Tipo de arquivo não suportado",
+    "toastFileTypeDesc": "Apenas imagens PNG / JPG / WebP / GIF são suportadas",
+    "toastFileSizeTitle": "Imagem muito grande",
+    "toastFileSizeDesc": "Cada imagem não pode exceder 5MB"
   },
   "actions": {
     "all": "Tudo",
@@ -2781,7 +2884,10 @@
     "open": "Abrir"
   },
   "signalSector": {
-    "all": "Tudo"
+    "all": "Tudo",
+    "crypto": "Cripto",
+    "equity": "Ações",
+    "meme": "Meme"
   },
   "strategyHero": {
     "badge": "Motor de estratégia inteligente",
@@ -2837,5 +2943,9 @@
   },
   "position": {
     "autoManaged": "O fechamento é gerenciado automaticamente pelo agente"
+  },
+  "walletGate": {
+    "title": "Conecte sua carteira",
+    "desc": "Conecte sua carteira para acessar o painel, as estratégias de trading e a gestão de portfólio."
   }
 }

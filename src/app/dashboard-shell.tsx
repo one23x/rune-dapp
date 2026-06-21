@@ -3,19 +3,26 @@ import { Switch, Route, Router as WouterRouter, Link, Redirect } from "wouter";
 import { lazy, Suspense } from "react";
 import type React from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import "@app/lib/i18n";
 import { DesktopSidebar } from "@app/components/desktop-sidebar";
 import { BottomNav } from "@app/components/bottom-nav";
 import LangSwitcher from "@app/components/lang-switcher";
 import { WalletConnectButton } from "@/components/rune/wallet-connect-button";
 import { useActiveAccount, useActiveWalletConnectionStatus } from "thirdweb/react";
+// StrategyHub: 静态导入(原 lazy().then(m=>m.StrategyHub) 在某些 chunk 切分下 m=undefined → 整页崩。
+// 静态 ESM live-binding 不受循环依赖/chunk 初始化顺序影响,彻底消除该崩溃模式。)
+import { StrategyHub } from "@app/components/strategy/strategy-hub";
+// Support: 静态导入。理由同 StrategyHub —— support.tsx 引入 WalletConnectButton
+// (模块求值期即 createWallet(...)),作为 lazy chunk 时命中 vendor-thirdweb 的
+// chunk 初始化顺序 bug(Cannot read 'default' of undefined)→ 整页崩。静态导入消除。
+import Support from "@app/pages/support";
 
 const Dashboard       = lazy(() => import("@app/pages/dashboard"));
 const Trade           = lazy(() => import("@app/pages/trade"));
 const Vault           = lazy(() => import("@app/pages/vault"));
 const StrategyPage    = lazy(() => import("@app/pages/strategy"));
 const StrategyVault   = lazy(() => import("@app/pages/strategy-vault"));
-const StrategyHub     = lazy(() => import("@app/components/strategy/hl-copy-section").then((m) => ({ default: m.HlHubPage })));
 const Market          = lazy(() => import("@app/pages/market"));
 const CopyTrading     = lazy(() => import("@app/pages/copy-trading"));
 const CopyTradingAuto      = lazy(() => import("@app/pages/copy-trading-auto"));
@@ -166,6 +173,7 @@ function ShellHeader() {
 }
 
 function WalletRequiredGate({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const account = useActiveAccount();
   const status = useActiveWalletConnectionStatus();
   const isResolving = status === "unknown" || status === "connecting";
@@ -217,11 +225,10 @@ function WalletRequiredGate({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-bold text-foreground">连接钱包以继续</h2>
+            <h2 className="text-xl font-bold text-foreground">{t("walletGate.title", "连接钱包以继续")}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Connect your wallet to access the dashboard, trading strategies, and portfolio management.
+              {t("walletGate.desc", "连接钱包后即可访问仪表盘、交易策略和资产管理。")}
             </p>
-            <p className="text-xs text-muted-foreground/70">连接钱包后即可访问仪表盘、交易策略和资产管理。</p>
           </div>
           <div className="flex justify-center [&_button]:!h-11 [&_button]:!px-8 [&_button]:!text-sm [&_button]:!rounded-lg">
             <WalletConnectButton />
@@ -260,6 +267,7 @@ function DashboardRoutes() {
         <Route path="/copy-trading/earnings">{() => <Redirect to="/copy-trading/stats" />}</Route>
         <Route path="/nodes" component={Nodes} />
         <Route path="/profile" component={Profile} />
+        <Route path="/support" component={Support} />
         <Route path="/profile/nodes" component={ProfileNodes} />
         <Route path="/profile/referral" component={ProfileReferral} />
         <Route path="/profile/commission" component={ProfileCommission} />
