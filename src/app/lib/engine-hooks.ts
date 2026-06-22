@@ -451,31 +451,30 @@ export function useHlAccount(address: string | undefined, network: HlNetwork) {
       const hasFunds = (a: HlAccount | null | undefined): boolean =>
         !!a && (a.funded || (a.accountValue ?? 0) > 0 || (a.positions?.length ?? 0) > 0);
 
-      let live: HlAccount | null = null;
-      try {
-        live = await hyperliquid.account(address!, network);
-      } catch {
-        /* 引擎瞬时失败 → 走下面兜底 */
-      }
-      // 引擎确有资金/持仓 → 它是正源(含 fills/realizedPnl/真实 entryPx),直接用。
-      if (hasFunds(live)) return live!;
-      // 引擎返回空/未 funded(典型:今日切 QN HyperCore 后,无交易活动的账户未被索引 →
-      // 引擎给一个 accountValue=0 的「空但非 null」对象)。**绝不能让这个空结果掩盖同步表里
-      // 真实存在的余额** → 回退同步表(trading_hl_account_state 有现金/持仓)。
+      // 同步表优先(首屏快源):一次 Supabase 索引读即拿净值/可提/持仓/成交,
+      // 无引擎 QN SQL timeout / info 429 / 高 fill 账户卡顿 → 首屏快且稳。
+      // 引擎只在同步层未覆盖(刚开户/刚充值未同步)时兜底,仍带 fills 富数据。
       let synced: HlAccount | null = null;
       try {
         synced = await fetchHlAccountFromSync(address!, network);
       } catch {
-        /* 同步表读失败(RLS/网络)→ 不能让它中断整条链,继续直连 HL 兜底 */
+        /* 同步表读失败(RLS/网络)→ 继续引擎/直连兜底,不中断 */
       }
       if (hasFunds(synced)) return synced!;
+      // 同步层未覆盖 → 引擎实时 clearinghouseState + userFills。
+      let live: HlAccount | null = null;
+      try {
+        live = await hyperliquid.account(address!, network);
+      } catch {
+        /* 引擎瞬时失败/timeout → 走直连兜底 */
+      }
+      if (hasFunds(live)) return live!;
       // 仍无 → 末级直连 HL 公共 clearinghouseState(刚充值新户 + QN 未索引 + /info 429)。
-      // 这是全球可达、CORS 开的公共只读源,对 0xcea5…(纯现金 $489)能可靠返回。
       const verified = await fetchHlAccountDirect(address!, network);
       if (hasFunds(verified)) return verified!;
-      // 处处确为空 → 返回已有的空对象(UI 优雅显示 $0/未 funded,而非抛错→「找不到」)。
-      if (live) return live;
+      // 处处确为空 → 返回已有的空对象(UI 优雅显示 $0,而非抛错→「找不到」)。
       if (synced) return synced;
+      if (live) return live;
       if (verified) return verified;
       throw new Error("hl account unavailable");
     },

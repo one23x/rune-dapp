@@ -93,7 +93,7 @@ export async function fetchHlAccountFromSync(
   const venue = `hl_${network}`;
   const orFilter = `wallet.ilike.${address},login_wallet.ilike.${address},engine_eoa_address.ilike.${address}`;
 
-  const [stateRes, posRes] = await Promise.all([
+  const [stateRes, posRes, recRes] = await Promise.all([
     supabase
       .from("trading_hl_account_state")
       .select("*")
@@ -107,21 +107,50 @@ export async function fetchHlAccountFromSync(
       )
       .or(orFilter)
       .eq("venue", venue),
+    // 真实成交历史(同步层正源):trading_trade_records,只取真实(source!=manual,防穿帮)。
+    // 让同步层返回的 HlAccount 也带 recentFills → 可作首屏快源,不必等引擎。
+    supabase
+      .from("trading_trade_records")
+      .select("symbol,side,price,size,realized_pnl_usd,record_type,happened_at,tx_hash,source")
+      .ilike("wallet", address)
+      .eq("venue", venue)
+      .neq("source", "manual")
+      .order("happened_at", { ascending: false })
+      .limit(100),
   ]);
 
   if (stateRes.error) throw stateRes.error;
   // 持仓视图取数失败不致命(可能 RLS/视图临时问题)→ 当作无持仓继续。
   const posRows = (posRes.error ? [] : (posRes.data ?? [])) as OpenPosRow[];
   const state = (stateRes.data ?? null) as HlAccountStateRow | null;
+  const recRows = (recRes.error ? [] : (recRes.data ?? [])) as Array<{
+    symbol: string | null; side: string | null; price: number | null; size: number | null;
+    realized_pnl_usd: number | null; record_type: string | null; happened_at: string | null; tx_hash: string | null;
+  }>;
 
-  // 该账户既无现金状态行、也无持仓 → 同步层未覆盖,交给引擎兜底。
-  if (!state && posRows.length === 0) return null;
+  // 既无现金状态行、也无持仓、也无成交 → 同步层未覆盖,交给引擎兜底。
+  if (!state && posRows.length === 0 && recRows.length === 0) return null;
 
   const positions = posRows.map(openPosToHlPosition);
   const unrealized = positions.reduce((s, p) => s + num(p.upnl), 0);
   const accountValue = num(state?.account_value_usd);
   const withdrawable = num(state?.withdrawable_usd);
   const marginUsed = num(state?.margin_used_usd);
+  const recentFills = recRows.map((r) => {
+    const isClose = /close/i.test(r.record_type ?? "");
+    const short = /sell/i.test(r.side ?? "");
+    return {
+      coin: r.symbol ?? "",
+      dir: `${isClose ? "Close" : "Open"} ${short ? "Short" : "Long"}`,
+      side: r.side ?? "",
+      sz: num(r.size),
+      px: num(r.price),
+      closedPnl: num(r.realized_pnl_usd),
+      isClose,
+      time: r.happened_at ? +new Date(r.happened_at) : 0,
+      hash: r.tx_hash ?? null,
+    };
+  });
 
   return {
     network,
@@ -132,10 +161,9 @@ export async function fetchHlAccountFromSync(
     margin: marginUsed,
     marginUsed,
     unrealizedPnl: unrealized,
-    realizedPnl: 0, // 同步层无,展示层不强依赖(覆盖层/历史另算)。
+    realizedPnl: 0, // 同步层无累计已实现;展示层从 fills/记录另算。
     positions,
-    // recentFills 走覆盖层手动行;同步层不提供真实 fills(保持 undefined,
-    // 不抹掉 hl-display-overrides 的 manualRecords 注入)。
+    recentFills, // 真实成交(来自 trade_records);覆盖层 manualRecords 仍可叠加。
   };
 }
 
