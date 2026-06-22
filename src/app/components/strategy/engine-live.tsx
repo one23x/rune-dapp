@@ -76,11 +76,21 @@ export function EngineStats({ acct, loading }: { acct?: HlAccount; loading: bool
         )}
       </div>
 
-      {/* 次级:未实现 / 当日 / 可提 */}
+      {/* 账户资金:可提 / 保证金 / 手续费(与净值分别列出) */}
       <div className="relative z-10 mt-3.5 grid grid-cols-3 gap-3 border-t border-white/[0.06] pt-3">
+        {sub(t("engineLive.withdrawable", "可提"), funded ? usd(acct?.withdrawable ?? 0) : "—", funded ? "text-foreground" : "text-foreground/35")}
+        {sub(t("engineLive.margin", "保证金"), funded ? usd(acct?.marginUsed ?? acct?.margin ?? 0) : "—", funded ? "text-foreground" : "text-foreground/35")}
+        {sub(
+          t("engineLive.fees", "手续费"),
+          acct?.fees != null ? usd(acct.fees) : "—",
+          acct?.fees != null ? "text-foreground/80" : "text-foreground/35",
+        )}
+      </div>
+
+      {/* 盈亏:未实现 / 当日 */}
+      <div className="relative z-10 mt-3 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-3">
         {sub(t("engineLive.unrealized", "未实现"), unreal.txt, unreal.cls)}
         {sub(t("engineLive.today", "当日盈亏"), today.txt, today.cls)}
-        {sub(t("engineLive.withdrawable", "可提"), funded ? usd(acct?.withdrawable ?? 0) : "—", funded ? "text-foreground" : "text-foreground/35")}
       </div>
 
       {/* 交易账户:真实 HL 地址 + 链上 explorer/address 链接(让用户看清是哪个账户) */}

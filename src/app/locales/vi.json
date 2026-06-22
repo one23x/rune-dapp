@@ -2875,7 +2875,9 @@
     "size": "Khối lượng",
     "entry": "Mở vị thế",
     "value": "Giá trị thị trường",
-    "noFills": "Chưa có lịch sử khớp lệnh (trong phạm vi theo dõi của chiến lược này)"
+    "noFills": "Chưa có lịch sử khớp lệnh (trong phạm vi theo dõi của chiến lược này)",
+    "margin": "Ký quỹ",
+    "fees": "Phí"
   },
   "engineSignals": {
     "net": "Dòng tiền ròng",

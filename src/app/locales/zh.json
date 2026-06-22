@@ -2875,7 +2875,9 @@
     "size": "数量",
     "entry": "开仓",
     "value": "市值",
-    "noFills": "暂无成交记录(该策略盯盘范围内)"
+    "noFills": "暂无成交记录(该策略盯盘范围内)",
+    "margin": "保证金",
+    "fees": "手续费"
   },
   "engineSignals": {
     "net": "净流向",

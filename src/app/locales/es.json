@@ -2875,7 +2875,9 @@
     "size": "Cantidad",
     "entry": "Apertura",
     "value": "Valor de mercado",
-    "noFills": "Sin registros de ejecución (dentro del rango monitoreado de esta estrategia)"
+    "noFills": "Sin registros de ejecución (dentro del rango monitoreado de esta estrategia)",
+    "margin": "Margen",
+    "fees": "Comisiones"
   },
   "engineSignals": {
     "net": "Flujo neto",

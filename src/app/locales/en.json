@@ -2875,7 +2875,9 @@
     "size": "Size",
     "entry": "Entry",
     "value": "Value",
-    "noFills": "No fills yet (within this strategy's watched markets)"
+    "noFills": "No fills yet (within this strategy's watched markets)",
+    "margin": "Margin",
+    "fees": "Fees"
   },
   "engineSignals": {
     "net": "Net flow",

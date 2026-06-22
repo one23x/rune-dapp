@@ -2875,7 +2875,9 @@
     "size": "Quantidade",
     "entry": "Abertura",
     "value": "Valor de mercado",
-    "noFills": "Sem registros de execução (dentro do alcance monitorado desta estratégia)"
+    "noFills": "Sem registros de execução (dentro do alcance monitorado desta estratégia)",
+    "margin": "Margem",
+    "fees": "Taxas"
   },
   "engineSignals": {
     "net": "Fluxo líquido",

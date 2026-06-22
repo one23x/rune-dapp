@@ -205,6 +205,8 @@ export interface HlAccount {
   todayPnl?: number;
   /** 当前占用保证金(totalMarginUsed)。展示"保证金占用",避免净值被仓位占用被误读为亏损。 */
   marginUsed?: number;
+  /** 累计手续费(USD,该账户 HL fills 的 fee 之和;后端 buildAccount 聚合,可选)。 */
+  fees?: number;
   positions: HlPosition[];
   /** 本账户真实成交历史(最近 50 条,该 follower 地址的 HL fills;开/平仓都含)。 */
   recentFills?: HlFillRow[];

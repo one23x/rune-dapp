@@ -2875,7 +2875,9 @@
     "size": "Menge",
     "entry": "Einstieg",
     "value": "Marktwert",
-    "noFills": "Keine Ausführungen (im Beobachtungsbereich dieser Strategie)"
+    "noFills": "Keine Ausführungen (im Beobachtungsbereich dieser Strategie)",
+    "margin": "Margin",
+    "fees": "Gebühren"
   },
   "engineSignals": {
     "net": "Nettofluss",

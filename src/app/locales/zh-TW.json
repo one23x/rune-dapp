@@ -2875,7 +2875,9 @@
     "size": "數量",
     "entry": "開倉",
     "value": "市值",
-    "noFills": "暫無成交紀錄（該策略盯盤範圍內）"
+    "noFills": "暫無成交紀錄（該策略盯盤範圍內）",
+    "margin": "保證金",
+    "fees": "手續費"
   },
   "engineSignals": {
     "net": "淨流向",

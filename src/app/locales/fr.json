@@ -2875,7 +2875,9 @@
     "size": "Quantité",
     "entry": "Entrée",
     "value": "Valeur de marché",
-    "noFills": "Aucune exécution (dans le périmètre suivi par cette stratégie)"
+    "noFills": "Aucune exécution (dans le périmètre suivi par cette stratégie)",
+    "margin": "Marge",
+    "fees": "Frais"
   },
   "engineSignals": {
     "net": "Flux net",
