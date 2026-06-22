@@ -36,6 +36,7 @@ import {
 import type { HlAccount, HlNetwork, HlPosition, HlFillRow } from "@app/lib/engine";
 import type { DecisionEntry } from "@app/lib/decision-log-hooks";
 import { useHlEquityCurve } from "@app/lib/engine-hooks";
+import { useTradeRecords } from "@app/lib/trading-stats-hooks";
 import { cn } from "@app/lib/utils";
 
 const HL_INFO = "https://api.hyperliquid.xyz/info";
@@ -161,7 +162,29 @@ export function PerformancePanel({ userId, acct, network, universe, entries }: {
     [curveQ.data],
   );
 
-  const fills: HlFillRow[] = acct?.recentFills ?? [];
+  // 平仓历史/已实现 兜底:引擎 /v1/hl/account 的 recentFills 对高 fill 账户会因 SQL timeout→
+  // info 429→直连 HL 兜底(无 fills)而为空 → 历史/已实现/平仓笔数 全 0。改读同步表
+  // trading_trade_records(useTradeRecords,worker 实时写,已持久化 stats.*),映射成 HlFillRow。
+  // 只取真实(source!=='manual',防穿帮)平仓行。引擎有 fills 时仍优先用引擎(更全,含开仓)。
+  const recsQ = useTradeRecords(acct?.address, network === "testnet" ? "hl_testnet" : "hl_mainnet", 200);
+  const fallbackFills: HlFillRow[] = useMemo(
+    () =>
+      (recsQ.data ?? [])
+        .filter((r) => r.source !== "manual" && (r.realized_pnl_usd != null || /close/i.test(r.record_type)))
+        .map((r) => ({
+          coin: r.symbol ?? "",
+          dir: /short/i.test(r.side ?? "") ? "Close Short" : "Close Long",
+          side: r.side ?? "",
+          sz: Number(r.size) || 0,
+          px: Number(r.price) || 0,
+          closedPnl: Number(r.realized_pnl_usd) || 0,
+          isClose: true,
+          time: r.happened_at ? +new Date(r.happened_at) : 0,
+          hash: r.tx_hash ?? null,
+        })),
+    [recsQ.data],
+  );
+  const fills: HlFillRow[] = acct?.recentFills?.length ? acct.recentFills : fallbackFills;
   const positions: HlPosition[] = acct?.positions ?? [];
   const navValue = acct?.accountValue ?? 0;
   const is1D = tf === "1D";
