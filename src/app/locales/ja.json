@@ -2790,7 +2790,7 @@
       "withdrawable": "出金可能",
       "fundTitle": "入金 / 出金",
       "fundDesc": "USDC を取引口座に入金するとコピートレードを開始できます。",
-      "fundedNote": "入金完了、次へ進めます",
+      "fundedNote": "口座開設完了 · HLで入金を確認しました。次へ進めます",
       "depositToContinue": "入金後に戦略を選択できます"
     }
   },

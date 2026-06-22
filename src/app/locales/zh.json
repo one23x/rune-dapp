@@ -2790,7 +2790,7 @@
       "withdrawable": "可提",
       "fundTitle": "充值 / 提现",
       "fundDesc": "把 USDC 充入交易账户即可开始跟单。",
-      "fundedNote": "已入金,可进入下一步",
+      "fundedNote": "开户成功 · HL 已验证到账,可进入下一步",
       "depositToContinue": "充值后才能选择策略"
     }
   },

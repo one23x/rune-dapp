@@ -128,7 +128,7 @@ export function WalletStep(props: {
         >
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
           <p className="text-[12px] leading-snug text-emerald-200/90">
-            {t("flow.wallet.fundedNote", "已入金,可进入下一步")}
+            {t("flow.wallet.fundedNote", "开户成功 · HL 已验证到账,可进入下一步")}
           </p>
         </div>
       ) : (

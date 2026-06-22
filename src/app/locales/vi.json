@@ -2790,7 +2790,7 @@
       "withdrawable": "Có thể rút",
       "fundTitle": "Nạp / Rút",
       "fundDesc": "Nạp USDC vào tài khoản giao dịch để bắt đầu copy-trading.",
-      "fundedNote": "Đã nạp tiền, có thể sang bước tiếp theo",
+      "fundedNote": "Mở tài khoản thành công · đã xác minh tiền vào HL, bạn có thể tiếp tục",
       "depositToContinue": "Phải nạp tiền mới có thể chọn chiến lược"
     }
   },

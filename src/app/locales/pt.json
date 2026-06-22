@@ -2790,7 +2790,7 @@
       "withdrawable": "Sacável",
       "fundTitle": "Depositar / Sacar",
       "fundDesc": "Deposite USDC na sua conta de trading para começar a copiar.",
-      "fundedNote": "Depósito realizado, você pode seguir para a próxima etapa",
+      "fundedNote": "Conta aberta · fundos confirmados na HL, você pode continuar",
       "depositToContinue": "Deposite para poder escolher uma estratégia"
     }
   },

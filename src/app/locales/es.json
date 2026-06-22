@@ -2790,7 +2790,7 @@
       "withdrawable": "Retirable",
       "fundTitle": "Depositar / Retirar",
       "fundDesc": "Deposita USDC en tu cuenta de trading para empezar a copiar.",
-      "fundedNote": "Depósito realizado, puedes pasar al siguiente paso",
+      "fundedNote": "Cuenta abierta · fondos verificados en HL, puedes continuar",
       "depositToContinue": "Deposita para poder elegir una estrategia"
     }
   },

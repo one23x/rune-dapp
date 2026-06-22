@@ -2790,7 +2790,7 @@
       "withdrawable": "Retirable",
       "fundTitle": "Dépôt / Retrait",
       "fundDesc": "Déposez des USDC sur le compte de trading pour commencer le copy-trading.",
-      "fundedNote": "Dépôt effectué, vous pouvez passer à l'étape suivante",
+      "fundedNote": "Compte ouvert · fonds vérifiés sur HL, vous pouvez continuer",
       "depositToContinue": "La sélection de stratégie n'est possible qu'après dépôt"
     }
   },

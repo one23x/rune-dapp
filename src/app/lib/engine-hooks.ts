@@ -20,6 +20,7 @@ import {
   node,
   packs,
   type HlNetwork,
+  type HlAccount,
   type NodeStatus,
   type PolymarketOrderInput,
 } from "@app/lib/engine";
@@ -387,6 +388,58 @@ export function useHlSignals(
  * 注意:useHlAccountAdjusted(hl-display-overrides.ts)包装本 hook,叠加 admin 覆盖/
  * 手动持仓/手动成交 —— 本 hook 返回同形状对象后那层逻辑原样工作。
  */
+/**
+ * 末级兜底:直连 HL 公共 /info clearinghouseState(CORS 开,全球可达)验证账户是否到账。
+ * 仅在引擎 /v1/hl/account + 同步层都拿不到时调用 —— 典型场景:刚充值、QN HyperCore 尚未
+ * 索引(无交易活动)且引擎侧 /info 间歇 429 的新户。带重试绕 429;只回余额/funded 级字段
+ * (无 fills/持仓明细,established 账户下轮 poll 会被引擎完整结果覆盖)。
+ */
+async function fetchHlAccountDirect(
+  address: string,
+  network: HlNetwork,
+): Promise<HlAccount | null> {
+  const base =
+    network === "testnet"
+      ? "https://api.hyperliquid-testnet.xyz"
+      : "https://api.hyperliquid.xyz";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch(`${base}/info`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "clearinghouseState", user: address }),
+      });
+      if (res.ok) {
+        const d = (await res.json()) as {
+          marginSummary?: { accountValue?: string; totalMarginUsed?: string };
+          withdrawable?: string;
+          assetPositions?: unknown[];
+        } | null;
+        if (d?.marginSummary) {
+          const accountValue = Number(d.marginSummary.accountValue ?? 0);
+          const marginUsed = Number(d.marginSummary.totalMarginUsed ?? 0);
+          return {
+            network,
+            address,
+            funded: accountValue > 0 || (d.assetPositions?.length ?? 0) > 0,
+            accountValue,
+            withdrawable: Number(d.withdrawable ?? 0),
+            margin: marginUsed,
+            marginUsed,
+            unrealizedPnl: 0,
+            realizedPnl: 0,
+            positions: [],
+          };
+        }
+      }
+    } catch {
+      /* 网络/429 → 重试 */
+    }
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  return null;
+}
+
 export function useHlAccount(address: string | undefined, network: HlNetwork) {
   return useQuery({
     queryKey: ["engine", "hl", "account", network, address?.toLowerCase()],
@@ -403,6 +456,10 @@ export function useHlAccount(address: string | undefined, network: HlNetwork) {
       }
       const synced = await fetchHlAccountFromSync(address!, network);
       if (synced) return synced;
+      // 末级兜底:刚充值的新户(QN HyperCore 尚未索引 + 引擎 /info 间歇 429)→ 直连 HL
+      // 公共 clearinghouseState 验证。只要 HL 验证到余额,即可判定 funded → 显示「开户成功」。
+      const verified = await fetchHlAccountDirect(address!, network);
+      if (verified) return verified;
       throw new Error("hl account unavailable");
     },
     enabled: !!address,

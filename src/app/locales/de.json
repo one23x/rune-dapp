@@ -2790,7 +2790,7 @@
       "withdrawable": "Auszahlbar",
       "fundTitle": "Einzahlen / Auszahlen",
       "fundDesc": "Zahle USDC auf das Handelskonto ein, um mit dem Copy-Trading zu beginnen.",
-      "fundedNote": "Eingezahlt, weiter zum nächsten Schritt",
+      "fundedNote": "Konto eröffnet · Geldeingang auf HL bestätigt, du kannst fortfahren",
       "depositToContinue": "Strategieauswahl erst nach Einzahlung möglich"
     }
   },

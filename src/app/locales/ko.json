@@ -2790,7 +2790,7 @@
       "withdrawable": "출금 가능",
       "fundTitle": "충전 / 출금",
       "fundDesc": "USDC를 거래 계좌에 입금하면 복사거래를 시작할 수 있습니다.",
-      "fundedNote": "입금 완료, 다음 단계로 진행 가능",
+      "fundedNote": "계좌 개설 완료 · HL 입금 확인됨, 다음 단계로 진행하세요",
       "depositToContinue": "충전 후에야 전략을 선택할 수 있습니다"
     }
   },

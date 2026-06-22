@@ -2790,7 +2790,7 @@
       "withdrawable": "Withdrawable",
       "fundTitle": "Deposit / Withdraw",
       "fundDesc": "Deposit USDC into your trading account to start copy-trading.",
-      "fundedNote": "Deposit received, you can proceed",
+      "fundedNote": "Account opened · funds verified on HL, you can proceed",
       "depositToContinue": "Deposit before selecting a strategy"
     }
   },
