@@ -404,29 +404,30 @@ const COIN_MAP: Record<string, string> = {
   BTC: "bitcoin", ETH: "ethereum", BNB: "binancecoin", DOGE: "dogecoin", SOL: "solana",
 };
 
+// 2026-06-18:Binance(.us)对部分地区/浏览器失败导致 K 线一直「重试中」→ 改用 Hyperliquid
+// 公开 /info(CORS 开),全球可达。价格走 allMids,K 线走 candleSnapshot。
 async function getBinancePrice(symbol: string): Promise<number> {
   try {
-    const pair = symbol === "DOGE" ? "DOGEUSDT" : `${symbol}USDT`;
-    const res = await fetch(`https://api.binance.us/api/v3/ticker/price?symbol=${pair}`);
-    if (res.ok) {
-      const data = await res.json();
-      return parseFloat(data.price) || 0;
-    }
+    const res = await fetch("https://api.hyperliquid.xyz/info", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "allMids" }),
+    });
+    if (res.ok) { const d = await res.json(); return parseFloat((d as Record<string, string>)[symbol]) || 0; }
   } catch {}
   return 0;
 }
 
 async function getBinanceKlines(symbol: string, days: number): Promise<[number, number][]> {
   try {
-    const pair = symbol === "DOGE" ? "DOGEUSDT" : `${symbol}USDT`;
     const endTime = Date.now();
     const startTime = endTime - days * 24 * 60 * 60 * 1000;
-    const res = await fetch(
-      `https://api.binance.us/api/v3/klines?symbol=${pair}&interval=1d&startTime=${startTime}&endTime=${endTime}&limit=${days + 1}`
-    );
+    const res = await fetch("https://api.hyperliquid.xyz/info", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "candleSnapshot", req: { coin: symbol, interval: "1d", startTime, endTime } }),
+    });
     if (res.ok) {
       const data = await res.json();
-      return (data as any[]).map((k: any) => [k[0], parseFloat(k[4])]);
+      // HL candle: { t:openMs, c:closeStr, ... } → [timestamp, close]
+      return (data as any[]).map((k: any) => [k.t, parseFloat(k.c)]);
     }
   } catch {}
   return [];

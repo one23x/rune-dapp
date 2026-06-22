@@ -1,0 +1,4 @@
+# 凭证绝不进 git（CHARTER §4）
+.env
+.dev.vars
+*.bak

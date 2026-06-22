@@ -1,0 +1,12 @@
+{
+  // Rune agent 矢量记忆库 — Cloudflare Worker + Vectorize + Workers AI
+  // 部署前置：token 需含 vectorize(edit) + ai(edit) scope；先建索引（见 README）。
+  "name": "rune-agent-memory",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-06-01",
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "rune-agent-memory" }
+  ],
+  "ai": { "binding": "AI" }
+  // INGEST_SECRET 走 secret：wrangler secret put INGEST_SECRET
+}

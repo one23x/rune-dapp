@@ -332,13 +332,18 @@ export function PriceChart({
       }
     })();
     const maxDeviation = currentPrice * maxDeviationPct;
+    // 把超出周期 band 的预测点【钳制】到 band 内,而不是过滤丢弃 —— 旧逻辑会把
+    // 偏离 currentPrice 超阈值的点 filter 掉,当模型目标涨跌幅 > 阈值、或 live 与
+    // 最后一根收盘价有差时,会丢掉很多未来蜡烛(显示不全)。钳制后所有蜡烛都画出来。
     const saneForecast = forecast?.forecastPoints?.length && currentPrice > 0
       ? (() => {
-          const sanePoints = forecast.forecastPoints.filter(fp =>
-            Math.abs(fp.price - currentPrice) <= maxDeviation
-          );
-          if (sanePoints.length === 0) return null;
-          return { ...forecast, forecastPoints: sanePoints };
+          const lo = currentPrice - maxDeviation;
+          const hi = currentPrice + maxDeviation;
+          const clamped = forecast.forecastPoints.map(fp => ({
+            ...fp,
+            price: Math.min(hi, Math.max(lo, fp.price)),
+          }));
+          return { ...forecast, forecastPoints: clamped };
         })()
       : forecast;
     const saneTargetPrice = targetPrice && currentPrice > 0 && Math.abs(targetPrice - currentPrice) <= maxDeviation

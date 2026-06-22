@@ -33,9 +33,9 @@ type VenueFilter = "ALL" | StatsVenue;
 /** venue 显示名(走 i18n;Polymarket 是品牌名不翻)。 */
 type Tr = (key: string, defaultValue: string) => string;
 const venueLabel = (t: Tr, v: StatsVenue): string =>
-  v === "polymarket" ? "Polymarket"
-  : v === "hl_mainnet" ? t("copyTrading.venueHlMainnet", "HL 主网")
-  : t("copyTrading.venueHlTestnet", "HL 测试网");
+  v === "polymarket" ? t("copyTrading.venuePm", "Rune 预测市场")
+  : v === "hl_mainnet" ? t("copyTrading.venueHlMainnet", "Rune 合约交易市场")
+  : t("copyTrading.venueHlTestnet", "Rune 合约交易市场(测试)");
 const VENUE_COLOR: Record<StatsVenue, string> = {
   polymarket: "bg-sky-500/10 text-sky-400",
   hl_mainnet: "bg-emerald-500/10 text-emerald-400",
@@ -173,9 +173,8 @@ function DailyTab({ wallet, venueScope }: { wallet: string; venueScope?: StatsVe
 }
 
 /* ── Tab 3: 当前持仓(当日统计 + 持仓明细)──────────────────────────────── */
-function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress }: {
+function OpenTab({ wallet, venueScope, hlAddress }: {
   wallet: string; venueScope?: StatsVenue;
-  onClosePosition?: (symbol: string) => void; closingSymbol?: string | null;
   hlAddress?: string;
 }) {
   const { t } = useTranslation();
@@ -211,8 +210,6 @@ function OpenTab({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress
                 key={`${p.venue}-${p.symbol}-${i}`}
                 p={p}
                 showVenue={!venueScope}
-                onClose={onClosePosition}
-                closing={closingSymbol != null && closingSymbol === p.symbol}
                 hlAddress={hlAddress}
                 accountValue={av}
               />
@@ -274,17 +271,14 @@ function TodayClosedTab({ wallet, venueScope }: { wallet: string; venueScope?: S
 
 /** 当前持仓一行:LONG/SHORT 徽章 + 浮盈$/ROE% + 三列(数量/入场价/持仓价值)。
  *  仅真实行 + 传入 onClose 时给「平仓」(双击确认);tx_hash 仅 HL 给详情页直链。 */
-function PositionCard({ p, showVenue, onClose, closing, hlAddress, accountValue }: {
+function PositionCard({ p, showVenue, hlAddress, accountValue }: {
   p: import("@app/lib/trading-stats-hooks").OpenPositionRow;
   showVenue?: boolean;
-  onClose?: (symbol: string) => void;
-  closing?: boolean;
   hlAddress?: string;
   /** 该 venue 账户净值(admin 覆盖优先);用于算「持仓价值」占净值比,NULL/0 时 % 不显示。 */
   accountValue?: number | null;
 }) {
   const { t } = useTranslation();
-  const [confirm, setConfirm] = useState(false);
   const isPm = p.venue === "polymarket";
   // PM 持仓:symbol 优先用市场题目(title),无题目再回退 token_id 截断;HL 行不变。
   const coin = isPm && p.title && p.title.trim()
@@ -315,7 +309,9 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress, accountValue 
     : (!p.is_manual && hlAddress && (p.venue === "hl_mainnet" || p.venue === "hl_testnet")
         ? explorerAddr(hlAddress, p.venue)
         : null);
-  const closable = !!onClose && !!p.symbol && !p.is_manual;
+  // 平仓改由智能体自动管理(leader 镜像平仓 / TP-SL / daily-supervisor)→ 不再给手动平仓入口,
+  // 仅对真实跟单仓(非手动覆盖行)显示一行「自动管理」说明文案。
+  const autoManaged = !!p.symbol && !p.is_manual;
   return (
     <div className="glass-panel p-3">
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -365,20 +361,13 @@ function PositionCard({ p, showVenue, onClose, closing, hlAddress, accountValue 
           <span className="font-bold tabular-nums text-foreground/80">{fmtUsd(positionMargin)}</span>
         </div>
       )}
-      {closable && (
-        <button
-          type="button"
-          disabled={closing}
-          onClick={() => {
-            if (confirm) { onClose!(p.symbol!); setConfirm(false); }
-            else { setConfirm(true); window.setTimeout(() => setConfirm(false), 3000); }
-          }}
-          className={`mt-2.5 w-full h-9 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 transition active:scale-[0.99] disabled:opacity-60 ${
-            confirm ? "bg-red-500 text-white" : "bg-white/[0.04] text-red-300 border border-red-500/25 hover:bg-red-500/10"}`}
-          data-testid={`button-close-${coin}`}
+      {autoManaged && (
+        <div
+          className="mt-2.5 w-full rounded-lg px-3 py-2 text-[11px] leading-snug text-center text-foreground/55 bg-white/[0.03] border border-white/[0.06]"
+          data-testid={`text-auto-managed-${coin}`}
         >
-          {closing ? t("hl.closing", "平仓中…") : confirm ? t("hl.closeConfirm", "确认市价平仓?") : t("hl.closePosition", "平仓")}
-        </button>
+          {t("position.autoManaged", "平仓由智能体自动管理")}
+        </div>
       )}
     </div>
   );
@@ -434,11 +423,8 @@ function ListSkeleton() {
  * stats-page tabs + the overview PM 三-Tab):
  *   当前持仓 / 当日平仓 / 历史记录(每日) / 交易记录(三分类).
  */
-export function TradeRecordsDetail({ wallet, venueScope, onClosePosition, closingSymbol, hlAddress }: {
+export function TradeRecordsDetail({ wallet, venueScope, hlAddress }: {
   wallet?: string; venueScope?: StatsVenue;
-  /** 传入即在真实持仓行显示「平仓」按钮(双击确认)— HL 区用引擎市价平仓。 */
-  onClosePosition?: (symbol: string) => void;
-  closingSymbol?: string | null;
   /** HL 账户地址(custodial EOA / agent master)— 真实持仓行回退到 explorer 账户页用。 */
   hlAddress?: string;
 }) {
@@ -449,7 +435,6 @@ export function TradeRecordsDetail({ wallet, venueScope, onClosePosition, closin
     { id: "open" as Tab, icon: Layers, label: t("copyTrading.tabOpenPositions", "当前持仓") },
     { id: "todayClosed" as Tab, icon: Activity, label: t("copyTrading.tabTodayClosed", "当日平仓") },
     { id: "history" as Tab, icon: CalendarDays, label: t("copyTrading.tabHistoryRecords", "历史记录") },
-    { id: "records" as Tab, icon: ListOrdered, label: t("copyTrading.statsTabRecords", "交易记录") },
   ]), [t]);
 
   return (
@@ -472,13 +457,11 @@ export function TradeRecordsDetail({ wallet, venueScope, onClosePosition, closin
           <p className="text-[12px] text-muted-foreground">{t("copyTrading.statsConnectWallet", "连接钱包查看你的交易数据")}</p>
         </PremiumCard>
       ) : tab === "open" ? (
-        <OpenTab wallet={wallet} venueScope={venueScope} onClosePosition={onClosePosition} closingSymbol={closingSymbol} hlAddress={hlAddress} />
+        <OpenTab wallet={wallet} venueScope={venueScope} hlAddress={hlAddress} />
       ) : tab === "todayClosed" ? (
         <TodayClosedTab wallet={wallet} venueScope={venueScope} />
-      ) : tab === "history" ? (
-        <DailyTab wallet={wallet} venueScope={venueScope} />
       ) : (
-        <RecordsTab wallet={wallet} venueScope={venueScope} />
+        <DailyTab wallet={wallet} venueScope={venueScope} />
       )}
     </div>
   );

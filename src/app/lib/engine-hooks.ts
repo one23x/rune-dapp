@@ -391,17 +391,23 @@ export function useHlAccount(address: string | undefined, network: HlNetwork) {
   return useQuery({
     queryKey: ["engine", "hl", "account", network, address?.toLowerCase()],
     queryFn: async () => {
+      // 引擎 /v1/hl/account = 实时 clearinghouseState + userFills:完整(含 recentFills /
+      // realizedPnl / todayPnl / 真实 entryPx),且**按地址**查 —— 不受多 project / 视图
+      // (v_wallet_open_positions 按连接钱包)歧义影响。是 Trades / Performance / 持仓 的正源。
+      // 同步表只作兜底(引擎瞬时失败):它**不含 fills、realizedPnl=0**,单用会让这些面板空。
       try {
-        const synced = await fetchHlAccountFromSync(address!, network);
-        if (synced) return synced;
+        const live = await hyperliquid.account(address!, network);
+        if (live) return live;
       } catch {
-        /* 同步表读失败 → 回退引擎 */
+        /* 引擎瞬时失败 → 回退同步表(至少有余额/持仓) */
       }
-      return hyperliquid.account(address!, network);
+      const synced = await fetchHlAccountFromSync(address!, network);
+      if (synced) return synced;
+      throw new Error("hl account unavailable");
     },
     enabled: !!address,
-    staleTime: 120_000,
-    refetchInterval: 120_000,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
     retry: false,
   });
 }
@@ -430,6 +436,23 @@ export function useHlCopyDecisions(userId: string | undefined) {
 }
 
 /**
+ * 账户净值历史曲线 —— worker equity-snapshot job 落的多日真实净值序列
+ * (GET /v1/users/:userId/hl/equity-curve?days=N)。有真实快照时 PerformancePanel 用它画
+ * 多日真曲线,无快照(job 未开 / 账户新)→ points:[],面板回退现有当日逻辑。
+ * 快照本就每 ~30min 一条 → 轮询 5min、staleTime 5min,降消耗。
+ */
+export function useHlEquityCurve(userId: string | undefined, days = 30) {
+  return useQuery({
+    queryKey: ["engine", "hl", "equity-curve", userId, days],
+    queryFn: () => hyperliquid.equityCurve(userId!, days),
+    enabled: !!userId,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
+    retry: false,
+  });
+}
+
+/**
  * Manage an existing HL copy subscription: pause / resume (PATCH) + cancel (DELETE).
  * Routes are live (hl-read.ts :588 / :616). Invalidates the subs query on success so the
  * ActiveSubs list reflects the new state immediately.
@@ -454,4 +477,30 @@ export function useHlSubMutations(userId: string | undefined) {
     cancel: (id: string) => cancel.mutateAsync({ id }),
     isPending: setStatus.isPending || cancel.isPending,
   };
+}
+
+/**
+ * One-click STOP ALL copy-trading for a user: pauses every active HL + PM subscription
+ * (POST /v1/users/:userId/stop-all). Idempotent — already-paused/stopped subs are no-ops.
+ * Existing positions keep getting AI-managed exits (mirror close / TP-SL); no new positions open.
+ * Invalidates the HL subs query so the active-follows list reflects the paused state immediately.
+ */
+export function useStopAllCopy(userId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => hyperliquid.stopAll(userId!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] }),
+  });
+}
+
+/**
+ * 选择/切换策略市场(单选)。把该用户所有 HL 订阅约束到该板块币种宇宙(allowed_coins),
+ * 执行器据此只交易该板块的币。成功后刷新订阅列表。
+ */
+export function useSetStrategyMarket(userId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (market: string) => hyperliquid.setStrategyMarket(userId!, market),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["engine", "hl", "subs", userId] }),
+  });
 }

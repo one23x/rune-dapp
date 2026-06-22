@@ -827,6 +827,7 @@ export function DepositTransferPanel({
   gasChain = "polygon",
   minHard,
   hint,
+  lockedAmount,
 }: {
   seller?: string;
   cap: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean; cap: number; deposited: number };
@@ -844,6 +845,9 @@ export function DepositTransferPanel({
   minHard?: number;
   /** 底部说明文案(默认 PM 文案)。 */
   hint?: string;
+  /** 固定档位金额(HL 充值绑定风控)。有值 → 锁定金额、隐藏预设网格 + 自由输入。
+   *  不传(如 PM 流程)→ 行为完全不变(预设 + 自由输入)。 */
+  lockedAmount?: number;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -856,6 +860,12 @@ export function DepositTransferPanel({
   const [granting, setGranting] = useState(false);
   const [amount, setAmount] = useState("");
   const { mutate: sendTx, isPending } = useSendTransaction();
+
+  // 固定档位:锁定金额(隐藏自由输入/预设),amt 始终 = lockedAmount。
+  const locked = lockedAmount != null && lockedAmount > 0;
+  useEffect(() => {
+    if (locked) setAmount(String(lockedAmount));
+  }, [locked, lockedAmount]);
 
   // 连接钱包代币余额(6 位小数)。
   const token = getContract({ client: thirdwebClient, chain, address: tokenAddress });
@@ -1008,48 +1018,58 @@ export function DepositTransferPanel({
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-1.5">
-        {BUY_PRESETS.map((p) => {
-          const presetDisabled = !cap.loading && (p < minPerTx || p > remaining);
-          return (
-            <button
-              key={p}
-              type="button"
-              disabled={presetDisabled}
-              onClick={() => setAmount(String(p))}
-              className={cn(
-                "h-11 rounded-xl text-[13px] font-bold tabular-nums transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed",
-                amt === p
-                  ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-black border border-amber-400"
-                  : "bg-white/[0.04] text-foreground/80 border border-white/10 hover:border-amber-400/40",
-              )}
-            >
-              ${p}
-            </button>
-          );
-        })}
-      </div>
+      {locked ? (
+        /* 固定档位:只读「已选 $X(绑定风控)」,不可自由输入/选预设。 */
+        <div className="flex items-center justify-between rounded-xl bg-amber-500/[0.08] border border-amber-400/30 px-3 h-12" data-testid="deposit-locked-amount">
+          <span className="text-[12px] text-amber-200/80">{t("deposit.lockedSelected", "已选金额(绑定风控)")}</span>
+          <span className="text-[16px] font-extrabold tabular-nums num-gold">${lockedAmount!.toLocaleString()} <span className="text-[11px] font-normal text-muted-foreground">{tokenLabel}</span></span>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-4 gap-1.5">
+            {BUY_PRESETS.map((p) => {
+              const presetDisabled = !cap.loading && (p < minPerTx || p > remaining);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  disabled={presetDisabled}
+                  onClick={() => setAmount(String(p))}
+                  className={cn(
+                    "h-11 rounded-xl text-[13px] font-bold tabular-nums transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed",
+                    amt === p
+                      ? "bg-gradient-to-br from-amber-400 to-yellow-600 text-black border border-amber-400"
+                      : "bg-white/[0.04] text-foreground/80 border border-white/10 hover:border-amber-400/40",
+                  )}
+                >
+                  ${p}
+                </button>
+              );
+            })}
+          </div>
 
-      <div className="flex items-center rounded-xl bg-background/60 border border-white/10 px-3 h-11 focus-within:border-amber-400/50 transition-colors">
-        <span className="text-[13px] text-muted-foreground mr-1">$</span>
-        <Input
-          type="number"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder={t("deposit.customAmount", "自定义金额")}
-          className="border-0 bg-transparent px-0 h-auto text-[15px] font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
-        />
-        <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{tokenLabel}</span>
-        <button
-          type="button"
-          onClick={onMax}
-          disabled={maxFill < minPerTx}
-          className="ml-2 shrink-0 text-[11px] font-bold text-amber-300 hover:underline disabled:opacity-30 disabled:no-underline"
-        >
-          {t("deposit.max", "全部")}
-        </button>
-      </div>
+          <div className="flex items-center rounded-xl bg-background/60 border border-white/10 px-3 h-11 focus-within:border-amber-400/50 transition-colors">
+            <span className="text-[13px] text-muted-foreground mr-1">$</span>
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={t("deposit.customAmount", "自定义金额")}
+              className="border-0 bg-transparent px-0 h-auto text-[15px] font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{tokenLabel}</span>
+            <button
+              type="button"
+              onClick={onMax}
+              disabled={maxFill < minPerTx}
+              className="ml-2 shrink-0 text-[11px] font-bold text-amber-300 hover:underline disabled:opacity-30 disabled:no-underline"
+            >
+              {t("deposit.max", "全部")}
+            </button>
+          </div>
+        </>
+      )}
 
       {!cap.loading && amt > 0 && !amountValid && (
         <p className="text-[11px] text-red-400 leading-snug" data-testid="deposit-cap-error">
@@ -1094,13 +1114,16 @@ export function DepositTransferPanel({
 // 注意:HL **agent 模式不要用这个面板**(HL 把发送地址记为账户,第三方扫码打款
 // 会把钱记到对方的 HL 账户),agent 模式用引导面板。
 export function DepositAddressPanel({
-  seller, cap, onCopy, warnText,
+  seller, cap, onCopy, warnText, lockedAmount,
 }: {
   seller?: string;
   cap: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean };
   onCopy: (addr: string) => void;
   /** 红色警示文案(默认 PM:仅 Polygon pUSD)。 */
   warnText?: string;
+  /** 固定档位金额(HL 充值绑定风控)。有值 → 在地址上方显示「请转入 $X」指引。
+   *  不传(如 PM 流程)→ 行为完全不变。 */
+  lockedAmount?: number;
 }) {
   const { t } = useTranslation();
   const [qr, setQr] = useState<string>("");
@@ -1126,8 +1149,16 @@ export function DepositAddressPanel({
     );
   }
 
+  const locked = lockedAmount != null && lockedAmount > 0;
+
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 space-y-3">
+      {/* 固定档位:在地址上方显示「请转入 $X USDC」指引(绑定风控)。 */}
+      {locked && (
+        <div className="rounded-xl bg-amber-500/[0.08] border border-amber-400/30 px-3 py-2.5 text-[12px] text-amber-200/90 leading-snug" data-testid="deposit-locked-amount">
+          {t("deposit.lockedTransferHint", "请准确转入 ${{amount}} USDC(该金额绑定风控规则)", { amount: lockedAmount!.toLocaleString() })}
+        </div>
+      )}
       {/* 二维码居中。 */}
       <div className="flex justify-center">
         {qr ? (
@@ -1201,7 +1232,7 @@ function startDepositRefreshPolling(onSuccess?: () => void) {
 }
 
 export function DepositBuyPanel({
-  chain, token, seller, assetLabel, onSuccess, cap,
+  chain, token, seller, assetLabel, onSuccess, cap, lockedAmount,
 }: {
   chain: any; // thirdweb Chain（polygon / arbitrum）
   token: `0x${string}`;
@@ -1214,6 +1245,9 @@ export function DepositBuyPanel({
    *  传入时:金额必须 ≥ minPerTx 且 ≤ remaining;预设按钮过滤越界值;
    *  无授权码(!hasCode)或 remaining<minPerTx → 阻断充值并提示。 */
   cap?: { remaining: number; minPerTx: number; hasCode: boolean; loading: boolean };
+  /** 固定档位金额(HL 充值绑定风控)。有值 → 用它当购买金额、隐藏自由输入/预设。
+   *  不传(如 PM 流程)→ 行为完全不变。PayEmbed/seller/onSuccess 逻辑不动。 */
+  lockedAmount?: number;
 }) {
   const { t } = useTranslation();
   const account = useActiveAccount();
@@ -1221,6 +1255,12 @@ export function DepositBuyPanel({
   const [confirmed, setConfirmed] = useState(false);
   const [done, setDone] = useState(false);
   const amt = Number(amount);
+
+  // 固定档位:锁定购买金额(隐藏自由输入/预设)。
+  const locked = lockedAmount != null && lockedAmount > 0;
+  useEffect(() => {
+    if (locked) setAmount(String(lockedAmount));
+  }, [locked, lockedAmount]);
   // 充值目标 = 后端读余额/执行的地址(PM=派生 Polymarket 钱包 / HL=托管 EOA),由调用方传入。
   // **绝不回退到连接钱包**:连接钱包不是后端读钱的地址,回退会导致"充值不到账"。
   // seller 未就绪 → 不渲染买入流程,显示"地址准备中"(见下方守卫),而不是打到错地址。
@@ -1311,6 +1351,14 @@ export function DepositBuyPanel({
 
       {!confirmed || !(amt > 0) ? (
         <>
+          {locked ? (
+            /* 固定档位:只读「已选 $X(绑定风控)」,不可自由输入/选预设。 */
+            <div className="flex items-center justify-between rounded-xl bg-amber-500/[0.08] border border-amber-400/30 px-3 h-12" data-testid="deposit-locked-amount">
+              <span className="text-[12px] text-amber-200/80">{t("deposit.lockedSelected", "已选金额(绑定风控)")}</span>
+              <span className="text-[16px] font-extrabold tabular-nums num-gold">${lockedAmount!.toLocaleString()} <span className="text-[11px] font-normal text-muted-foreground">{assetLabel}</span></span>
+            </div>
+          ) : (
+            <>
           <div className="grid grid-cols-4 gap-1.5">
             {BUY_PRESETS.map((p) => {
               // 限额生效时过滤越界预设:<minPerTx 或 >remaining 的禁用。
@@ -1345,6 +1393,8 @@ export function DepositBuyPanel({
             />
             <span className="text-[11px] text-muted-foreground ml-1 shrink-0">{assetLabel}</span>
           </div>
+            </>
+          )}
           {/* 金额越界红字提示(限额生效且已输入金额时)。 */}
           {capEnabled && !capLoading && amt > 0 && !amountValid && (
             <p className="text-[11px] text-red-400 leading-snug" data-testid="deposit-cap-error">
@@ -1463,8 +1513,9 @@ export function WithdrawDialog({
       if (error) throw error;
     },
     onSuccess: () => {
-      // 文案改为「审核中」——资金不即时到账,等公司审核打款。
-      toast({ title: t("copyTrading.withdrawPending", "提现申请已提交"), description: t("copyTrading.withdrawPendingDesc", "申请审核中,通过后将由公司打款到账。") });
+      // 文案口径:链上提现(产品要求去掉「公司审批/打款」字眼）。⚠️ 后端目前仍写 member_withdraw_requests 待处理,
+      // 非即时链上;若要名副其实须改走链上 wallet-withdraw(polymarket-withdraw)。
+      toast({ title: t("copyTrading.withdrawPending", "链上提现已提交"), description: t("copyTrading.withdrawPendingDesc", "提现已提交，将在链上处理并到账到目标地址。") });
       reset();
       onOpenChange(false);
     },

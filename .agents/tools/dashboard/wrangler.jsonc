@@ -1,0 +1,11 @@
+{
+  // rune-dashboard — one-agents 平台监控面板
+  // 部署：wrangler secret put PUSH_SECRET; wrangler deploy
+  "name": "rune-dashboard",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-06-01",
+  "kv_namespaces": [
+    { "binding": "DASH", "id": "36b7823fc26e425aa0c6f8fcc446a077" }
+  ]
+  // PUSH_SECRET 走 secret：wrangler secret put PUSH_SECRET
+}

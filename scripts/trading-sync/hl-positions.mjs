@@ -81,11 +81,23 @@ async function fetchRealPositions(host, follower) {
   return { positions: out, account: acct };
 }
 
+// follower 集 = 现有订阅 ∪ 真实持仓表里已有行的 follower。
+//   并上后者是为了根治"幽灵持仓":用户停止/取消跟单后订阅行没了,但 trading_hl_real_positions
+//   里的旧行若不再被访问就永远不会 reconcile → 前端永久显示持仓中。把这些 follower 也纳入,
+//   下一轮拉到真实账户已无该仓 → 走 syncFollower 的删除分支清零。幂等、只增覆盖面。
 async function getFollowers(dst) {
   const { rows } = await dst.query(`
-    select distinct lower(s.follower_address) as follower_address, s.network, s.user_id
-    from public.trading_hl_copy_subscriptions s
-    where s.follower_address is not null and s.user_id is not null`);
+    select follower_address, network, max(user_id::text)::uuid as user_id
+    from (
+      select distinct lower(s.follower_address) as follower_address, s.network, s.user_id
+      from public.trading_hl_copy_subscriptions s
+      where s.follower_address is not null and s.user_id is not null
+      union
+      select distinct lower(rp.follower_address) as follower_address, rp.network, rp.user_id
+      from public.trading_hl_real_positions rp
+      where rp.follower_address is not null
+    ) u
+    group by follower_address, network`);
   return rows;
 }
 

@@ -4,7 +4,7 @@ import { PageEnter, PageEnterStagger, PageEnterItem } from "@app/components/page
 import { useActiveAccount } from "thirdweb/react";
 import {
   Copy, Check, ChevronRight, Bell, Settings, History, GitBranch, Share2,
-  ArrowLeftRight, User, Vault, Lock, Flame, TrendingUp, Coins, Wallet,
+  ArrowLeftRight, User, Vault, Lock, Flame, TrendingUp, Coins, Wallet, LifeBuoy,
 } from "lucide-react";
 import { useToast } from "@app/hooks/use-toast";
 import { copyText } from "@app/lib/copy";
@@ -15,9 +15,11 @@ import { buildReferralUrl } from "@/hooks/rune/use-referral-param";
 import {
   useEngineUser, useCopySubs, useHlSubs,
 } from "@app/lib/engine-hooks";
+import type { HlNetwork } from "@app/lib/engine";
+import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
+import { usePusdBalanceAdjusted } from "@app/lib/pm-display-overrides";
 import { useWalletTodayStats, numOrZero } from "@app/lib/trading-stats-hooks";
-import { useMemberAccount } from "@app/lib/member-account-hooks";
-import { asArray, fmtUsd } from "@app/components/copy-trading/shared";
+import { asArray, fmtUsd, pusdAmount } from "@app/components/copy-trading/shared";
 import { Activity, Layers } from "lucide-react";
 
 // MENU_ITEMS deliberately omits the "Referral & Team" entry — it lives
@@ -29,6 +31,7 @@ const MENU_ITEMS = [
   { labelKey: "profile.myVaultPositions",  icon: Vault,          path: "/profile/vault",        descKey: "profile.myVaultPositionsDesc" },
   { labelKey: "profile.swap",              icon: ArrowLeftRight, path: "/profile/swap",         descKey: "profile.swapDesc" },
   { labelKey: "profile.notifications",     icon: Bell,           path: "/profile/notifications", descKey: "profile.notificationsDesc" },
+  { labelKey: "profile.support",           icon: LifeBuoy,       path: "/support",              descKey: "profile.supportDesc" },
   { labelKey: "profile.settings",          icon: Settings,       path: "/profile/settings",     descKey: "profile.settingsDesc" },
 ];
 
@@ -78,11 +81,16 @@ function AnimUsdt({ value }: { value: number }) {
  *    settlement contracts aren't live yet)
  */
 /**
- * Engine copy-trading summary — surfaces live One-Agents Engine data on the
- * profile: HL account value + open positions (useHlAccount), Polymarket pUSD
- * balance + copy-subscription count, and a copy-trading performance summary
- * derived from the local order history (useOrders). Real data only; gracefully
- * hides itself when the wallet has no engine user / no HL account.
+ * Engine copy-trading summary — surfaces **live on-chain** One-Agents Engine
+ * data on the profile, NOT the v_member_account ledger view:
+ *   • HL Account net value + 浮盈 + 持仓数 → useHlAccountAdjusted → engine
+ *     /v1/hl/account (live clearinghouseState: accountValue / unrealizedPnl /
+ *     positions), polled, keyed by the vault-backed HL address (engineEoaAddress,
+ *     or hlMasterAddress in agent mode) — same resolution as the strategy page.
+ *   • pUSD balance → usePusdBalanceAdjusted → engine live pusd-balance (on-chain
+ *     USDC collateral), not a zeroed ledger row.
+ *   • Today PnL → useWalletTodayStats (cross-venue, coalesce(manual, real)).
+ * Gracefully hides itself when the wallet has no engine user.
  */
 function EngineSummaryCard({ wallet }: { wallet: string }) {
   const { t } = useTranslation();
@@ -91,27 +99,40 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
 
   const pmSubsQ = useCopySubs(userId);
   const hlSubsQ = useHlSubs(userId);
-  // 账户/盈亏/持仓全部读会员虚拟账本(v_member_account,三市场行)——
-  // HL 账户净值 = hl_mainnet equity;pUSD 余额 = polymarket equity;浮盈/持仓数 = 三市场汇总。
-  const memberAcct = useMemberAccount(wallet);
-  // 当日盈亏:账本视图无对应列,取 Supabase 当日统计跨 venue 汇总(manual 优先)。
+
+  // 账户净值 / pUSD / 浮盈 / 持仓数全部走**链上实时**(不再读 v_member_account 虚拟账本台账,
+  // 该视图 withdrawable/equity 是流水推算且有转出符号 bug → 与链上不同步、虚高)。
+  // HL: 引擎 /v1/hl/account = 实时 clearinghouseState(accountValue / unrealizedPnl / positions),
+  //     按 HL 账户地址查;v3 Vault 迁移后地址解析必须取 vault-backed 账户(engineEoaAddress),
+  //     agent 模式取 hlMasterAddress —— 与 strategy 页 (engine-page.tsx) 同一解析法,避免解析到旧空账户。
+  const network: HlNetwork = "mainnet";
+  const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
+  const agentMode = hlUser?.hlMode === "agent";
+  const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : hlUser?.engineEoaAddress;
+  const hlAcctQ = useHlAccountAdjusted(hlAddress, network, wallet);
+  const hlAcct = hlAcctQ.data;
+
+  // pUSD: 引擎实时 pusd-balance(链上 USDC 抵押),叠 admin 覆盖。非台账。
+  const pusdQ = usePusdBalanceAdjusted(userId, wallet);
+  const pusd = pusdAmount(pusdQ.data);
+
+  // 当日盈亏:跨 PM + HL 汇总,取 Supabase 当日统计视图(coalesce(manual, 真实);
+  // 引擎 HL account 的 todayPnl 只覆盖 HL,跨 venue 当日口径仍用此视图)。
   const statsQ = useWalletTodayStats(wallet);
 
-  const hlLedger = memberAcct.byVenue("hl_mainnet");
-  const pmLedger = memberAcct.byVenue("polymarket");
-  const hlAcctVal = numOrZero(hlLedger?.equity);
-  const pusd = numOrZero(pmLedger?.equity);
-  // 跨三市场浮盈 / 持仓数(账本汇总);当日盈亏取当日统计视图。
+  const hlAcctVal = numOrZero(hlAcct?.accountValue);
+  // 浮盈 / 持仓数 = 链上实时 HL 账户(PM 持仓数走订阅数,见下)。
   const agg = useMemo(() => {
-    const unreal = memberAcct.rows.reduce((s, r) => s + numOrZero(r.unrealized_pnl), 0);
-    const open = memberAcct.rows.reduce((s, r) => s + numOrZero(r.open_positions), 0);
+    const unreal = numOrZero(hlAcct?.unrealizedPnl);
+    const open = (hlAcct?.positions ?? []).length;
     const dayPnl = (statsQ.data ?? []).reduce((s, d) => s + numOrZero(d.day_pnl_usd), 0);
     return { dayPnl, unreal, open };
-  }, [memberAcct.rows, statsQ.data]);
+  }, [hlAcct?.unrealizedPnl, hlAcct?.positions, statsQ.data]);
 
   const pmSubCount = asArray(pmSubsQ.data).filter((s: any) => s?.status !== "stopped").length;
   const hlSubCount = (hlSubsQ.data?.subscriptions ?? []).filter((s: any) => s?.status !== "stopped").length;
   const hlOpen = agg.open;
+  const acctLoading = hlAcctQ.isLoading;
 
   // While the engine user is resolving, hold a slot so the card doesn't pop in.
   if (userQ.isLoading) return <div className="glass-panel h-40" />;
@@ -138,19 +159,20 @@ function EngineSummaryCard({ wallet }: { wallet: string }) {
           <div>
             <div className="text-xs text-white/50 mb-1">{t("profile.hlAccount", "HL Account")}</div>
             <div className="text-2xl font-bold text-white tabular-nums">
-              {memberAcct.isLoading ? "…" : fmtUsd(hlAcctVal)}
+              {acctLoading ? "…" : fmtUsd(hlAcctVal)}
             </div>
             <div className="text-[10px] text-white/40 mt-0.5">{hlOpen} {t("profile.hlOpenPositions", "open positions")}</div>
           </div>
           <div className="text-right">
             <div className="text-xs text-white/50 mb-1">{t("profile.pmBalance", "pUSD")}</div>
             <div className="text-sm font-medium text-white/90 tabular-nums">
-              {memberAcct.isLoading ? "…" : fmtUsd(pusd)}
+              {pusdQ.isLoading ? "…" : fmtUsd(pusd)}
             </div>
           </div>
         </div>
 
-        {/* 当日表现汇总(跨 PM + HL 主/测网,Supabase 当日统计 = coalesce(manual,真实))*/}
+        {/* 当日表现汇总:当日盈亏 = Supabase 当日统计(coalesce(manual,真实),跨 PM+HL);
+            浮盈 / 持仓数 = 链上实时 HL 账户(/v1/hl/account)。*/}
         <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/10">
           <div className="text-center">
             <div className={`text-sm font-bold tabular-nums ${agg.dayPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>

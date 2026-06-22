@@ -265,6 +265,40 @@ export interface HlAgentApproveBody {
   network?: HlNetwork;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// agent — conversational strategy chat (Bearer). Scoped per user so the agent
+// can build a personal memory/preference bank. Backend route `hl/agent/chat`
+// is pending; the UI (AgentChat) degrades gracefully (offline bubble) until it ships.
+// ─────────────────────────────────────────────────────────────────────────────
+/** A transaction prepared by the thirdweb Nebula on-chain brain, to be signed by the user's wallet. */
+export interface AgentChatAction {
+  type: string;
+  source?: string;
+  data?: { chainId: number; to: string; value?: string; data?: string; function?: string | null };
+}
+export interface AgentChatReply {
+  reply: string;
+  /** Nebula-prepared transactions (on-chain branch). Empty/absent for the strategy brain. */
+  actions?: AgentChatAction[];
+  /** Nebula session id — persist client-side and echo back for multi-turn on-chain context. */
+  sessionId?: string;
+  /** true when answered by the on-chain brain (Nebula). */
+  onchain?: boolean;
+  prefsUpdated?: boolean;
+}
+
+export const agent = {
+  chat: (body: {
+    userId?: string;
+    message: string;
+    history?: Array<{ role: string; text: string }>;
+    lang?: string;
+    strategyId?: string;
+    walletAddress?: string;
+    sessionId?: string;
+  }) => post<AgentChatReply>("v1/hl/agent/chat", body),
+};
+
 export const hyperliquid = {
   /** withdraw3 → Arbitrum address. */
   withdraw: (userId: string, body: unknown) =>
@@ -345,7 +379,38 @@ export const hyperliquid = {
   /** F17 — this user's AI copy-trade decision stream (drives the decision cards). */
   copyDecisions: (userId: string) =>
     get<{ userId: string; decisions: HlCopyDecision[] }>(`v1/users/${userId}/hl/copy-decisions`),
+
+  /**
+   * 账户净值历史曲线 —— worker equity-snapshot job 落的多日真实净值序列
+   * (live: hl-read.ts GET /v1/users/:userId/hl/equity-curve?days=N)。无快照 → points:[]。
+   */
+  equityCurve: (userId: string, days = 30) =>
+    get<{ userId: string; days: number; points: HlEquityPoint[] }>(
+      `v1/users/${userId}/hl/equity-curve${qs({ days })}`,
+    ),
+
+  /**
+   * One-click STOP ALL copy-trading: pause every active HL + PM subscription for this user
+   * (live: hl-read.ts POST /v1/users/:userId/stop-all). Idempotent — only flips `active`→`paused`,
+   * so existing positions still get AI-managed exits (mirror close / TP-SL); no NEW positions open.
+   */
+  stopAll: (userId: string) =>
+    post<{ ok: boolean; paused: number; hl: number; pm: number }>(`v1/users/${userId}/stop-all`, {}),
+
+  /**
+   * 选择/切换策略市场(单选)。把该用户所有 HL 订阅的 allowed_coins 设成该板块的币种宇宙,
+   * 执行器据此只交易该板块的币(live: hl-read.ts POST /v1/users/:userId/strategy-market)。
+   */
+  setStrategyMarket: (userId: string, market: string) =>
+    post<{ ok: boolean; market: string; updated: number; coins: number }>(`v1/users/${userId}/strategy-market`, { market }),
 };
+
+/** 一点净值快照(GET /v1/users/:userId/hl/equity-curve)。 */
+export interface HlEquityPoint {
+  ts: string;
+  accountValue: number | null;
+  unrealizedPnl: number | null;
+}
 
 /** One AI copy-trade decision (从 ai_inferences,kind='copy-trade-decision')。 */
 export interface HlCopyDecision {

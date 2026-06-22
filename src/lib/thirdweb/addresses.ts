@@ -29,16 +29,3 @@ const mainnet: RuneAddresses = {
 export function getRuneAddresses(chainKey: RuneChainKey): RuneAddresses {
   return chainKey === "bsc_mainnet" ? mainnet : testnet;
 }
-
-// ─── Arbitrum 节点购买(与 BSC NodePresell 并存,独立常量,勿塞进上面的二选一)──
-//
-// 链上 thirdweb Edition Drop (DropERC1155) 已部署在 Arbitrum One (chainId 42161),
-// 支付币种 = Arbitrum 原生 USDC(6 位)。地址做成 env 可覆盖,默认 = 真实部署地址,
-// 换一套部署不必重新构建。claim conditions(价格/限量/每钱包)已在链上配好,
-// 5 档 = token id 0–4,前端直接 read。
-export const ARB_NODE_DROP_ADDRESS = ((import.meta.env.VITE_ARB_NODE_DROP as string | undefined)
-  || "0x9D296E2A959a3f584500913f19a0Dc2dfC7307a1") as `0x${string}`;
-
-/** Arbitrum 原生 USDC(6 位)—— Edition Drop 的 claim 收款币种。 */
-export const ARB_USDC_ADDRESS = ((import.meta.env.VITE_ARB_USDC as string | undefined)
-  || "0xaf88d065e77c8cC2239327C5EDb3A432268e5831") as `0x${string}`;

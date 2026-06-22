@@ -770,7 +770,7 @@ export default function Rune() {
               Icon: Flame,
               rows: [
                 { kKey: "mr.rune.token.open",      kEn: "Open",        v: `$${overview.motherToken.launchPrice}`, accent: false },
-                { kKey: "mr.rune.token.supply",    kEn: "Supply",      v: `${((overview.motherToken.totalSupply ?? 0)/1e8).toFixed(1)}${isEn ? "B" : t("mr.rune.kpi.tokensUnit")}`, accent: false },
+                { kKey: "mr.rune.token.supply",    kEn: "Supply",      v: isEn ? `${((overview.motherToken.totalSupply ?? 0)/1e6).toFixed(0)}M` : `${((overview.motherToken.totalSupply ?? 0)/1e8).toFixed(1)}亿${t("mr.rune.kpi.tokensUnit")}`, accent: false },
                 { kKey: "mr.rune.token.dailyBurn", kEn: "Daily Burn",  v: `${((overview.motherToken.dailyBurnRate ?? 0)*100).toFixed(1)}%`, accent: false },
                 { kKey: "mr.rune.token.target24M", kEn: "24M Target",  v: `$${overview.motherToken.targetPriceLow}~${overview.motherToken.targetPriceHigh}`, accent: true },
               ],

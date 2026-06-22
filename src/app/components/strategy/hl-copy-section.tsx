@@ -28,7 +28,7 @@ import {
   Wallet, TrendingUp, TrendingDown, Zap, Crown, ShieldCheck, CheckCircle2,
   Loader2, Circle, AlertTriangle, RefreshCw, Copy, ArrowDownToLine, ArrowUpFromLine,
   Settings, ChevronRight, Sparkles, ArrowLeft, Pause, Play, X, ExternalLink,
-  KeyRound, Server, QrCode,
+  KeyRound, Server, QrCode, Ban,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -43,22 +43,25 @@ import { queryClient } from "@app/lib/queryClient";
 import { useToast } from "@app/hooks/use-toast";
 import { arbitrum } from "@/lib/thirdweb/chains";
 import {
-  useEngineUser, useHlLeaders, useHlSignals, useHlSubs, useHlSubMutations, useHlClose,
-  useConsolePacks,
+  useEngineUser, useHlLeaders, useHlSignals, useHlSubs, useHlSubMutations, useStopAllCopy,
+  useConsolePacks, useHlAccount,
 } from "@app/lib/engine-hooks";
+import { useHlAccountAdjusted } from "@app/lib/hl-display-overrides";
 import {
   useWalletOpenPositions, useWalletTodayClosed, useWalletDailyHistory, useWalletTodayStats,
+  useWalletAccountSummary,
   fmtPct as fmtStatsPct, numOrZero,
   type StatsVenue, type OpenPositionRow, type TodayClosedRow, type WalletDailyRow,
 } from "@app/lib/trading-stats-hooks";
-import { useMemberAccount } from "@app/lib/member-account-hooks";
-import { supabase } from "@app/lib/supabase-client";
 import { hyperliquid, users } from "@app/lib/engine";
 import type { ConsolePack, HlLeader, HlNetwork, HlPosition, HlSignal, HlFillRow } from "@app/lib/engine";
 import { TradeRecordsDetail } from "@app/components/copy-trading/trade-records-detail";
 import { AiDecisionCards } from "./ai-decision-cards";
 import { HlVaultsPanel } from "./hl-vaults-panel";
 import { AiLab } from "./ai-lab";
+import { DecisionLog } from "./decision-log";
+import { EngineStats } from "./engine-live";
+import { AgentChat } from "./agent-chat";
 import {
   NetworkToggle, HlEmpty, useHlCopy, executorOnlyConfig, TIER_META, tierOf,
   shortAddr, fmtUsd, fmtHold, fmtScore, fmtTimeAgo,
@@ -68,6 +71,8 @@ import { useOnboardFlow, DepositBuyPanel, DepositTransferPanel, DepositAddressPa
 import { HL_BRIDGE2_MAINNET } from "@app/components/hl/hl-deposit-guide";
 import { useDepositCap } from "@/hooks/rune/use-deposit-cap";
 import { HlDepositGuide } from "@app/components/hl/hl-deposit-guide";
+import { DepositTierPicker } from "@app/components/strategy/deposit-tier-picker";
+import { DepositWizard } from "@app/components/strategy/deposit-wizard";
 
 // Native USDC on Arbitrum One — the asset the engine custodial EOA accepts for
 // HL deposits (mainnet). PayEmbed bridges/buys this directly to that address.
@@ -133,12 +138,12 @@ function AddressLine({ address, label }: { address: string; label?: string }) {
 // 充值:展示用户的引擎托管 EOA(= HL 签名者/账户),用户从 Arbitrum 把 USDC 充进去;
 //       测试网用 HL 测试网水龙头/桥。地址来自 engineUser.engineEoaAddress —— 未开户时为空,
 //       由 HlAccountStrip 的「开通账户」先把它创建出来(解决"充值地址生成不出来")。
-// 提现:写 member_withdraw_requests(pending,venue=hl_<network>),公司审核后线下打款(申请审核模型)。
+// 提现:hyperliquid.withdraw → 引擎签 withdraw3 经官方桥把 USDC 提到指定 Arbitrum 地址。
 // 弹窗用 w-[calc(100vw-2rem)] max-w-sm + footer 在 <sm 纵向堆叠,适配手机端。
 // 跨链 / 买币直充(thirdweb PayEmbed)—— Arbitrum USDC 直接到托管 EOA(=seller)。
 // 资金只会进引擎托管地址(HL 下单账户),与 copy-trading 的 DepositBridge 同构,
 // 仅链/资产不同(Arbitrum USDC)。先输金额→下一步→PayEmbed,弹窗内可滚动且自适应宽度。
-function HlFunding({
+export function HlFunding({
   userId, network, depositAddress, withdrawable, agentMode = false, wallet, accountValue = 0,
 }: { userId: string; network: HlNetwork; depositAddress: string; withdrawable: number;
   /** 非托管 agent 模式:充值目标 = 用户自己的钱包(=HL 主账户),并隐藏站内提现
@@ -153,11 +158,13 @@ function HlFunding({
   const account = useActiveAccount();
   // HL 充值限额:hl_cap_usd − 当前账户净值;无授权码 → cap 0 → 阻断。
   const cap = useDepositCap(wallet, "hl", accountValue);
+  const nodeGate = useNodeGate(wallet);
   const [depOpen, setDepOpen] = useState(false);
   const [wdOpen, setWdOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [dest, setDest] = useState("");
   const [confirming, setConfirming] = useState(false);
+  // 充值分步向导(选金额包 → 选支付方式 → 支付)已抽成独立组件 DepositWizard,自管状态。
 
   // agent 模式下 HL 账户 = 用户自己的连接钱包(master),充值就充进它;custodial 充进托管 EOA。
   const depositTarget = agentMode ? (account?.address ?? "") : depositAddress;
@@ -177,26 +184,11 @@ function HlFunding({
     if (wdOpen && !dest && account?.address) setDest(account.address);
   }, [wdOpen, account?.address, dest]);
 
-  // 提现走「申请审核」模型:写 member_withdraw_requests(pending,venue=hl_<network>),
-  // 公司审核后线下打款。会员看到的虚拟账本与真实链上账户解耦,不再直接调引擎 hyperliquid.withdraw。
-  const memberAcct = useMemberAccount(wallet);
   const withdraw = useMutation({
-    mutationFn: async () => {
-      const uid = memberAcct.userId;
-      if (!uid) throw new Error("member account not resolved");
-      const w = (wallet ?? account?.address ?? "").trim();
-      const { error } = await supabase.from("member_withdraw_requests").insert({
-        user_id: uid,
-        wallet: w,
-        amount_usd: amt,
-        venue: `hl_${network}`,
-        status: "pending",
-        note: `dest:${dest.trim()}`,
-      });
-      if (error) throw error;
-    },
+    mutationFn: async () => hyperliquid.withdraw(userId, { amountUsd: amt, destination: dest.trim(), network }),
     onSuccess: () => {
-      toast({ title: t("hl.withdrawPending", "提现申请已提交"), description: t("hl.withdrawPendingDesc", "申请审核中,通过后将由公司打款到账。") });
+      toast({ title: t("hl.withdrawSuccess", "提现已提交"), description: t("hl.withdrawSuccessDesc", "USDC 将经官方桥到达目标 Arbitrum 地址(约几分钟,含 ~$1 桥费)。") });
+      queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
       reset(); setWdOpen(false);
     },
     onError: (e: unknown) => toast({ title: t("common.error", "出错了"), description: String((e as { message?: string })?.message ?? e), variant: "destructive" }),
@@ -288,85 +280,17 @@ function HlFunding({
                  - agent:Tab1 直转 → HL Bridge2(sender=连接钱包=HL 账户,这是 HL 的入金机制);
                    Tab2 **不给二维码**(第三方扫码打款会把钱记到对方的 HL 账户)→ 引导+警示;
                    Tab3 PayEmbed 把 USDC 买/桥到自己钱包,再用 Tab1 发往 Bridge2。 */
-              <Tabs defaultValue="transfer">
-                <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-                  <TabsTrigger value="transfer" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
-                    <Wallet className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{t("deposit.tabTransfer", "钱包转账")}</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="address" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
-                    <QrCode className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{agentMode ? t("hl.tabDepositGuide", "充值引导") : t("deposit.tabAddress", "地址/扫码")}</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="bridge" className="text-[11.5px] sm:text-[12px] px-1 py-1.5 gap-1">
-                    <Zap className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{t("deposit.tabBridge", "跨链充值")}</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Tab 1 — 钱包直转 USDC(Arbitrum):先切链,gas 不足自动领,再拉起授权。 */}
-                <TabsContent value="transfer" className="space-y-3">
-                  <DepositTransferPanel
-                    seller={transferTarget || undefined}
-                    cap={cap}
-                    chain={arbitrum}
-                    tokenAddress={USDC_ARBITRUM}
-                    tokenLabel="USDC"
-                    chainLabel="Arbitrum"
-                    gasChain="arbitrum"
-                    minHard={5}
-                    hint={agentMode
-                      ? t("hl.transferHintAgent", "USDC 将由你连接的钱包直接发往 HL Bridge2,HL 会把发送地址(=你的钱包)记为你的 HL 账户。最低 5 USDC,约 1 分钟到账。")
-                      : t("hl.transferHintCustodial", "仅支持 Arbitrum 网络的 USDC,资金将进入你的托管交易地址并自动转入 HL 账户。最低 5 USDC。")}
-                    onSuccess={() => queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] })}
-                    onCopy={copyAny}
-                  />
-                </TabsContent>
-
-                {/* Tab 2 — 托管:地址/二维码(任何来源都可打款到托管 EOA,安全);
-                            agent:引导 + 强警示,绝不展示 Bridge2 二维码。 */}
-                <TabsContent value="address" className="space-y-3">
-                  {agentMode ? (
-                    <>
-                      <HlDepositGuide network={network} />
-                      <div className="rounded-xl p-2.5 flex items-start gap-2"
-                        style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.25)" }}>
-                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-300" />
-                        <p className="text-[11px] leading-snug text-red-100/85">
-                          {t("hl.bridge2Warn", "切勿从交易所或他人钱包直接向 Bridge2 转账 —— HL 会把「发送地址」记为入金账户,资金会进入对方的 HL 账户且无法找回。请使用「钱包转账」由本人连接的钱包发出。")}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <DepositAddressPanel
-                      seller={depositTarget || undefined}
-                      cap={cap}
-                      onCopy={copyAny}
-                      warnText={t("hl.addressWarn", "仅支持 Arbitrum 网络的 USDC,转入其他代币 / 其他链将无法找回。")}
-                    />
-                  )}
-                </TabsContent>
-
-                {/* Tab 3 — 跨链充值(原 DepositBuyPanel 逻辑原样):custodial→托管 EOA;agent→自己钱包。 */}
-                <TabsContent value="bridge" className="space-y-3">
-                  {depositTarget ? (
-                    <DepositBuyPanel
-                      chain={arbitrum}
-                      token={USDC_ARBITRUM}
-                      seller={depositTarget}
-                      assetLabel="USDC"
-                      cap={cap}
-                      onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: ["engine", "hl", "account"] });
-                        // 成功后自动关闭弹窗(留 1.5s 让 PayEmbed 成功态可见),HL 账户余额已失效→重读。
-                        window.setTimeout(() => setDepOpen(false), 1500);
-                      }}
-                    />
-                  ) : (
-                    <p className="text-[12px] text-muted-foreground text-center py-3">{t("hl.addressNeedOnboard", "暂无地址 —— 请先开通账户")}</p>
-                  )}
-                </TabsContent>
-              </Tabs>
+              <DepositWizard
+                open={depOpen}
+                network={network}
+                agentMode={agentMode}
+                depositTarget={depositTarget}
+                transferTarget={transferTarget}
+                level={nodeGate.level}
+                cap={cap}
+                onCopy={copyAny}
+                onClose={() => setDepOpen(false)}
+              />
             )}
           </div>
         </DialogContent>
@@ -903,7 +827,7 @@ function SectionHeader({
 // Reuses the hero/stats glass-panel-strong shell verbatim so the design stays
 // unified across hero → 统计台 → 金库 cards (same shimmer + amber glow + cells).
 
-function HubStatsBar({
+export function HubStatsBar({
   wallet, venue, loading, accountValue, followCount, reduce,
 }: {
   wallet?: string; venue: StatsVenue; loading: boolean; accountValue: number; followCount: number; reduce: boolean;
@@ -1298,64 +1222,55 @@ function DailyRow({ agg, todayUnrealized }: { agg: DailyAgg; todayUnrealized?: n
   );
 }
 
-function MyPositionsTab({ network }: { network: HlNetwork }) {
+export function MyPositionsTab({ network }: { network: HlNetwork }) {
   const { t } = useTranslation();
   const account = useActiveAccount();
   const wallet = account?.address;
   const { toast } = useToast();
-  // HL 账户地址解析:仅用于真实成交行的「链上详情」直链(非余额读取);custodial=托管 EOA / agent=主账户。
+  // HL 账户:custodial = 引擎托管 EOA;agent = 用户主账户(自己钱包)。下单/持仓/余额都在该地址。
   const userQ = useEngineUser(wallet);
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
   const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
-  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : hlUser?.engineEoaAddress;
+  const engineEoa = hlUser?.engineEoaAddress;
+  const hlAddress = hlUser?.hlMode === "agent" ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
+  // 顶部账户统计(净值/今日盈亏/浮盈/已实现/可用/保证金)仍走引擎+overrides 合并层。
+  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
   // 列表(当前持仓 / 历史 / 当日平仓 / 交易记录)统一走共享 TradeRecordsDetail
-  // (venueScope=hl_<network>,全 Supabase 虚拟数据;manual 持仓/记录;与 PM stats 同一组件)。
+  // (venueScope=hl_<network>,全 Supabase 视图;admin overwrite 即时一致;与 PM stats 同一组件)。
   const venue: StatsVenue = (`hl_${network}` as StatsVenue);
-  // 顶部账户统计 = 会员虚拟账本 v_member_account(本市场行):净值/保证金/可用/已实现/浮盈。
-  // 不再读引擎真实账户(useHlAccountAdjusted),与会员看到的账本完全一致。
-  const memberAcct = useMemberAccount(wallet);
-  const ledger = memberAcct.byVenue(venue);
-  // 当日盈亏 + 持仓价值:账本视图无对应列,取 Supabase 当日统计(manual 优先)。
+  // 顶部统计台的盈亏类(当日/已平仓/持仓价值/未实现)读 Supabase 当日视图(= overwrite 后展示值),
+  // 与下方列表口径统一;现金类(保证金/可用)才取引擎实时账户(Supabase 无现金概念)。
   const todayStatsQ = useWalletTodayStats(wallet);
-  const { close, closingCoin } = useHlClose(userId, network);
-  async function onClosePosition(coin: string) {
-    try {
-      await close(coin);
-      toast({ title: t("hl.closeOk", "已平仓"), description: t("hl.closeOkDesc", "已提交市价平仓(reduce-only),稍后刷新持仓。") });
-      memberAcct.refetch();
-    } catch (e) {
-      const msg = String((e as { message?: string })?.message ?? e);
-      // 仓位已不在(被 leader 镜像平仓 / TP-SL 自动平仓 / 重复点击)→ 当作已平仓,刷新而非报错。
-      if (/no_open_position/i.test(msg)) {
-        toast({ title: t("hl.closeAlready", "该仓位已平仓"), description: t("hl.closeAlreadyDesc", "持仓已不存在(可能已被自动平仓),已刷新。") });
-        memberAcct.refetch();
-        return;
-      }
-      toast({ title: t("common.error", "出错了"), description: msg, variant: "destructive" });
-    }
-  }
+  // 账户汇总(交易所式:净值/保证金/可用/保证金率)—— admin 覆盖优先,NULL 回退引擎实时现金。
+  const summaryQ = useWalletAccountSummary(wallet);
+  // 手动平仓入口已移除 —— 平仓由智能体自动管理(leader 镜像平仓 / TP-SL / daily-supervisor)。
   if (!wallet) {
     return <HlEmpty icon={Wallet} title={t("hl.connectTitle")} desc={t("hl.connectDesc")} />;
   }
 
-  // 净值(equity)= 账本本市场行;无账本行 → 0(穿帮兜底:不报错,显示空账户)。
-  const av = numOrZero(ledger?.equity);
+  const acct = acctQ.data;
+  // 该 venue 的账户汇总(Supabase v_wallet_account_summary,admin 覆盖优先)。
+  const summary = (summaryQ.data ?? []).find((s) => s.venue === venue);
+  // 净值:admin 覆盖(account_value_usd)优先,NULL 回退引擎实时净值。
+  const av = summary?.account_value_usd ?? acct?.accountValue ?? 0;
   // 相对净值的百分比;净值=0 时返回 null(不显示 %)。
   const pctOfAv = (v: number): number | null => (av > 0 ? (v / av) * 100 : null);
-  // 保证金 / 可用 / 已实现 / 浮盈 全来自账本。
-  const marginUsed = numOrZero(ledger?.margin_used);
-  const available = numOrZero(ledger?.available);
-  const marginRatio = pctOfAv(marginUsed);
-  // 该 venue 的当日统计行(Supabase v_wallet_today_stats)—— 仅取当日盈亏 / 持仓价值。
+  // 保证金 / 可用:account_summary 优先(?? 仅在 NULL 时回退引擎实时现金,0 是有效值不回退)。
+  const marginUsed = summary?.margin_used_usd ?? acct?.marginUsed ?? 0;
+  const available = summary?.available_usd ?? acct?.withdrawable ?? 0;
+  // 保证金率(margin_ratio_pct):account_summary 有值才显示;否则用本地 margin/净值 兜底。
+  const marginRatio = summary?.margin_ratio_pct ?? pctOfAv(marginUsed);
+  // 该 venue 的当日统计行(Supabase v_wallet_today_stats,展示值 = coalesce(manual,真实))。
   const today = (todayStatsQ.data ?? []).find((d) => d.venue === venue);
+  // 顶部"持仓价值"取自合并层 acct.positions(引擎+overrides);列表在共享组件内自取 Supabase。
+  const acctHoldValue = (acct?.positions ?? []).reduce((s, p) => s + p.positionValue, 0);
 
   // ── 每格百分比兜底:视图 *_pct 为 null 时前端算,保证每个金额旁都有 %(Number.isFinite 守卫)。
   const dayPnlUsd = numOrZero(today?.day_pnl_usd);
-  // 已实现 / 浮盈走账本(与净值同源);当日持仓价值走当日统计。
-  const realizedUsd = numOrZero(ledger?.realized_pnl);
+  const realizedUsd = numOrZero(today?.realized_pnl_day_usd);
   const posValueUsd = numOrZero(today?.position_value_usd);
-  const unrealUsd = numOrZero(ledger?.unrealized_pnl);
-  // 浮盈% 的分母 = 持仓成本(账本无成本 → 回退:posValue − unrealized);兜底用净值。
+  const unrealUsd = numOrZero(today?.unrealized_pnl_usd);
+  // 浮盈% 的分母 = 持仓成本(净值视图无成本 → 回退账户成本:posValue − unrealized);兜底用净值。
   const costBasis = posValueUsd - unrealUsd;
   // 盈亏类口径:当日/已平仓 → 占净值;未实现 → 占成本(无成本则占净值)。
   const dayPnlPct = today?.day_pnl_pct ?? pctOfAv(dayPnlUsd);
@@ -1386,9 +1301,7 @@ function MyPositionsTab({ network }: { network: HlNetwork }) {
       <TradeRecordsDetail
         wallet={wallet}
         venueScope={venue}
-        onClosePosition={(coin) => void onClosePosition(coin)}
-        closingSymbol={closingCoin}
-        hlAddress={hlAddress}
+        hlAddress={hlAddress ?? acct?.address}
       />
     </div>
   );
@@ -1448,12 +1361,33 @@ function ActiveSubs({ userId }: { userId?: string }) {
   const { toast } = useToast();
   const subsQ = useHlSubs(userId);
   const mut = useHlSubMutations(userId);
+  const stopAll = useStopAllCopy(userId);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  // 一键停止跟单的二次确认弹层(避免误点)。
+  const [confirmStopAll, setConfirmStopAll] = useState(false);
   const subs = (subsQ.data?.subscriptions ?? []).filter((s: any) => s.status !== "stopped");
   if (!userId || subsQ.isLoading || subs.length === 0) return null;
 
+  // 是否还有「跟单中」(active)订阅 —— 全 paused 时停止跟单按钮无意义,禁用。
+  const hasActive = subs.some((s: any) => s.status === "active");
+
   async function run(fn: () => Promise<unknown>, errKey: string) {
     try { await fn(); } catch (e: any) { toast({ title: t(errKey, "操作失败"), description: String(e?.message ?? e), variant: "destructive" }); }
+  }
+
+  async function onStopAll() {
+    try {
+      const r = await stopAll.mutateAsync();
+      toast({
+        title: t("copyTrading.stopAllOk", "已停止跟单"),
+        description: t("copyTrading.stopAllOkDesc", "不再开新仓,已有持仓将由智能体/市场自然平掉。"),
+      });
+      void r;
+    } catch (e: any) {
+      toast({ title: t("copyTrading.stopAllFailed", "停止跟单失败"), description: String(e?.message ?? e), variant: "destructive" });
+    } finally {
+      setConfirmStopAll(false);
+    }
   }
 
   return (
@@ -1462,6 +1396,52 @@ function ActiveSubs({ userId }: { userId?: string }) {
         <Crown className="h-3.5 w-3.5 text-amber-300" />
         <span className="text-[11px] uppercase tracking-wider text-foreground/50 font-semibold">{t("hl.activeFollows")}</span>
         <Badge className="text-[9px] px-1.5 py-0 border-0 bg-amber-500/15 text-amber-300 no-default-hover-elevate no-default-active-elevate ml-auto">{subs.length}</Badge>
+      </div>
+
+      {/* 一键停止跟单 —— 暂停该用户所有 HL+PM 订阅(不再开新仓;已有仓位自然平掉),二次确认。 */}
+      <div className="mb-2.5">
+        {confirmStopAll ? (
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/[0.07] p-2.5">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-300 shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-snug text-foreground/75">
+                {t("copyTrading.stopAllConfirm", "确认停止全部跟单?之后不再开新仓,已有持仓将由智能体自动平掉。")}
+              </p>
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                disabled={stopAll.isPending}
+                onClick={onStopAll}
+                className="flex-1 h-8 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 bg-rose-500 text-white transition active:scale-[0.99] disabled:opacity-60"
+                data-testid="button-stop-all-confirm"
+              >
+                {stopAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
+                {t("common.confirm", "确认")}
+              </button>
+              <button
+                type="button"
+                disabled={stopAll.isPending}
+                onClick={() => setConfirmStopAll(false)}
+                className="flex-1 h-8 rounded-lg text-[12px] font-bold bg-white/[0.04] text-foreground/70 border border-white/10 transition active:scale-[0.99] disabled:opacity-60"
+                data-testid="button-stop-all-cancel"
+              >
+                {t("common.cancel", "取消")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={!hasActive || stopAll.isPending}
+            onClick={() => setConfirmStopAll(true)}
+            className="w-full h-9 rounded-lg text-[12px] font-bold inline-flex items-center justify-center gap-1.5 bg-white/[0.04] text-rose-300 border border-rose-500/25 hover:bg-rose-500/10 transition active:scale-[0.99] disabled:opacity-40"
+            data-testid="button-stop-all"
+          >
+            <Ban className="h-3.5 w-3.5" />
+            {hasActive ? t("copyTrading.stopAll", "一键停止跟单") : t("copyTrading.stopAllAlready", "已全部停止")}
+          </button>
+        )}
       </div>
       <div className="space-y-1.5">
         {subs.map((s: any) => {
@@ -1524,50 +1504,71 @@ function ActiveSubs({ userId }: { userId?: string }) {
  */
 export function HlCopySection() {
   const { t } = useTranslation();
-  const reduce = !!useReducedMotion();
-  const account = useActiveAccount();
-  const wallet = account?.address;
   const [network, setNetwork] = useState<HlNetwork>("mainnet");
 
-  const userQ = useEngineUser(wallet);
-  const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
-
-  // Hero 数字 = 会员虚拟账本本市场行(净值/浮盈),不再读引擎真实账户。
-  const memberAcct = useMemberAccount(wallet);
-  const ledger = memberAcct.byVenue(`hl_${network}` as StatsVenue);
-  const subsQ = useHlSubs(userId);
+  // 顶级交易员数(Hero 展示用)。账户总览 / 充值提现已下沉到 /strategy/hl 分步向导。
   const leadersQ = useHlLeaders(network);
-
-  const subscribedLeaders = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of subsQ.data?.subscriptions ?? []) {
-      if ((s as any).status !== "stopped") set.add(String((s as any).leaderAddress).toLowerCase());
-    }
-    return set;
-  }, [subsQ.data]);
+  const leaderCount = leadersQ.data?.leaders?.length ?? 0;
 
   return (
     <div className="space-y-5" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
       <NetworkToggle value={network} onChange={setNetwork} />
 
-      {/* Hero 入口 → 智能跟单 hub (统计台 / 总览 / 智能跟单 / 信号源 / 持仓·平仓)。
-          钱包(开户/充值/提现)已移入 hub 的「总览」tab,与交易所一致。 */}
-      <Link href="/strategy/hl" data-testid="link-hl-hub">
-        <div className="cursor-pointer active:scale-[0.99] transition-transform">
-          <HlHero
-            wallet={wallet}
-            loading={!!wallet && memberAcct.isLoading}
-            accountValue={numOrZero(ledger?.equity)}
-            unrealizedPnl={numOrZero(ledger?.unrealized_pnl)}
-            followCount={subscribedLeaders.size}
-            reduce={reduce}
-            health={engineHealthFrom(leadersQ)}
-          />
+      {/* Hero 卡 — 进入策略交易引擎的主入口(trade 页同款质感);整卡可点 → /strategy/hl。 */}
+      <Link href="/strategy/hl" data-testid="link-strategy-hero">
+        <div
+          className="relative rounded-2xl overflow-hidden border border-[#f59e0b]/25 bg-gradient-to-br from-[#1a1408] via-[#161100] to-[#0c0a07] cursor-pointer active:scale-[0.995] transition-transform"
+          style={{ boxShadow: "0 0 40px rgba(245,158,11,0.08), inset 0 1px 0 rgba(245,158,11,0.15)" }}
+        >
+          <div className="absolute -top-8 -right-8 w-36 h-36 bg-[#f59e0b]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 -left-4 w-24 h-24 bg-amber-600/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#f59e0b]/60 to-transparent" />
+          <div className="relative z-10 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5 bg-[#f59e0b]/12 border border-[#f59e0b]/25 rounded-full px-2.5 py-1">
+                <Sparkles size={11} className="text-[#f59e0b]" />
+                <span className="text-[10px] font-semibold text-[#f59e0b] uppercase tracking-wider">
+                  {t("strategyHero.badge", "智能策略引擎")}
+                </span>
+              </div>
+            </div>
+            <h2 className="font-display text-[22px] font-bold text-white leading-tight tracking-tight mb-1">
+              {t("strategyHero.title1", "让 AI 驱动你的")}<br />
+              <span className="bg-gradient-to-r from-[#f59e0b] via-amber-300 to-[#f59e0b] bg-clip-text text-transparent">
+                {t("strategyHero.title2", "链上跟单与策略执行")}
+              </span>
+            </h2>
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+              {t("strategyHero.subtitle", "One-Agents 引擎实时跟踪顶级交易员,按板块策略自动开平仓")}
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {[
+                { k: "strategyHero.statStrategies", fb: "策略板块", v: "3" },
+                { k: "strategyHero.statLeaders", fb: "顶级交易员", v: leaderCount > 0 ? String(leaderCount) : "—" },
+                { k: "strategyHero.statLive", fb: "执行", v: t("strategyHero.statLiveVal", "链上实时") },
+              ].map((s) => (
+                <div key={s.k} className="bg-black/20 rounded-xl p-2.5 border border-white/5 min-w-0">
+                  <div className="text-[15px] font-bold text-white tabular-nums truncate">{s.v}</div>
+                  <div className="text-[9.5px] text-zinc-500 mt-0.5 truncate">{t(s.k, s.fb)}</div>
+                </div>
+              ))}
+            </div>
+            <div
+              className="w-full rounded-xl bg-[#f59e0b] text-black font-bold text-sm py-3 flex items-center justify-center gap-2"
+              style={{ boxShadow: "0 4px 20px rgba(245,158,11,0.35)" }}
+            >
+              <Zap size={15} strokeWidth={2.5} />
+              <span>{t("strategyHero.cta", "选择策略 · 进入交易引擎")}</span>
+              <ChevronRight size={15} strokeWidth={2.5} className="ml-0.5" />
+            </div>
+          </div>
         </div>
       </Link>
 
-      {/* 底部两 tab:金库(推荐金库,实时链上数据,纯展示)/ AI 实验室。
-          一次只显示一个,移动端等宽按钮、无横向溢出。 */}
+      {/* 账户总览 + 充值/提现已下沉到 /strategy/hl 分步向导(资格→钱包→选策略→引擎),
+          此落地页只保留:Hero 入口 + 金库 + AI 实验室。 */}
+
+      {/* 金库 + AI 实验室(AILAB)。 */}
       <BottomTabs network={network} />
     </div>
   );
@@ -1880,12 +1881,11 @@ export function HlHubPage() {
   const userId = userQ.data?.id ? String(userQ.data.id) : undefined;
   const hlUser = userQ.data as { engineEoaAddress?: string; hlMode?: string; hlMasterAddress?: string } | undefined;
   const engineEoa = hlUser?.engineEoaAddress;
-  // agent/custodial 仅用于充值/提现(HlFunding,真实资金流向);展示数字一律走会员账本。
+  // 非托管 agent 模式:净值/持仓读 master(自己钱包);custodial 读托管 EOA。
   const agentMode = hlUser?.hlMode === "agent";
   const hlAddress = agentMode ? (hlUser?.hlMasterAddress ?? wallet) : engineEoa;
-  // 会员虚拟账本(本市场行):净值/可提门槛展示全部源自此,不读引擎真实账户。
-  const memberAcct = useMemberAccount(wallet);
-  const ledger = memberAcct.byVenue(`hl_${network}` as StatsVenue);
+  // 可调控数据层:真实引擎数据 + Supabase 手动覆盖(统计/持仓/历史)。
+  const acctQ = useHlAccountAdjusted(hlAddress, network, wallet);
   const subsQ = useHlSubs(userId);
   const leadersQ = useHlLeaders(network);
   const packsQ = useConsolePacks();
@@ -1908,15 +1908,14 @@ export function HlHubPage() {
     return set;
   }, [subsQ.data]);
 
+  const acct = acctQ.data;
   const leaders = leadersQ.data?.leaders ?? [];
-  // 会员账本本市场净值(展示 + 余额门槛判定均用它)。
-  const accountValue = numOrZero(ledger?.equity);
 
-  // 实时引擎健康(UIUX Rec #6)+ 余额门槛(UIUX Rec #2)。引擎健康只看 leaders 连通性。
-  const engineHealth = engineHealthFrom(leadersQ);
-  // 账本净值 < HL_MIN → 跟单会以 insufficient_funds 静默失败,改为引导充值。
-  // 仅在账本已成功读取后判定,避免加载/未连接时误报余额不足。
-  const underfunded = !!wallet && !memberAcct.isLoading && !memberAcct.isError && accountValue < HL_MIN;
+  // 实时引擎健康(UIUX Rec #6)+ 余额门槛(UIUX Rec #2)。
+  const engineHealth = engineHealthFrom(acctQ, leadersQ);
+  // 账户净值 < HL_MIN → 跟单会以 insufficient_funds 静默失败,改为引导充值。
+  // 仅在账户已成功读取后判定,避免加载/未连接时误报余额不足。
+  const underfunded = !!wallet && !!hlAddress && acctQ.isSuccess && (acct?.accountValue ?? 0) < HL_MIN;
 
   // 选风格(执行器)→ 选交易员 → 一键跟单。每个 leader 独立 busy(地址小写为 key)。
   const [busyLeader, setBusyLeader] = useState<string | null>(null);
@@ -1975,8 +1974,8 @@ export function HlHubPage() {
         <HubStatsBar
           wallet={wallet}
           venue={`hl_${network}` as StatsVenue}
-          loading={!!wallet && memberAcct.isLoading}
-          accountValue={accountValue}
+          loading={!!wallet && acctQ.isLoading}
+          accountValue={acct?.accountValue ?? 0}
           followCount={subscribedLeaders.size}
           reduce={reduce}
         />
@@ -2024,9 +2023,9 @@ export function HlHubPage() {
                     network={network}
                     agentMode={agentMode}
                     depositAddress={engineEoa ?? ""}
-                    withdrawable={numOrZero(ledger?.withdrawable)}
+                    withdrawable={acct?.withdrawable ?? 0}
                     wallet={wallet}
-                    accountValue={accountValue}
+                    accountValue={acct?.accountValue ?? 0}
                   />
                 ) : undefined}
               />
@@ -2064,7 +2063,7 @@ export function HlHubPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[13px] font-bold text-amber-200">{t("hl.underfundedTitle2", "余额不足,去「总览」充值")}</div>
                       <p className="mt-0.5 text-[11px] leading-snug text-foreground/55">
-                        {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(accountValue) })}
+                        {t("hl.underfundedDesc", "HL 最低需 ${{min}} 才能跟单;当前账户净值 {{val}}。点此回钱包充值。", { min: HL_MIN, val: fmtUsd(acct?.accountValue ?? 0) })}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-amber-300/80" />
@@ -2108,6 +2107,16 @@ export function HlHubPage() {
 
               {/* F17 — AI 跟单决策卡 */}
               <AiDecisionCards userId={userId} />
+
+              {/* 决策流 — 开单时实时显示 agent 在看什么 / 为何开 / 为何跳过(Live + Actions)。 */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="h-4 w-4 text-amber-400" />
+                  <h3 className="text-sm font-medium text-foreground/90">{t("hl.decisionLogTitle", "决策流")}</h3>
+                  <span className="text-[11px] text-foreground/40">· {t("hl.decisionLogHint", "实时决策依据")}</span>
+                </div>
+                <DecisionLog model="rune-ai" />
+              </div>
             </div>
           )}
 
@@ -2118,6 +2127,8 @@ export function HlHubPage() {
           {hubTab === "positions" && <MyPositionsTab network={network} />}
         </div>
       </div>
+      {/* 浮窗:与策略智能体对话(trading logs 保持不变,这只是叠加一个浮窗按钮)。 */}
+      <AgentChat userId={userId} />
     </div>
   );
 }

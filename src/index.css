@@ -94,6 +94,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* extra-small breakpoint for very narrow phones (≥400px) — enables xs: variants
+     so 4-up tab bars can switch from stacked icon+label to inline on roomier widths. */
+  --breakpoint-xs: 25rem;
 }
 
 :root, .dark {
