@@ -17,9 +17,18 @@ const BUILD_ID = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "dev";
 const KEY = "rune-rq-cache-v1";
 const MAX_AGE_MS = 60 * 60_000; // 1h
 
-/** 只持久化每账户展示类数据(键以 "engine" 开头且属于这几类)。 */
+/**
+ * 只持久化「每账户/Performance 展示类」数据 —— 秒显上次值、后台刷新。
+ * - engine.hl.*(账户/净值/持仓/平仓 fills/净值曲线 equity-curve)、engine.user、余额、订单、节点。
+ * - stats.*(useHlAccountAdjusted 的 admin 覆盖/手动持仓/手动成交叠加层 —— 否则 Performance
+ *   每次进都要等这层冷加载才定型)。
+ * - hl-marks(持仓估值的标记价 —— 否则持仓「市值/浮盈」列会慢慢冒出来)。
+ * 不持久化行情流/排行榜等大体量或高频数据。
+ */
 function shouldPersist(queryKey: readonly unknown[]): boolean {
-  if (queryKey[0] !== "engine") return false;
+  const root = queryKey[0];
+  if (root === "stats" || root === "hl-marks") return true;
+  if (root !== "engine") return false;
   const k = queryKey[1];
   return k === "hl" || k === "user" || k === "pusd-balance" || k === "open-orders" || k === "node-status";
 }
