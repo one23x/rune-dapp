@@ -462,9 +462,15 @@ export function useHlAccount(address: string | undefined, network: HlNetwork) {
       // 引擎返回空/未 funded(典型:今日切 QN HyperCore 后,无交易活动的账户未被索引 →
       // 引擎给一个 accountValue=0 的「空但非 null」对象)。**绝不能让这个空结果掩盖同步表里
       // 真实存在的余额** → 回退同步表(trading_hl_account_state 有现金/持仓)。
-      const synced = await fetchHlAccountFromSync(address!, network);
+      let synced: HlAccount | null = null;
+      try {
+        synced = await fetchHlAccountFromSync(address!, network);
+      } catch {
+        /* 同步表读失败(RLS/网络)→ 不能让它中断整条链,继续直连 HL 兜底 */
+      }
       if (hasFunds(synced)) return synced!;
       // 仍无 → 末级直连 HL 公共 clearinghouseState(刚充值新户 + QN 未索引 + /info 429)。
+      // 这是全球可达、CORS 开的公共只读源,对 0xcea5…(纯现金 $489)能可靠返回。
       const verified = await fetchHlAccountDirect(address!, network);
       if (hasFunds(verified)) return verified!;
       // 处处确为空 → 返回已有的空对象(UI 优雅显示 $0/未 funded,而非抛错→「找不到」)。
