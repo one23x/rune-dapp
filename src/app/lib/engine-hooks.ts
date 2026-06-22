@@ -448,17 +448,28 @@ export function useHlAccount(address: string | undefined, network: HlNetwork) {
       // realizedPnl / todayPnl / 真实 entryPx),且**按地址**查 —— 不受多 project / 视图
       // (v_wallet_open_positions 按连接钱包)歧义影响。是 Trades / Performance / 持仓 的正源。
       // 同步表只作兜底(引擎瞬时失败):它**不含 fills、realizedPnl=0**,单用会让这些面板空。
+      const hasFunds = (a: HlAccount | null | undefined): boolean =>
+        !!a && (a.funded || (a.accountValue ?? 0) > 0 || (a.positions?.length ?? 0) > 0);
+
+      let live: HlAccount | null = null;
       try {
-        const live = await hyperliquid.account(address!, network);
-        if (live) return live;
+        live = await hyperliquid.account(address!, network);
       } catch {
-        /* 引擎瞬时失败 → 回退同步表(至少有余额/持仓) */
+        /* 引擎瞬时失败 → 走下面兜底 */
       }
+      // 引擎确有资金/持仓 → 它是正源(含 fills/realizedPnl/真实 entryPx),直接用。
+      if (hasFunds(live)) return live!;
+      // 引擎返回空/未 funded(典型:今日切 QN HyperCore 后,无交易活动的账户未被索引 →
+      // 引擎给一个 accountValue=0 的「空但非 null」对象)。**绝不能让这个空结果掩盖同步表里
+      // 真实存在的余额** → 回退同步表(trading_hl_account_state 有现金/持仓)。
       const synced = await fetchHlAccountFromSync(address!, network);
-      if (synced) return synced;
-      // 末级兜底:刚充值的新户(QN HyperCore 尚未索引 + 引擎 /info 间歇 429)→ 直连 HL
-      // 公共 clearinghouseState 验证。只要 HL 验证到余额,即可判定 funded → 显示「开户成功」。
+      if (hasFunds(synced)) return synced!;
+      // 仍无 → 末级直连 HL 公共 clearinghouseState(刚充值新户 + QN 未索引 + /info 429)。
       const verified = await fetchHlAccountDirect(address!, network);
+      if (hasFunds(verified)) return verified!;
+      // 处处确为空 → 返回已有的空对象(UI 优雅显示 $0/未 funded,而非抛错→「找不到」)。
+      if (live) return live;
+      if (synced) return synced;
       if (verified) return verified;
       throw new Error("hl account unavailable");
     },

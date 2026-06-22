@@ -54,12 +54,13 @@ export function WalletStep(props: {
     <div className="space-y-3">
       {/* 交易账户地址卡:短地址 + HL explorer/address 链接(诚实展示资金落在哪个账户)。 */}
       <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="shrink-0 text-[10px] uppercase tracking-wider text-foreground/45">
             {t("flow.wallet.account", "交易账户")}
           </span>
-          <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-foreground/75">
-            {shortAddr(hlAddress)}
+          {/* 完整地址(可全选复制),窄屏 break-all 换行不溢出 */}
+          <code className="min-w-0 break-all select-all font-mono text-[12px] text-foreground/75">
+            {hlAddress}
           </code>
           <a
             href={hlAddr(hlAddress, network)}

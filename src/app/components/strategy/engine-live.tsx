@@ -85,9 +85,10 @@ export function EngineStats({ acct, loading }: { acct?: HlAccount; loading: bool
 
       {/* 交易账户:真实 HL 地址 + 链上 explorer/address 链接(让用户看清是哪个账户) */}
       {acct?.address && (
-        <div className="relative z-10 mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2">
+        <div className="relative z-10 mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2 flex-wrap">
           <span className="text-[10px] text-foreground/45 shrink-0">{t("engineLive.account", "交易账户")}</span>
-          <code className="font-mono text-[11px] text-foreground/70 truncate">{shortAddr(acct.address)}</code>
+          {/* 完整地址(可全选复制),窄屏 break-all 换行不溢出 */}
+          <code className="font-mono text-[11px] text-foreground/70 break-all select-all min-w-0">{acct.address}</code>
           <a
             href={hlAddr(acct.address, acct.network)}
             target="_blank"
