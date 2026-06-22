@@ -173,7 +173,7 @@ export function StrategyFlow() {
           <div className="space-y-4">
             {stratHeader}
             {/* 链上真实账户总览 */}
-            <EngineStats acct={acct} loading={loading} />
+            <EngineStats acct={acct} loading={loading} updating={!!wallet && acctQ.isFetching && !loading} />
             {/* 一键跟单(自动优选 / 手动跟顶级交易员)。跟单成功 → 自动进数据台(4)。 */}
             <EngineFollow userId={userId} network={network} onFollowed={() => setManualStep(4)} />
           </div>

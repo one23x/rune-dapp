@@ -2877,7 +2877,8 @@
     "value": "Valeur de marché",
     "noFills": "Aucune exécution (dans le périmètre suivi par cette stratégie)",
     "margin": "Marge",
-    "fees": "Frais"
+    "fees": "Frais",
+    "updating": "Synchronisation on-chain…"
   },
   "engineSignals": {
     "net": "Flux net",

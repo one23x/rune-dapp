@@ -2877,7 +2877,8 @@
     "value": "Value",
     "noFills": "No fills yet (within this strategy's watched markets)",
     "margin": "Margin",
-    "fees": "Fees"
+    "fees": "Fees",
+    "updating": "Syncing on-chain…"
   },
   "engineSignals": {
     "net": "Net flow",

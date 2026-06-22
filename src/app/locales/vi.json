@@ -2877,7 +2877,8 @@
     "value": "Giá trị thị trường",
     "noFills": "Chưa có lịch sử khớp lệnh (trong phạm vi theo dõi của chiến lược này)",
     "margin": "Ký quỹ",
-    "fees": "Phí"
+    "fees": "Phí",
+    "updating": "Đang đồng bộ on-chain…"
   },
   "engineSignals": {
     "net": "Dòng tiền ròng",

@@ -36,7 +36,7 @@ function inUni(coin: string, uni?: Set<string>): boolean {
 const pnlCls = (n: number) => (n >= 0 ? "text-emerald-400" : "text-red-400");
 
 /** 真实账户总览条(链上)。NAV 做主视觉;未入金/无持仓时盈亏类显示「—」而非噪音 "+$0"。 */
-export function EngineStats({ acct, loading }: { acct?: HlAccount; loading: boolean }) {
+export function EngineStats({ acct, loading, updating = false }: { acct?: HlAccount; loading: boolean; updating?: boolean }) {
   const { t } = useTranslation();
   const nav = acct?.accountValue ?? 0;
   const funded = nav > 0;
@@ -61,7 +61,16 @@ export function EngineStats({ acct, loading }: { acct?: HlAccount; loading: bool
 
       {/* Hero:账户净值 */}
       <div className="relative z-10">
-        <p className="text-[10px] uppercase tracking-wider text-foreground/45 mb-1">{t("engineLive.nav", "账户净值")}</p>
+        <p className="text-[10px] uppercase tracking-wider text-foreground/45 mb-1 flex items-center gap-1.5">
+          {t("engineLive.nav", "账户净值")}
+          {/* 链上数据更新中提醒:首屏拿缓存秒显时、或后台刷新时,告诉用户「正在与链上同步」 */}
+          {updating && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-medium text-amber-300/80 normal-case tracking-normal">
+              <span className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
+              {t("engineLive.updating", "链上更新中…")}
+            </span>
+          )}
+        </p>
         {loading ? (
           <div className="h-8 w-32 rounded bg-white/5 animate-pulse" />
         ) : (

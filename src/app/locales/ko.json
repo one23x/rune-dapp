@@ -2877,7 +2877,8 @@
     "value": "평가액",
     "noFills": "체결 내역 없음(해당 전략 모니터링 범위 내)",
     "margin": "증거금",
-    "fees": "수수료"
+    "fees": "수수료",
+    "updating": "온체인 동기화 중…"
   },
   "engineSignals": {
     "net": "순흐름",

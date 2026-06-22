@@ -2877,7 +2877,8 @@
     "value": "Valor de mercado",
     "noFills": "Sin registros de ejecución (dentro del rango monitoreado de esta estrategia)",
     "margin": "Margen",
-    "fees": "Comisiones"
+    "fees": "Comisiones",
+    "updating": "Sincronizando on-chain…"
   },
   "engineSignals": {
     "net": "Flujo neto",

@@ -36,7 +36,7 @@ import {
 import type { HlAccount, HlNetwork, HlPosition, HlFillRow } from "@app/lib/engine";
 import type { DecisionEntry } from "@app/lib/decision-log-hooks";
 import { useHlEquityCurve } from "@app/lib/engine-hooks";
-import { useTradeRecords } from "@app/lib/trading-stats-hooks";
+import { useTradeRecords, useWalletDailyHistory } from "@app/lib/trading-stats-hooks";
 import { cn } from "@app/lib/utils";
 
 const HL_INFO = "https://api.hyperliquid.xyz/info";
@@ -162,6 +162,23 @@ export function PerformancePanel({ userId, acct, network, universe, entries }: {
     [curveQ.data],
   );
 
+  // 多日曲线兜底:worker equity-snapshot 没数据时,用同步表 trading_acct_daily 的
+  // 日线累计已实现 PnL(realized_pnl_cum_usd,缺则按 day_pnl_usd 累加)画多日曲线 —— 与
+  // 当日 intraday 兜底同口径(累计 PnL,非绝对净值)。只取本 HL venue 行。
+  const hlVenue = network === "testnet" ? "hl_testnet" : "hl_mainnet";
+  const dailyQ = useWalletDailyHistory(acct?.address, 90);
+  const dailyPoints = useMemo(() => {
+    const rows = (dailyQ.data ?? [])
+      .filter((r) => r.venue === hlVenue && r.day)
+      .slice()
+      .sort((a, b) => (a.day < b.day ? -1 : 1));
+    let running = 0;
+    return rows.map((r) => {
+      const cum = r.realized_pnl_cum_usd != null ? r.realized_pnl_cum_usd : (running += r.day_pnl_usd ?? 0);
+      return { t: +new Date(r.day), v: cum };
+    });
+  }, [dailyQ.data, hlVenue]);
+
   // 平仓历史/已实现 兜底:引擎 /v1/hl/account 的 recentFills 对高 fill 账户会因 SQL timeout→
   // info 429→直连 HL 兜底(无 fills)而为空 → 历史/已实现/平仓笔数 全 0。改读同步表
   // trading_trade_records(useTradeRecords,worker 实时写,已持久化 stats.*),映射成 HlFillRow。
@@ -228,9 +245,23 @@ export function PerformancePanel({ userId, acct, network, universe, entries }: {
     return pts;
   }, [dayCloses, positions.length, unrealized]);
 
-  // 真实快照可用 → 用真曲线(任意窗);否则回退当日累计(仅 1D 显示,其余窗 DASH)。
+  // 日线兜底曲线(多日):trading_acct_daily 累计 PnL,按 tf 切窗。
+  const dailyEquity = useMemo(() => {
+    if (dailyPoints.length < 2) return null;
+    const cutoff = windowDays != null ? Date.now() - windowDays * DAY_MS : 0;
+    const win = dailyPoints.filter((p) => p.t >= cutoff);
+    return win.length >= 2 ? win.map((p) => p.v) : null;
+  }, [dailyPoints, windowDays]);
+
+  // 优先级:worker 真净值快照(绝对净值,最佳)> 日线累计 PnL 兜底(多日)> 当日 intraday(仅 1D)。
   const usingSnapshot = snapEquity != null;
-  const equity = usingSnapshot ? (snapEquity as number[]) : is1D ? intradayEquity : [];
+  const equity = usingSnapshot
+    ? (snapEquity as number[])
+    : dailyEquity != null
+      ? dailyEquity
+      : is1D
+        ? intradayEquity
+        : [];
   const hasCurve = equity.length >= 2;
 
   // 最大回撤(best-effort,来自曲线)。
@@ -334,6 +365,11 @@ export function PerformancePanel({ userId, acct, network, universe, entries }: {
         <div className="mt-2">
           {hasCurve ? (
             <Sparkline points={equity} />
+          ) : curveQ.isLoading || dailyQ.isLoading || recsQ.isLoading ? (
+            <p className="py-6 text-center text-[11px] text-amber-300/70 flex items-center justify-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
+              {t("engineLive.updating", "链上更新中…")}
+            </p>
           ) : (
             <p className="py-6 text-center text-[11px] text-muted-foreground/40">{t("perf.noCurve", "数据不足")}</p>
           )}

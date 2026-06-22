@@ -142,7 +142,7 @@ export function EnginePage({ strategyId }: { strategyId: string }) {
 
       <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto" style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
         {/* 链上真实账户总览 */}
-        <EngineStats acct={acct} loading={loading} />
+        <EngineStats acct={acct} loading={loading} updating={!!wallet && acctQ.isFetching && !loading} />
 
         {/* 盯盘币种(动态:来自当日交易员实际交易 ∩ 本板块);窄屏横向滚动,不撑破布局 */}
         {dynUniverse.length > 0 && (

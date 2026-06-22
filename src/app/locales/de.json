@@ -2877,7 +2877,8 @@
     "value": "Marktwert",
     "noFills": "Keine Ausführungen (im Beobachtungsbereich dieser Strategie)",
     "margin": "Margin",
-    "fees": "Gebühren"
+    "fees": "Gebühren",
+    "updating": "On-Chain wird aktualisiert…"
   },
   "engineSignals": {
     "net": "Nettofluss",

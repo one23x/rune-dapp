@@ -2877,7 +2877,8 @@
     "value": "Valor de mercado",
     "noFills": "Sem registros de execução (dentro do alcance monitorado desta estratégia)",
     "margin": "Margem",
-    "fees": "Taxas"
+    "fees": "Taxas",
+    "updating": "Sincronizando on-chain…"
   },
   "engineSignals": {
     "net": "Fluxo líquido",

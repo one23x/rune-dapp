@@ -2877,7 +2877,8 @@
     "value": "時価",
     "noFills": "約定記録なし（この戦略の監視対象範囲内）",
     "margin": "証拠金",
-    "fees": "手数料"
+    "fees": "手数料",
+    "updating": "オンチェーン同期中…"
   },
   "engineSignals": {
     "net": "ネットフロー",
