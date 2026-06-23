@@ -8,6 +8,8 @@ import { Toaster } from "@/components/ui/toaster";
 // calls across the dashboard import this instance; providing a different
 // client here silently turns them all into no-ops.
 import { queryClient } from "@app/lib/queryClient";
+// 顶层错误边界:防任意组件渲染抛错(如某地区被墙资源失败)导致整页黑屏。
+import { AppErrorBoundary } from "@app/components/error-boundary";
 // 缓存持久化(#1):首屏/重进页面秒显上次的净值·持仓·余额,后台静默刷新。
 import { hydratePersistedCache, startPersistingCache } from "@app/lib/query-persist";
 // iOS Safari/WKWebView 旧 SPA 常驻内存拿不到新版 → 切回前台比对构建号自动刷新,
@@ -26,13 +28,15 @@ startPersistingCache(queryClient);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThirdwebProvider>
-      <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <AppRouter />
-          <Toaster />
-        </LanguageProvider>
-      </QueryClientProvider>
-    </ThirdwebProvider>
+    <AppErrorBoundary>
+      <ThirdwebProvider>
+        <QueryClientProvider client={queryClient}>
+          <LanguageProvider>
+            <AppRouter />
+            <Toaster />
+          </LanguageProvider>
+        </QueryClientProvider>
+      </ThirdwebProvider>
+    </AppErrorBoundary>
   </StrictMode>,
 );

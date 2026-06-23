@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+/* Google Fonts 改由 index.html 的非阻塞 <link>(media=print onload)加载,
+   不再用 CSS @import(@import 远程样式表会阻塞渲染,慢/被墙时整页黑屏)。
+   系统字体栈见 --app-font-sans,首屏即可读,字体加载好再 swap。 */
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
