@@ -34,6 +34,7 @@ import {
   Eye,
 } from "lucide-react";
 import type { HlAccount, HlNetwork, HlPosition, HlFillRow } from "@app/lib/engine";
+import { sideIsShort } from "@app/lib/engine";
 import type { DecisionEntry } from "@app/lib/decision-log-hooks";
 import { useHlEquityCurve } from "@app/lib/engine-hooks";
 import { useTradeRecords, useWalletDailyHistory } from "@app/lib/trading-stats-hooks";
@@ -190,7 +191,7 @@ export function PerformancePanel({ userId, acct, network, universe, entries }: {
         .filter((r) => r.source !== "manual" && (r.realized_pnl_usd != null || /close/i.test(r.record_type)))
         .map((r) => ({
           coin: r.symbol ?? "",
-          dir: /short/i.test(r.side ?? "") ? "Close Short" : "Close Long",
+          dir: sideIsShort(r.side) ? "Close Short" : "Close Long", // 原 /short/ 漏 'sell' → 空头平仓误显示 Long
           side: r.side ?? "",
           sz: Number(r.size) || 0,
           px: Number(r.price) || 0,
@@ -406,8 +407,9 @@ export function PerformancePanel({ userId, acct, network, universe, entries }: {
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {positions.map((p) => {
-                    const sz = (p as { szi?: number; size?: number }).szi ?? p.size ?? 0;
-                    const long = sz >= 0;
+                    // 方向取权威的 `side` 字段:同步源把 `size` 存成绝对值(去了符号),
+                    // 只按 size 判向会把所有空单错显成 LONG。side 缺失时再回退 size 符号。
+                    const long = p.side ? p.side === "LONG" : ((p as { szi?: number; size?: number }).szi ?? p.size ?? 0) >= 0;
                     return (
                       <li key={p.coin} className="flex items-center gap-2 rounded-xl bg-black/30 px-2.5 py-1.5">
                         <span className="font-mono text-[11px] font-semibold text-foreground/85">{baseCoin(p.coin)}</span>

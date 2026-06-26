@@ -192,6 +192,23 @@ export interface HlPosition {
   upnl: number;
   leverage: number | null;
 }
+
+/**
+ * 成交/平仓方向归一 —— 数据源里 `side` 有四种写法(record_type=close 用 long/short;
+ * position_closed 用 buy/sell),大小写不一,HL wire 还可能是 B/A。各处 UI 自己写正则只覆盖
+ * 一部分 → 把空头错判成多头(大盘下跌时盈利的空头平仓被显示成盈利 Long)。统一在此判定。
+ * 持仓(开仓)方向请用 size 符号(size<0=空),不要用本函数。
+ */
+export function sideIsShort(side?: string | null): boolean {
+  const s = (side ?? "").trim().toLowerCase();
+  if (!s) return false;
+  return s === "a" || s.includes("short") || s.includes("sell");
+}
+export function sideIsLong(side?: string | null): boolean {
+  const s = (side ?? "").trim().toLowerCase();
+  if (!s) return false;
+  return s === "b" || s.includes("long") || s.includes("buy");
+}
 export interface HlAccount {
   network: HlNetwork;
   address: string;

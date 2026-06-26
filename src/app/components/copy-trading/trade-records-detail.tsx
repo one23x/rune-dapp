@@ -20,6 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumCard } from "@app/components/premium-card";
 import { SectionEmpty, SectionError, fmtUsd } from "@app/components/copy-trading/shared";
+import { sideIsShort, sideIsLong } from "@app/lib/engine";
 import {
   useTradeRecords, useWalletDailyHistory, useWalletOpenPositions,
   useWalletTodayClosed, useWalletTodayStats, useWalletAccountSummary,
@@ -125,8 +126,8 @@ function RecordsTab({ wallet, venueScope }: { wallet: string; venueScope?: Stats
                   <span className="text-[13px] font-medium text-foreground/85 truncate">{prettySymbol(r.symbol, r.market_id)}</span>
                 </div>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
-                  r.side === "BUY" || r.side === "long" ? "bg-emerald-500/10 text-emerald-400"
-                  : r.side === "SELL" || r.side === "short" ? "bg-red-500/10 text-red-400"
+                  sideIsLong(r.side) ? "bg-emerald-500/10 text-emerald-400"
+                  : sideIsShort(r.side) ? "bg-red-500/10 text-red-400"
                   : "bg-white/5 text-muted-foreground"
                 }`}>{r.side ?? r.record_type}</span>
               </div>
@@ -376,7 +377,7 @@ function PositionCard({ p, showVenue, hlAddress, accountValue }: {
 /** 当日平仓一行:LONG/SHORT + 名义 + 实现盈亏$%(tx_hash 仅 HL 给「查看链上记录」)。 */
 function ClosedRow({ r, showVenue }: { r: import("@app/lib/trading-stats-hooks").TodayClosedRow; showVenue?: boolean }) {
   const { t } = useTranslation();
-  const long = r.side ? /buy|long/i.test(r.side) : true;
+  const long = !sideIsShort(r.side); // side 含 long/short/buy/sell;空头(short/sell)→false
   const realized = numOrZero(r.realized_pnl_usd);
   const pnlPos = realized >= 0;
   const notional = numOrZero(r.notional_usd);

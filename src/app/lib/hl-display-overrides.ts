@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@app/lib/supabase-client";
 import { useHlAccount } from "@app/lib/engine-hooks";
 import type { HlAccount, HlFillRow, HlNetwork, HlPosition } from "@app/lib/engine";
+import { sideIsShort } from "@app/lib/engine";
 
 interface HlOverrideRow {
   wallet: string;
@@ -137,7 +138,7 @@ function manualToPosition(m: HlManualPosRow): HlPosition {
 
 function manualToFill(r: ManualRecordRow): HlFillRow {
   const sz = n(r.size);
-  const isLong = (r.side ?? "").toLowerCase() === "long" || (r.side ?? "").toUpperCase() === "BUY";
+  const isLong = !sideIsShort(r.side); // 原判定漏小写 'buy' → 误判 short;统一用 sideIsShort
   const isClose = r.record_type === "close" || /close/i.test(r.side ?? "");
   return {
     coin: r.symbol ?? "—",

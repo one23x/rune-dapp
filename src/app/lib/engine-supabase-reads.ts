@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "@app/lib/supabase-client";
+import { sideIsShort } from "@app/lib/engine";
 import type {
   HlAccount,
   HlLeader,
@@ -138,7 +139,7 @@ export async function fetchHlAccountFromSync(
   const marginUsed = num(state?.margin_used_usd);
   const recentFills = recRows.map((r) => {
     const isClose = /close/i.test(r.record_type ?? "");
-    const short = /sell/i.test(r.side ?? "");
+    const short = sideIsShort(r.side); // side 可为 long/short/buy/sell → 统一判定(原 /sell/ 漏 'short')
     return {
       coin: r.symbol ?? "",
       dir: `${isClose ? "Close" : "Open"} ${short ? "Short" : "Long"}`,
